@@ -146,10 +146,15 @@ public final class GovernmentIdFaceRenderer {
         }
 
         // Square photo well adopts the card: tinted fill + border + icon.
-        android.graphics.drawable.GradientDrawable photoBg =
-                (android.graphics.drawable.GradientDrawable) f.photoBox.getBackground().mutate();
-        photoBg.setColor(colorOf(f, scheme.photoBgRes));
-        photoBg.setStroke((int) (1 * f.density + 0.5f), colorOf(f, scheme.photoBorderRes));
+        // instanceof: background is a <shape> today, guard survives a future
+        // drawable swap without a mid-layout ClassCastException.
+        android.graphics.drawable.Drawable bg = f.photoBox.getBackground();
+        if (bg instanceof android.graphics.drawable.GradientDrawable) {
+            android.graphics.drawable.GradientDrawable photoBg =
+                    (android.graphics.drawable.GradientDrawable) bg.mutate();
+            photoBg.setColor(colorOf(f, scheme.photoBgRes));
+            photoBg.setStroke((int) (1 * f.density + 0.5f), colorOf(f, scheme.photoBorderRes));
+        }
         f.photoIcon.setColorFilter(colorOf(f, scheme.photoIconRes));
 
         applyFaceMetrics(f, scheme);
@@ -184,9 +189,11 @@ public final class GovernmentIdFaceRenderer {
         setTopMargin(f.subtitle, 1, f.density);
         setTopMargin(f.rule, 4, f.density);
 
-        android.graphics.drawable.GradientDrawable photoBg =
-                (android.graphics.drawable.GradientDrawable) f.photoBox.getBackground();
-        photoBg.setCornerRadius(6 * f.density);
+        android.graphics.drawable.Drawable metricsBg = f.photoBox.getBackground();
+        if (metricsBg instanceof android.graphics.drawable.GradientDrawable) {
+            ((android.graphics.drawable.GradientDrawable) metricsBg)
+                    .setCornerRadius(6 * f.density);
+        }
 
         // Smaller avatar well.
         ViewGroup.LayoutParams photoLp = f.photoBox.getLayoutParams();

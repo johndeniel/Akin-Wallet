@@ -52,29 +52,32 @@ public class BankCardAdapter extends RecyclerView.Adapter<BankCardAdapter.CardVi
     }
 
     public void updateData(List<BankCardModel> newCards) {
-        List<BankCardModel> next =
-                newCards != null ? new ArrayList<>(newCards) : new ArrayList<>();
-        // Small vaults diff on UI; large vaults (>200) diff off UI to avoid
-        // dropped frames. Result always dispatched on the caller (UI) thread
-        // via post when background.
-        if (next.size() + cards.size() > 200) {
-            final List<BankCardModel> old = new ArrayList<>(cards);
-            new Thread(() -> {
-                DiffUtil.DiffResult diff = computeDiff(old, next);
-                android.os.Handler main =
-                        new android.os.Handler(android.os.Looper.getMainLooper());
-                main.post(() -> {
-                    cards.clear();
-                    cards.addAll(next);
-                    diff.dispatchUpdatesTo(this);
-                });
-            }).start();
+        // Drops null rows; a null would NPE inside areItemsTheSame.
+        List<BankCardModel> next = new ArrayList<>();
+        if (newCards != null) {
+            for (BankCardModel card : newCards) {
+                if (card != null) {
+                    next.add(card);
+                }
+            }
+        }
+        // Roll back on failed dispatch so adapter and RecyclerView stay
+        // in agreement (previously crashed the 2nd search).
+        List<BankCardModel> old = new ArrayList<>(cards);
+        DiffUtil.DiffResult diff;
+        try {
+            diff = computeDiff(old, next);
+        } catch (RuntimeException e) {
             return;
         }
-        DiffUtil.DiffResult diff = computeDiff(cards, next);
         cards.clear();
         cards.addAll(next);
-        diff.dispatchUpdatesTo(this);
+        try {
+            diff.dispatchUpdatesTo(this);
+        } catch (RuntimeException e) {
+            cards.clear();
+            cards.addAll(old);
+        }
     }
 
     private static DiffUtil.DiffResult computeDiff(List<BankCardModel> oldList,
@@ -126,8 +129,16 @@ public class BankCardAdapter extends RecyclerView.Adapter<BankCardAdapter.CardVi
 
     @Override
     public void onBindViewHolder(@NonNull CardViewHolder holder, int position) {
+        // RecyclerView may bind a stale position while removals animate.
+        if (position < 0 || position >= cards.size()) {
+            return;
+        }
         BankCardModel card = cards.get(position);
-        holder.bind(card, listener);
+        try {
+            holder.bind(card, listener);
+        } catch (RuntimeException e) {
+            // One bad row must never close the app.
+        }
     }
 
     @Override

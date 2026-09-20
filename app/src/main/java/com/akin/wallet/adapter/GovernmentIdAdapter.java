@@ -36,32 +36,52 @@ public class GovernmentIdAdapter extends RecyclerView.Adapter<GovernmentIdAdapte
     }
 
     public void updateData(List<GovernmentIDModel> newIdCards) {
-        List<GovernmentIDModel> next =
-                newIdCards != null ? new ArrayList<>(newIdCards) : new ArrayList<>();
-        DiffUtil.DiffResult diff = DiffUtil.calculateDiff(new DiffUtil.Callback() {
-            @Override
-            public int getOldListSize() {
-                return idCards.size();
+        // Drops null rows; a null would NPE inside areItemsTheSame.
+        List<GovernmentIDModel> next = new ArrayList<>();
+        if (newIdCards != null) {
+            for (GovernmentIDModel id : newIdCards) {
+                if (id != null) {
+                    next.add(id);
+                }
             }
+        }
+        // Roll back on failed dispatch so adapter and RecyclerView stay
+        // in agreement (previously crashed the 2nd search).
+        List<GovernmentIDModel> old = new ArrayList<>(idCards);
+        DiffUtil.DiffResult diff;
+        try {
+            diff = DiffUtil.calculateDiff(new DiffUtil.Callback() {
+                @Override
+                public int getOldListSize() {
+                    return old.size();
+                }
 
-            @Override
-            public int getNewListSize() {
-                return next.size();
-            }
+                @Override
+                public int getNewListSize() {
+                    return next.size();
+                }
 
-            @Override
-            public boolean areItemsTheSame(int oldPos, int newPos) {
-                return idCards.get(oldPos).getId() == next.get(newPos).getId();
-            }
+                @Override
+                public boolean areItemsTheSame(int oldPos, int newPos) {
+                    return old.get(oldPos).getId() == next.get(newPos).getId();
+                }
 
-            @Override
-            public boolean areContentsTheSame(int oldPos, int newPos) {
-                return idCards.get(oldPos).equals(next.get(newPos));
-            }
-        });
+                @Override
+                public boolean areContentsTheSame(int oldPos, int newPos) {
+                    return old.get(oldPos).equals(next.get(newPos));
+                }
+            });
+        } catch (RuntimeException e) {
+            return;
+        }
         idCards.clear();
         idCards.addAll(next);
-        diff.dispatchUpdatesTo(this);
+        try {
+            diff.dispatchUpdatesTo(this);
+        } catch (RuntimeException e) {
+            idCards.clear();
+            idCards.addAll(old);
+        }
     }
 
     @NonNull
@@ -87,21 +107,26 @@ public class GovernmentIdAdapter extends RecyclerView.Adapter<GovernmentIdAdapte
 
     @Override
     public void onBindViewHolder(@NonNull IdCardViewHolder holder, int position) {
+        // RecyclerView may bind a stale position while removals animate.
+        if (position < 0 || position >= idCards.size()) {
+            return;
+        }
         GovernmentIDModel idCard = idCards.get(position);
-        Map<String, String> fields = idCard.getFields();
-        String idType = idCard.getIdType();
-        String rawType = idType.trim();
-        // Unknown types render through the generic face — never masqueraded
-        // as another document. forName() falls back to the first type, so it
-        // is only called for known types.
-        GovernmentIDModel.IdType spec = GovernmentIDModel.isKnownType(idType)
-                ? GovernmentIDModel.forName(idType)
-                : GovernmentIDModel.genericType(idType, fields);
-        GovernmentIdFaceRenderer.render(holder.face,
-                spec,
-                idType,
-                rawType.isEmpty() ? "GOVERNMENT ID" : rawType,
-                fields);
+        try {
+            Map<String, String> fields = idCard.getFields();
+            String idType = idCard.getIdType();
+            String rawType = idType.trim();
+            GovernmentIDModel.IdType spec = GovernmentIDModel.isKnownType(idType)
+                    ? GovernmentIDModel.forName(idType)
+                    : GovernmentIDModel.genericType(idType, fields);
+            GovernmentIdFaceRenderer.render(holder.face,
+                    spec,
+                    idType,
+                    rawType.isEmpty() ? "GOVERNMENT ID" : rawType,
+                    fields);
+        } catch (RuntimeException e) {
+            // One bad row must never close the app.
+        }
 
         holder.itemView.setOnClickListener(v -> {
             if (listener != null) {

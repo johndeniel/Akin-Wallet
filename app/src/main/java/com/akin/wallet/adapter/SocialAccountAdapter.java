@@ -35,36 +35,56 @@ public class SocialAccountAdapter extends RecyclerView.Adapter<SocialAccountAdap
     }
 
     public void updateData(List<SocialAccountModel> newAccounts) {
-        List<SocialAccountModel> next =
-                newAccounts != null ? new ArrayList<>(newAccounts) : new ArrayList<>();
-        DiffUtil.DiffResult diff = DiffUtil.calculateDiff(new DiffUtil.Callback() {
-            @Override
-            public int getOldListSize() {
-                return accounts.size();
-            }
-
-            @Override
-            public int getNewListSize() {
-                return next.size();
-            }
-
-            @Override
-            public boolean areItemsTheSame(int oldPos, int newPos) {
-                return accounts.get(oldPos).getId() == next.get(newPos).getId();
-            }
-
-            @Override
-            public boolean areContentsTheSame(int oldPos, int newPos) {
-                if (!accounts.get(oldPos).equals(next.get(newPos))) {
-                    return false;
+        // Drops null rows; a null would NPE inside areItemsTheSame.
+        List<SocialAccountModel> next = new ArrayList<>();
+        if (newAccounts != null) {
+            for (SocialAccountModel account : newAccounts) {
+                if (account != null) {
+                    next.add(account);
                 }
-                // Divider visibility is positional (hidden on the last row).
-                return (oldPos == accounts.size() - 1) == (newPos == next.size() - 1);
             }
-        });
+        }
+        // Roll back on failed dispatch so adapter and RecyclerView stay
+        // in agreement (previously crashed the 2nd search).
+        List<SocialAccountModel> old = new ArrayList<>(accounts);
+        DiffUtil.DiffResult diff;
+        try {
+            diff = DiffUtil.calculateDiff(new DiffUtil.Callback() {
+                @Override
+                public int getOldListSize() {
+                    return old.size();
+                }
+
+                @Override
+                public int getNewListSize() {
+                    return next.size();
+                }
+
+                @Override
+                public boolean areItemsTheSame(int oldPos, int newPos) {
+                    return old.get(oldPos).getId() == next.get(newPos).getId();
+                }
+
+                @Override
+                public boolean areContentsTheSame(int oldPos, int newPos) {
+                    if (!old.get(oldPos).equals(next.get(newPos))) {
+                        return false;
+                    }
+                    // Divider visibility is positional (hidden on the last row).
+                    return (oldPos == old.size() - 1) == (newPos == next.size() - 1);
+                }
+            });
+        } catch (RuntimeException e) {
+            return;
+        }
         accounts.clear();
         accounts.addAll(next);
-        diff.dispatchUpdatesTo(this);
+        try {
+            diff.dispatchUpdatesTo(this);
+        } catch (RuntimeException e) {
+            accounts.clear();
+            accounts.addAll(old);
+        }
     }
 
     @NonNull
@@ -77,14 +97,22 @@ public class SocialAccountAdapter extends RecyclerView.Adapter<SocialAccountAdap
 
     @Override
     public void onBindViewHolder(@NonNull AccountViewHolder holder, int position) {
+        // RecyclerView may bind a stale position while removals animate.
+        if (position < 0 || position >= accounts.size()) {
+            return;
+        }
         SocialAccountModel account = accounts.get(position);
-        String fallback = holder.itemView.getContext().getString(R.string.label_social_account);
-        String platform = account.getPlatform() != null && !account.getPlatform().trim().isEmpty()
-                ? account.getPlatform().trim() : fallback;
-        String username = account.getUsername() != null ? account.getUsername().trim() : "";
-        holder.title.setText(platform);
-        holder.sub.setText(username.isEmpty() ? fallback : username);
-        SocialPlatformModel.bindIcon(holder.icon, account.getPlatform(), account.getIconRes());
+        try {
+            String fallback = holder.itemView.getContext().getString(R.string.label_social_account);
+            String platform = account.getPlatform() != null && !account.getPlatform().trim().isEmpty()
+                    ? account.getPlatform().trim() : fallback;
+            String username = account.getUsername() != null ? account.getUsername().trim() : "";
+            holder.title.setText(platform);
+            holder.sub.setText(username.isEmpty() ? fallback : username);
+            SocialPlatformModel.bindIcon(holder.icon, account.getPlatform(), account.getIconRes());
+        } catch (RuntimeException e) {
+            // One bad row must never close the app.
+        }
         holder.itemView.setOnClickListener(v -> {
             if (listener != null) {
                 listener.onAccountClick(account);

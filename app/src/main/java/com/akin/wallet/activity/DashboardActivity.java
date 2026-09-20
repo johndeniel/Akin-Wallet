@@ -3,6 +3,8 @@ package com.akin.wallet.activity;
 import android.content.Intent;
 import android.graphics.Rect;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.animation.DecelerateInterpolator;
@@ -21,14 +23,15 @@ import com.akin.wallet.adapter.SocialAccountAdapter;
 import com.akin.wallet.model.BankCardModel;
 import com.akin.wallet.model.SocialAccountModel;
 import com.akin.wallet.model.GovernmentIDModel;
+import com.akin.wallet.util.DashboardSearch;
 import com.akin.wallet.util.Ui;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.search.SearchView;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
-import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * Dashboard (Home) — single-screen host, no fragments. Shows live Government
@@ -55,16 +58,14 @@ public class DashboardActivity extends BaseVaultActivity {
 
     /** Credit-card ratio shared with the carousel faces (width : height). */
     private static final float CARD_ASPECT_RATIO = 1.586f;
-    /** Precompiled: digit extraction runs per card per keystroke while searching. */
-    private static final java.util.regex.Pattern NON_DIGITS =
-            java.util.regex.Pattern.compile("\\D");
     private FloatingActionButton fabAdd;
     private View fabAddMenu;
     private View fabScrim;
     private boolean isFabMenuOpen = false;
 
-    // M3 Search state. Masters hold the full newest-first rows; the SearchView
-    // filters them into its own result lists (the dashboard behind stays whole).
+    // M3 Search state. Masters hold the full newest-first rows; a pre-lowered
+    // DashboardSearch.Index snapshot filters them off the UI thread into the
+    // SearchView result lists (the dashboard behind stays whole).
     private List<GovernmentIDModel> allIds;
     private List<BankCardModel> allCards;
     private List<SocialAccountModel> allAccounts;
@@ -80,6 +81,7 @@ public class DashboardActivity extends BaseVaultActivity {
     private RecyclerView recyclerSearchIds;
     private View searchHeaderIds;
     private SocialAccountAdapter searchSocialAdapter;
+    private RecyclerView recyclerSearchSocial;
     private View cardSearchSocial;
     private View searchHeaderSocial;
     private View headerIds;
@@ -88,6 +90,19 @@ public class DashboardActivity extends BaseVaultActivity {
     private View emptySearchResults;
     private TextView emptySearchTitle;
     private TextView emptySearchSub;
+
+    /**
+     * Search pipeline: masters are normalized once per refresh into
+     * {@link #searchIndex}; each keystroke scans pre-lowered strings on
+     * {@link #searchExecutor}. Single thread = ordered, generation drops
+     * stale results, 120ms debounce collapses fast typing.
+     */
+    private DashboardSearch.Index searchIndex = DashboardSearch.EMPTY_INDEX;
+    private final ExecutorService searchExecutor = Executors.newSingleThreadExecutor();
+    private final Handler searchHandler = new Handler(Looper.getMainLooper());
+    private Runnable pendingSearch;
+    private int searchGeneration;
+    private static final long SEARCH_DEBOUNCE_MS = 120L;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -141,6 +156,14 @@ public class DashboardActivity extends BaseVaultActivity {
         // Drop pending empty-state measures that capture views (activity).
         clearPendingMeasure(emptyCards);
         clearPendingMeasure(emptyIds);
+        // Search: drop debounced + in-flight work so no callback touches a
+        // dead activity, then stop the single search thread.
+        if (pendingSearch != null) {
+            searchHandler.removeCallbacks(pendingSearch);
+            pendingSearch = null;
+        }
+        searchGeneration++;
+        searchExecutor.shutdownNow();
         super.onDestroy();
     }
 
@@ -202,10 +225,10 @@ public class DashboardActivity extends BaseVaultActivity {
         if (searchView == null) {
             return;
         }
-        // Shared pool: dashboard + search carousels share view types.
-        RecyclerView.RecycledViewPool sharedPool = new RecyclerView.RecycledViewPool();
-        sharedPool.setMaxRecycledViews(0, 8);
-
+        // Each search list keeps its own RecycledViewPool (the default).
+        // IDs and cards inflate different layouts under the same viewType 0,
+        // so sharing one pool recycled a bank-card view into the ID carousel
+        // (and vice versa) on the 2nd search -> ClassCastException mid-layout.
         searchIdAdapter = new GovernmentIdAdapter(this::openIdEditor);
         recyclerSearchIds = findViewById(R.id.dashboard_search_ids_list);
         recyclerSearchIds.setLayoutManager(
@@ -214,7 +237,6 @@ public class DashboardActivity extends BaseVaultActivity {
         recyclerSearchIds.addItemDecoration(sharedGap);
         recyclerSearchIds.setHasFixedSize(true);
         recyclerSearchIds.setItemViewCacheSize(4);
-        recyclerSearchIds.setRecycledViewPool(sharedPool);
         searchHeaderIds = findViewById(R.id.dashboard_search_header_ids);
 
         searchCardAdapter = new BankCardAdapter(this::openBankEditor);
@@ -225,12 +247,11 @@ public class DashboardActivity extends BaseVaultActivity {
         recyclerSearchCards.addItemDecoration(sharedGap);
         recyclerSearchCards.setHasFixedSize(true);
         recyclerSearchCards.setItemViewCacheSize(4);
-        recyclerSearchCards.setRecycledViewPool(sharedPool);
         searchHeaderCards = findViewById(R.id.dashboard_search_header_cards);
 
         // Row taps open the account's edit screen, same as the dashboard list.
         searchSocialAdapter = new SocialAccountAdapter(this::openSocialEditor);
-        RecyclerView recyclerSearchSocial = findViewById(R.id.dashboard_search_social_list);
+        recyclerSearchSocial = findViewById(R.id.dashboard_search_social_list);
         recyclerSearchSocial.setLayoutManager(new LinearLayoutManager(this));
         recyclerSearchSocial.setAdapter(searchSocialAdapter);
         // Same wrap_content vertical list contract as the dashboard list.
@@ -246,7 +267,9 @@ public class DashboardActivity extends BaseVaultActivity {
             @Override
             public void onTextChanged(CharSequence text, int start, int before, int count) {
                 currentQuery = text != null ? text.toString() : "";
-                updateSearchResults();
+                // Cheap on UI: just re-schedule. Normalize + scan run on the
+                // background search thread (see scheduleSearch).
+                scheduleSearch();
             }
         });
         searchView.addTransitionListener((view, oldState, newState) -> {
@@ -258,7 +281,7 @@ public class DashboardActivity extends BaseVaultActivity {
                 setFabVisible(false);
                 // Re-filter on open (covers rotation restore: the query is
                 // set before show, masters load separately).
-                updateSearchResults();
+                scheduleSearch();
             } else if (newState == SearchView.TransitionState.HIDDEN) {
                 searchShowing = false;
                 setFabVisible(true);
@@ -296,47 +319,124 @@ public class DashboardActivity extends BaseVaultActivity {
     }
 
     /**
-     * Filters the master lists into the SearchView results. Empty query shows
-     * everything newest-first; non-empty collapses empty sections and shows
-     * one global "no results" card when nothing matches anywhere.
+     * Rebuilds the pre-lowered search index from the current masters.
+     * Called once per masters refresh, never per keystroke.
      */
-    private void updateSearchResults() {
-        if (allIds == null || allCards == null || allAccounts == null
-                || searchIdAdapter == null || searchCardAdapter == null
-                || searchSocialAdapter == null) {
+    private void rebuildSearchIndex() {
+        try {
+            searchIndex = DashboardSearch.buildIndex(allIds, allCards, allAccounts);
+        } catch (RuntimeException e) {
+            searchIndex = DashboardSearch.EMPTY_INDEX;
+        }
+    }
+
+    /**
+     * Debounced search entry point (UI thread only). Each schedule bumps the
+     * generation so in-flight passes with an older generation are discarded.
+     */
+    private void scheduleSearch() {
+        if (searchIdAdapter == null || searchCardAdapter == null || searchSocialAdapter == null) {
             // Pre-load: search sections default to gone in XML; the first
             // bind restores them.
             return;
         }
-        String query = currentQuery.trim().toLowerCase(Locale.US);
-        if (query.isEmpty()) {
-            bindSearchResults(allIds, allCards, allAccounts, false);
+        if (pendingSearch != null) {
+            searchHandler.removeCallbacks(pendingSearch);
+        }
+        final int generation = ++searchGeneration;
+        final String raw = currentQuery;
+        final DashboardSearch.Index snapshot =
+                searchIndex != null ? searchIndex : DashboardSearch.EMPTY_INDEX;
+        pendingSearch = () -> {
+            try {
+                searchExecutor.execute(() -> runSearch(generation, raw, snapshot));
+            } catch (RuntimeException e) {
+                // Executor shut down (activity destroyed): nothing to bind.
+            }
+        };
+        searchHandler.postDelayed(pendingSearch, SEARCH_DEBOUNCE_MS);
+    }
+
+    /**
+     * Background pass: normalize only the query, scan pre-lowered strings.
+     * Binds on the UI thread only if still current and the activity is alive.
+     */
+    private void runSearch(int generation, String raw, DashboardSearch.Index snapshot) {
+        final DashboardSearch.Query query;
+        final DashboardSearch.Result result;
+        try {
+            query = DashboardSearch.normalizeQuery(raw);
+            result = DashboardSearch.search(snapshot, query);
+        } catch (RuntimeException e) {
+            // Defensive: search must never crash the app. Keep previous
+            // results visible; next keystroke retries.
             return;
         }
-        String digits = NON_DIGITS.matcher(query).replaceAll("");
-        bindSearchResults(filterIds(allIds, query), filterCards(allCards, query, digits),
-                filterAccounts(allAccounts, query), true);
+        searchHandler.post(() -> {
+            if (generation != searchGeneration || isFinishing() || isDestroyed()) {
+                return;
+            }
+            if (allIds == null || allCards == null || allAccounts == null
+                    || searchIdAdapter == null || searchCardAdapter == null
+                    || searchSocialAdapter == null) {
+                return;
+            }
+            bindSearchResults(result.ids, result.cards, result.accounts, !query.empty, generation);
+        });
+    }
+
+    /** True while any search list is mid-layout (a diff's animations still running). */
+    private boolean isAnySearchListLayingOut() {
+        return (recyclerSearchIds != null && recyclerSearchIds.isComputingLayout())
+                || (recyclerSearchCards != null && recyclerSearchCards.isComputingLayout())
+                || (recyclerSearchSocial != null && recyclerSearchSocial.isComputingLayout());
     }
 
     private void bindSearchResults(List<GovernmentIDModel> ids, List<BankCardModel> cards,
-                                    List<SocialAccountModel> accounts, boolean searching) {
+                                    List<SocialAccountModel> accounts, boolean searching, int generation) {
+        if (isFinishing() || isDestroyed() || generation != searchGeneration) {
+            return;
+        }
+        // Never dispatch into a running layout pass; re-queue behind it.
+        // The generation check above drops this if a newer keystroke won.
+        if (isAnySearchListLayingOut()) {
+            searchHandler.post(() ->
+                    bindSearchResults(ids, cards, accounts, searching, generation));
+            return;
+        }
+        // Adapters roll back on rejected dispatch, so bind every section:
+        // no mid-bind early return that leaves half-updated lists behind.
         searchIdAdapter.updateData(ids);
         boolean hasIds = ids != null && !ids.isEmpty();
-        recyclerSearchIds.setVisibility(hasIds ? View.VISIBLE : View.GONE);
-        searchHeaderIds.setVisibility(hasIds ? View.VISIBLE : View.GONE);
+        if (recyclerSearchIds != null) {
+            recyclerSearchIds.setVisibility(hasIds ? View.VISIBLE : View.GONE);
+        }
+        if (searchHeaderIds != null) {
+            searchHeaderIds.setVisibility(hasIds ? View.VISIBLE : View.GONE);
+        }
 
         searchCardAdapter.updateData(cards);
         boolean hasCards = cards != null && !cards.isEmpty();
-        recyclerSearchCards.setVisibility(hasCards ? View.VISIBLE : View.GONE);
-        searchHeaderCards.setVisibility(hasCards ? View.VISIBLE : View.GONE);
+        if (recyclerSearchCards != null) {
+            recyclerSearchCards.setVisibility(hasCards ? View.VISIBLE : View.GONE);
+        }
+        if (searchHeaderCards != null) {
+            searchHeaderCards.setVisibility(hasCards ? View.VISIBLE : View.GONE);
+        }
 
         searchSocialAdapter.updateData(accounts);
         boolean hasAccounts = accounts != null && !accounts.isEmpty();
-        cardSearchSocial.setVisibility(hasAccounts ? View.VISIBLE : View.GONE);
-        searchHeaderSocial.setVisibility(hasAccounts ? View.VISIBLE : View.GONE);
+        if (cardSearchSocial != null) {
+            cardSearchSocial.setVisibility(hasAccounts ? View.VISIBLE : View.GONE);
+        }
+        if (searchHeaderSocial != null) {
+            searchHeaderSocial.setVisibility(hasAccounts ? View.VISIBLE : View.GONE);
+        }
 
         boolean allEmpty = !hasIds && !hasCards && !hasAccounts;
-        emptySearchResults.setVisibility(allEmpty ? View.VISIBLE : View.GONE);
+        if (emptySearchResults != null) {
+            emptySearchResults.setVisibility(allEmpty ? View.VISIBLE : View.GONE);
+        }
         if (allEmpty) {
             // One card, two jobs: a dead-end query keeps the no-results
             // wording, while a genuinely empty vault gets its own invite.
@@ -357,85 +457,6 @@ public class DashboardActivity extends BaseVaultActivity {
                 }
             }
         }
-    }
-
-    private static List<GovernmentIDModel> filterIds(List<GovernmentIDModel> source, String query) {
-        List<GovernmentIDModel> out = new ArrayList<>();
-        for (GovernmentIDModel item : source) {
-            if (containsText(item.getIdType(), query) || idFieldsContain(item, query)) {
-                out.add(item);
-            }
-        }
-        return out;
-    }
-
-    private static List<BankCardModel> filterCards(
-            List<BankCardModel> source, String query, String digits) {
-        List<BankCardModel> out = new ArrayList<>();
-        for (BankCardModel item : source) {
-            // Non-secret fields only: card number matches on digits so "1234"
-            // finds "•••• •••• •••• 1234". CVV/PIN are never matched.
-            if (containsText(item.getBankName(), query)
-                    || containsText(item.getHolderName(), query)
-                    || containsText(item.getCardType(), query)
-                    || containsText(item.getCardNetwork(), query)
-                    || cardNumberContains(item, digits)) {
-                out.add(item);
-            }
-        }
-        return out;
-    }
-
-    private static List<SocialAccountModel> filterAccounts(List<SocialAccountModel> source, String query) {
-        List<SocialAccountModel> out = new ArrayList<>();
-        for (SocialAccountModel item : source) {
-            // Non-secret fields only: password/PIN stay out of the index.
-            if (containsText(item.getPlatform(), query)
-                    || containsText(item.getUsername(), query)) {
-                out.add(item);
-            }
-        }
-        return out;
-    }
-
-    private static boolean containsText(String value, String query) {
-        if (value == null) {
-            return false;
-        }
-        int len = value.length();
-        int start = 0;
-        int end = len;
-        while (start < end && value.charAt(start) <= ' ') start++;
-        while (end > start && value.charAt(end - 1) <= ' ') end--;
-        if (start >= end) {
-            return false;
-        }
-        // One allocation per row (lowercased trimmed slice) — no separate
-        // trim() copy plus lowercase copy.
-        String hay = end - start == len
-                ? value.toLowerCase(Locale.US)
-                : value.substring(start, end).toLowerCase(Locale.US);
-        return hay.contains(query);
-    }
-
-    private static boolean idFieldsContain(@NonNull GovernmentIDModel id, String query) {
-        // Read-only view: no LinkedHashMap copy per row per keystroke.
-        Map<String, String> fields = id.getFieldsRef();
-        for (String value : fields.values()) {
-            if (containsText(value, query)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    /** Card numbers are raw digits; match on digits only (CVV/PIN excluded). */
-    private static boolean cardNumberContains(@NonNull BankCardModel card, String digits) {
-        if (digits.isEmpty() || card.getCardNumber() == null) {
-            return false;
-        }
-        String numberDigits = NON_DIGITS.matcher(card.getCardNumber()).replaceAll("");
-        return !numberDigits.isEmpty() && numberDigits.contains(digits);
     }
 
     /** Extended FAB: round main button expanding the 3-option menu above it. */
@@ -760,6 +781,8 @@ public class DashboardActivity extends BaseVaultActivity {
         refreshIdsCarousel(allIds);
         refreshCardCarousel(allCards);
         refreshSocialAccounts(allAccounts);
+        // Masters changed -> index once so keystrokes scan pre-lowered data.
+        rebuildSearchIndex();
     }
 
     private void refreshDashboard() {
@@ -800,9 +823,12 @@ public class DashboardActivity extends BaseVaultActivity {
                 refreshCardCarousel(allCards);
                 refreshSocialAccounts(allAccounts);
 
+                // Masters changed -> re-index once; open search re-filters
+                // off fresh masters through the debounced background path.
+                rebuildSearchIndex();
                 // Editors close back here: re-filter open results off fresh masters.
                 if (searchShowing) {
-                    updateSearchResults();
+                    scheduleSearch();
                 }
             });
         });
