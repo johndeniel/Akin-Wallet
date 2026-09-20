@@ -5,13 +5,12 @@ import android.os.Bundle;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.biometric.BiometricPrompt;
 import androidx.core.content.ContextCompat;
 
+import com.akin.wallet.AkinWallet;
 import com.akin.wallet.R;
 import com.akin.wallet.security.AppLockManager;
-import com.akin.wallet.util.Ui;
 import com.google.android.material.materialswitch.MaterialSwitch;
 
 /**
@@ -20,7 +19,7 @@ import com.google.android.material.materialswitch.MaterialSwitch;
  * fingerprint check first, so a stored ON always means a working biometric.
  * Also hosts app-PIN change (current PIN is verified inside LockActivity).
  */
-public class SettingsActivity extends AppCompatActivity {
+public class SettingsActivity extends BaseVaultActivity {
 
     private MaterialSwitch biometricSwitch;
     private TextView biometricStatus;
@@ -32,14 +31,12 @@ public class SettingsActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_settings);
-        Ui.applySystemBars(this);
-
-        Ui.setupBackToolbar(this, R.id.toolbar);
+        applyChrome();
 
         // Version footer stamps the installed version.
         TextView settingsVersion = findViewById(R.id.settings_version);
         settingsVersion.setText(
-                getString(R.string.settings_version_format, Ui.versionName()));
+                getString(R.string.settings_version_format, AkinWallet.versionName()));
 
         biometricSwitch = findViewById(R.id.switch_biometric);
         biometricStatus = findViewById(R.id.biometric_status);
@@ -81,14 +78,6 @@ public class SettingsActivity extends AppCompatActivity {
         findViewById(R.id.row_about).setOnClickListener(v ->
                 startActivity(new Intent(this, PolicyActivity.class)
                         .putExtra(PolicyActivity.EXTRA_TYPE, PolicyActivity.TYPE_ABOUT)));
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        // The PIN-change screen stashes its confirmation and finishes; show
-        // it here where the user actually lands.
-        Ui.showPendingMessage(this);
     }
 
     @Override

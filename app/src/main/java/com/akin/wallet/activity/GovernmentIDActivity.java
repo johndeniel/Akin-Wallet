@@ -18,18 +18,14 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.PagerSnapHelper;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.akin.wallet.R;
 import com.akin.wallet.adapter.GovermentIdDesignAdapter;
-import com.akin.wallet.db.AppDatabaseHelper;
-import com.akin.wallet.db.VaultWarmCache;
 import com.akin.wallet.model.GovernmentIDModel;
 import com.akin.wallet.util.Ui;
-import com.google.android.material.snackbar.Snackbar;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -41,7 +37,7 @@ import java.util.Map;
  * content; dropdowns stay alert dialogs. Callers refresh in onResume;
  * RESULT_OK is set on save.
  */
-public class GovernmentIDActivity extends AppCompatActivity {
+public class GovernmentIDActivity extends BaseVaultActivity {
 
     public static final String EXTRA_ID = "extra_id";
 
@@ -54,10 +50,6 @@ public class GovernmentIDActivity extends AppCompatActivity {
         return new Intent(context, GovernmentIDActivity.class)
                 .putExtra(EXTRA_ID, item.getId());
     }
-
-    private AppDatabaseHelper dbHelper;
-    /** Owned dialogs: dismissed in onDestroy so rotation cannot leak windows. */
-    private androidx.appcompat.app.AlertDialog activeDialog;
 
     // Rotation state. Inputs are built programmatically (no view ids), so the
     // draft + selected type are saved explicitly; bindForm seeds from them.
@@ -74,11 +66,7 @@ public class GovernmentIDActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_government_id);
-        Ui.applySystemBars(this);
-
-        dbHelper = VaultWarmCache.get(this).helper();
-
-        Ui.setupBackToolbar(this, R.id.toolbar);
+        applyChrome();
 
         int id = getIntent().getIntExtra(EXTRA_ID, -1);
         if (savedInstanceState != null) {
@@ -90,7 +78,7 @@ public class GovernmentIDActivity extends AppCompatActivity {
         if (id == -1) {
             bindForm(null);
         } else {
-            GovernmentIDModel stored = dbHelper.getIdCardById(id);
+            GovernmentIDModel stored = db().getIdCardById(id);
             if (stored == null) {
                 finish();
                 return;
@@ -128,15 +116,6 @@ public class GovernmentIDActivity extends AppCompatActivity {
             }
         }
         return out;
-    }
-
-    @Override
-    protected void onDestroy() {
-        Ui.dismissOwnedDialog(activeDialog);
-        activeDialog = null;
-        // Shared helper lives with the process (VaultWarmCache); never close per-screen.
-        dbHelper = null;
-        super.onDestroy();
     }
 
     private void bindForm(@Nullable GovernmentIDModel existing) {
@@ -210,9 +189,7 @@ public class GovernmentIDActivity extends AppCompatActivity {
         // Swiping (or tapping) a page selects that type and rebuilds the form.
         GovermentIdDesignAdapter designAdapter = new GovermentIdDesignAdapter(pos -> {
             if (isEdit && !knownType[0]) {
-                Snackbar.make(findViewById(android.R.id.content),
-                        "ID type is fixed for entries from a newer version",
-                        Snackbar.LENGTH_SHORT).show();
+                showMessage("ID type is fixed for entries from a newer version");
                 return;
             }
             if (pos != selectedType[0]) {
@@ -318,14 +295,14 @@ public class GovernmentIDActivity extends AppCompatActivity {
                 GovernmentIDModel updated = new GovernmentIDModel(
                         existing.getId(), finalType, filtered,
                         existing.getCreatedAt(), 0);
-                dbHelper.updateIdCard(updated);
-                Ui.notifyOnReturn(R.string.msg_updated);
+                db().updateIdCard(updated);
+                app().notifyOnReturn(R.string.msg_updated);
             } else {
                 GovernmentIDModel newCard = new GovernmentIDModel(typeName, filtered);
-                dbHelper.insertIdCard(newCard);
-                Ui.notifyOnReturn(R.string.msg_id_saved);
+                db().insertIdCard(newCard);
+                app().notifyOnReturn(R.string.msg_id_saved);
             }
-            VaultWarmCache.get(GovernmentIDActivity.this).invalidate();
+            cache().invalidate();
             setResult(RESULT_OK);
             finish();
         });
@@ -337,20 +314,17 @@ public class GovernmentIDActivity extends AppCompatActivity {
         View btnDelete = findViewById(R.id.btn_delete);
         if (isEdit) {
             btnDelete.setVisibility(View.VISIBLE);
-            btnDelete.setOnClickListener(v -> {
-                Ui.dismissOwnedDialog(activeDialog);
-                activeDialog = Ui.confirmDelete(GovernmentIDActivity.this,
-                        "Delete ID",
-                        "Are you sure you want to delete this "
-                                + existing.getIdType() + "?",
-                        () -> {
-                            dbHelper.moveIdCardToTrash(existing.getId());
-                            VaultWarmCache.get(GovernmentIDActivity.this).invalidate();
-                            setResult(RESULT_OK);
-                            finish();
-                            Ui.notifyOnReturn(R.string.msg_deleted);
-                        });
-            });
+            btnDelete.setOnClickListener(v -> confirmDeleteToTrash(
+                    "Delete ID",
+                    "Are you sure you want to delete this "
+                            + existing.getIdType() + "?",
+                    () -> {
+                        db().moveIdCardToTrash(existing.getId());
+                        cache().invalidate();
+                        setResult(RESULT_OK);
+                        finish();
+                        app().notifyOnReturn(R.string.msg_deleted);
+                    }));
         }
 
 
@@ -598,8 +572,7 @@ public class GovernmentIDActivity extends AppCompatActivity {
 
         row.setOnClickListener(v -> {
             int checkedPosition = Ui.indexOfIgnoreCase(field.options, draft.get(field.key));
-            Ui.dismissOwnedDialog(activeDialog);
-            activeDialog = Ui.singleChoice(GovernmentIDActivity.this,
+            trackDialog(Ui.singleChoice(GovernmentIDActivity.this,
                     field.label, field.options, checkedPosition, selectedPosition -> {
                         String picked = field.options[selectedPosition];
                         draft.put(field.key, picked);
@@ -607,7 +580,7 @@ public class GovernmentIDActivity extends AppCompatActivity {
                         valueView.setAlpha(1f);
                         hideFieldError(dropdownValues, field.key);
                         onChanged.run();
-                    });
+                    }));
         });
 
         wrap.addView(row);
@@ -859,7 +832,7 @@ public class GovernmentIDActivity extends AppCompatActivity {
             value.requestFocus();
             return;
         }
-        Snackbar.make(findViewById(android.R.id.content), message, Snackbar.LENGTH_SHORT).show();
+        showMessage(message);
     }
 
     /** Clears a dropdown's setError once the user picks or clears a value. */

@@ -7,8 +7,7 @@ import android.view.ViewGroup;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
-import androidx.appcompat.app.AppCompatActivity;
-
+import com.akin.wallet.AkinWallet;
 import com.akin.wallet.R;
 import com.akin.wallet.util.Ui;
 import com.google.android.material.appbar.MaterialToolbar;
@@ -20,7 +19,7 @@ import com.google.android.material.appbar.MaterialToolbar;
  * section renders as an accent-blue heading over light body copy. The About
  * page stamps the installed version name at the end.
  */
-public class PolicyActivity extends AppCompatActivity {
+public class PolicyActivity extends BaseVaultActivity {
 
     public static final String EXTRA_TYPE = "extra_policy_type";
     public static final String TYPE_PRIVACY = "privacy";
@@ -35,9 +34,7 @@ public class PolicyActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_policy);
-        Ui.applySystemBars(this);
-
-        Ui.setupBackToolbar(this, R.id.toolbar);
+        applyChrome();
         MaterialToolbar toolbar = findViewById(R.id.toolbar);
 
         LinearLayout sections = findViewById(R.id.policy_sections);
@@ -54,7 +51,7 @@ public class PolicyActivity extends AppCompatActivity {
         } else if (TYPE_ABOUT.equals(type)) {
             toolbar.setTitle(R.string.settings_about);
             body = getString(R.string.policy_about_body)
-                    .replace("{version}", Ui.versionName());
+                    .replace("{version}", AkinWallet.versionName());
         } else {
             toolbar.setTitle(R.string.settings_privacy);
             body = getString(R.string.policy_privacy_body);

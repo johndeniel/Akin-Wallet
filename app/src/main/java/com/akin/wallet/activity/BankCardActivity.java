@@ -12,19 +12,16 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.PagerSnapHelper;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.akin.wallet.R;
 import com.akin.wallet.adapter.BankCardDesignAdapter;
-import com.akin.wallet.db.AppDatabaseHelper;
-import com.akin.wallet.db.VaultWarmCache;
 import com.akin.wallet.model.BankCardModel;
 import com.akin.wallet.util.Ui;
 
-public class BankCardActivity extends AppCompatActivity {
+public class BankCardActivity extends BaseVaultActivity {
 
     public static final String EXTRA_ID = "extra_id";
 
@@ -64,8 +61,6 @@ public class BankCardActivity extends AppCompatActivity {
     private static final String KEY_SELECTED_NETWORK = "selected_network";
     private static final String KEY_SELECTED_DESIGN = "selected_design";
 
-    private AppDatabaseHelper dbHelper;
-
     // Form state. Plain ints (not single-element arrays): bindForm runs once per
     // creation, and lambdas capture the activity, so no effectively-final hack.
     private boolean isEdit;
@@ -101,19 +96,12 @@ public class BankCardActivity extends AppCompatActivity {
     // inside afterTextChanged would recurse until a stack overflow.
     private boolean isFormattingNumber;
     private boolean isFormattingExpiry;
-    /** Owned dialogs: dismissed in onDestroy so rotation cannot leak windows. */
-    private androidx.appcompat.app.AlertDialog choiceDialog;
-    private androidx.appcompat.app.AlertDialog deleteDialog;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_bank_card);
-        Ui.applySystemBars(this);
-
-        dbHelper = VaultWarmCache.get(this).helper();
-
-        Ui.setupBackToolbar(this, R.id.toolbar);
+        applyChrome();
 
         if (savedInstanceState != null) {
             // Restore picker state before binding; invalid values fall back to 0.
@@ -146,17 +134,6 @@ public class BankCardActivity extends AppCompatActivity {
         outState.putInt(KEY_SELECTED_DESIGN, selectedDesign);
     }
 
-    @Override
-    protected void onDestroy() {
-        Ui.dismissOwnedDialog(choiceDialog);
-        choiceDialog = null;
-        Ui.dismissOwnedDialog(deleteDialog);
-        deleteDialog = null;
-        // Shared helper lives with the process (VaultWarmCache); never close per-screen.
-        dbHelper = null;
-        super.onDestroy();
-    }
-
     /**
      * Rebuilds the editing item from the vault by id. Returns null for add
      * mode (no id extra), which drives every isEdit branch downstream. A row
@@ -171,7 +148,7 @@ public class BankCardActivity extends AppCompatActivity {
         if (id == -1) {
             return null;
         }
-        BankCardModel item = dbHelper.getBankCardById(id);
+        BankCardModel item = db().getBankCardById(id);
         if (item == null) {
             finish();
             return null;
@@ -444,7 +421,7 @@ public class BankCardActivity extends AppCompatActivity {
             String pinDigits = extractDigits(inputPin.getText().toString());
 
             if (isEdit) {
-                dbHelper.updateBankCard(new BankCardModel(
+                db().updateBankCard(new BankCardModel(
                         editingItem.getId(),
                         CARD_TYPES[selectedType],
                         CARD_NETWORKS[selectedNetwork],
@@ -458,9 +435,9 @@ public class BankCardActivity extends AppCompatActivity {
                         // createdAt rides along untouched; updatedAt=0 tells the
                         // DB helper to stamp now().
                         editingItem.getCreatedAt(), 0));
-                Ui.notifyOnReturn(R.string.msg_updated);
+                app().notifyOnReturn(R.string.msg_updated);
             } else {
-                dbHelper.insertBankCard(new BankCardModel(
+                db().insertBankCard(new BankCardModel(
                         CARD_TYPES[selectedType],
                         CARD_NETWORKS[selectedNetwork],
                         inputBankName.getText().toString().trim(),
@@ -470,9 +447,9 @@ public class BankCardActivity extends AppCompatActivity {
                         cvvDigits,
                         pinDigits,
                         selectedDesign));
-                Ui.notifyOnReturn(R.string.msg_card_saved);
+                app().notifyOnReturn(R.string.msg_card_saved);
             }
-            VaultWarmCache.get(BankCardActivity.this).invalidate();
+            cache().invalidate();
             setResult(RESULT_OK);
             finish();
         });
@@ -484,19 +461,16 @@ public class BankCardActivity extends AppCompatActivity {
             return;
         }
         btnDelete.setVisibility(View.VISIBLE);
-        btnDelete.setOnClickListener(v -> {
-            Ui.dismissOwnedDialog(deleteDialog);
-            deleteDialog = Ui.confirmDelete(this,
-                    "Delete Card",
-                    "Are you sure you want to delete this card?",
-                    () -> {
-                        dbHelper.moveBankCardToTrash(editingItem.getId());
-                        VaultWarmCache.get(BankCardActivity.this).invalidate();
-                        setResult(RESULT_OK);
-                        finish();
-                        Ui.notifyOnReturn(R.string.msg_deleted);
-                    });
-        });
+        btnDelete.setOnClickListener(v -> confirmDeleteToTrash(
+                "Delete Card",
+                "Are you sure you want to delete this card?",
+                () -> {
+                    db().moveBankCardToTrash(editingItem.getId());
+                    cache().invalidate();
+                    setResult(RESULT_OK);
+                    finish();
+                    app().notifyOnReturn(R.string.msg_deleted);
+                }));
     }
 
     // ------------------------------------------------------------------
@@ -660,8 +634,7 @@ public class BankCardActivity extends AppCompatActivity {
     }
 
     private void showChoiceDialog(String title, String[] options, int checkedPosition, OnChoiceListener listener) {
-        Ui.dismissOwnedDialog(choiceDialog);
-        choiceDialog = Ui.singleChoice(this, title, options, checkedPosition, listener::onChoice);
+        trackDialog(Ui.singleChoice(this, title, options, checkedPosition, listener::onChoice));
     }
 
     /** Builds dots once; use updateDots() on scroll to avoid view churn. */

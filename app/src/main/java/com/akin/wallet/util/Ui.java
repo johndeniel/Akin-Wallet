@@ -13,17 +13,14 @@ import android.widget.EditText;
 import android.widget.LinearLayout;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.StringRes;
 import androidx.appcompat.app.AlertDialog;
 import androidx.core.content.ContextCompat;
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
 
-import com.akin.wallet.BuildConfig;
 import com.akin.wallet.R;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
-import com.google.android.material.snackbar.Snackbar;
 
 /**
  * Stateless UI helpers shared by the form activities. Each replaces 3+
@@ -73,47 +70,6 @@ public final class Ui {
             }
         }
         return -1;
-    }
-
-    // -- Return-screen messages (M3 Snackbar routing) --------------------
-    // Form confirms finish() immediately, which would kill a Snackbar shown
-    // there unseen. Stash the message instead; the return target shows it in
-    // onResume (dashboard for vault forms, settings for the PIN change).
-    private static int pendingMessage;
-
-    public static void notifyOnReturn(@StringRes int messageRes) {
-        pendingMessage = messageRes;
-    }
-
-    /** Takes the stashed message, if any (0 = none). */
-    public static int takePendingMessage() {
-        int message = pendingMessage;
-        pendingMessage = 0;
-        return message;
-    }
-
-    /**
-     * Shows the stashed return-screen message, if any. Forms finish()
-     * immediately, which would kill a Snackbar shown there unseen — the
-     * return target calls this in onResume instead.
-     */
-    public static void showPendingMessage(Activity activity) {
-        if (activity == null || activity.isFinishing()) {
-            takePendingMessage();
-            return;
-        }
-        int message = takePendingMessage();
-        if (message != 0) {
-            View content = activity.findViewById(android.R.id.content);
-            if (content != null) {
-                Snackbar.make(content, message, Snackbar.LENGTH_SHORT).show();
-            }
-        }
-    }
-
-    /** Installed version name for About/version footers. */
-    public static String versionName() {
-        return BuildConfig.VERSION_NAME;
     }
 
     // -- Shared chrome (one definition, every activity looks identical) ----

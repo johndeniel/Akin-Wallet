@@ -9,10 +9,7 @@ import android.view.animation.DecelerateInterpolator;
 import android.widget.TextView;
 
 import androidx.activity.OnBackPressedCallback;
-import androidx.activity.result.ActivityResultLauncher;
-import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.PagerSnapHelper;
 import androidx.recyclerview.widget.RecyclerView;
@@ -21,9 +18,6 @@ import com.akin.wallet.R;
 import com.akin.wallet.adapter.BankCardAdapter;
 import com.akin.wallet.adapter.GovermentIdAdapter;
 import com.akin.wallet.adapter.SocialAccountAdapter;
-import com.akin.wallet.db.AppDatabaseHelper;
-import com.akin.wallet.db.VaultWarmCache;
-import com.akin.wallet.security.AppLockManager;
 import com.akin.wallet.model.BankCardModel;
 import com.akin.wallet.model.SocialAccountModel;
 import com.akin.wallet.model.GovernmentIDModel;
@@ -43,9 +37,8 @@ import java.util.Map;
  * onResume. (Merged from DashboardFragment: one screen never needed the
  * fragment back stack.)
  */
-public class DashboardActivity extends AppCompatActivity {
+public class DashboardActivity extends BaseVaultActivity {
 
-    private AppDatabaseHelper dbHelper;
     private BankCardAdapter cardAdapter;
     private RecyclerView recyclerCarousel;
     private View emptyCards;
@@ -57,8 +50,6 @@ public class DashboardActivity extends AppCompatActivity {
     private RecyclerView recyclerSocialAccounts;
     private View emptySocialAccounts;
 
-    /** Drops stale loads (rotation / rapid resume) — only the latest binds. */
-    private int loadGeneration;
     /** One stateless 12dp gap shared by every carousel (never per-item state). */
     private RecyclerView.ItemDecoration sharedGap;
 
@@ -97,26 +88,12 @@ public class DashboardActivity extends AppCompatActivity {
     private View emptySearchResults;
     private TextView emptySearchTitle;
     private TextView emptySearchSub;
-    private long lastBackgroundAt;
-
-    /**
-     * Session re-lock: backing out of the verify screen means "do not enter",
-     * so the dashboard closes instead of sitting unlocked behind it.
-     */
-    private final ActivityResultLauncher<Intent> verifyLauncher = registerForActivityResult(
-            new ActivityResultContracts.StartActivityForResult(), result -> {
-                if (result.getResultCode() != RESULT_OK) {
-                    finish();
-                }
-            });
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_dashboard);
-        setupSystemBars();
-
-        dbHelper = VaultWarmCache.get(this).helper();
+        applyChrome();
         sharedGap = gapDecoration();
 
         setupHeader();
@@ -148,34 +125,6 @@ public class DashboardActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         refreshDashboard();
-        Ui.showPendingMessage(this);
-    }
-
-    @Override
-    protected void onStart() {
-        super.onStart();
-        // Vault re-lock: cold starts always land here locked, and returning
-        // after the app sat in the background past the grace period asks
-        // again. Quick trips (editors) stay unlocked.
-        if (dbHelper == null || !AppLockManager.isPinSet(this)) {
-            return;
-        }
-        boolean graceExpired = lastBackgroundAt > 0
-                && System.currentTimeMillis() - lastBackgroundAt
-                > AppLockManager.SESSION_GRACE_MS;
-        if (!AppLockManager.isSessionUnlocked() || graceExpired) {
-            // Drop row plaintext before the lock screen covers us; the
-            // post-auth preload repopulates before we are visible again.
-            VaultWarmCache.get(this).clearSensitiveOnLock();
-            verifyLauncher.launch(new Intent(this, LockActivity.class)
-                    .putExtra(LockActivity.EXTRA_MODE, LockActivity.MODE_VERIFY));
-        }
-    }
-
-    @Override
-    protected void onStop() {
-        lastBackgroundAt = System.currentTimeMillis();
-        super.onStop();
     }
 
     @Override
@@ -189,26 +138,7 @@ public class DashboardActivity extends AppCompatActivity {
     protected void onDestroy() {
         // Animators hold child views; cancel so a mid-entrance finish cannot leak them.
         cancelMenuEntrance();
-        // Vault I/O runs on the shared funnel (never shut down per-screen).
-        dbHelper = null;
         super.onDestroy();
-    }
-
-    @Override
-    public void onWindowFocusChanged(boolean hasFocus) {
-        super.onWindowFocusChanged(hasFocus);
-        if (hasFocus) {
-            setupSystemBars();
-        }
-    }
-
-    /**
-     * System bars stay visible (no immersive mode): the bottom navigation bar
-     * is shown, not hidden. Re-applied on focus in case the system hid it
-     * transiently (e.g. after a fullscreen intent returns).
-     */
-    private void setupSystemBars() {
-        Ui.applySystemBars(this);
     }
 
     /**
@@ -554,10 +484,7 @@ public class DashboardActivity extends AppCompatActivity {
     private void openSocialEditor(SocialAccountModel item) {
         // Recency bump rides the I/O thread; navigation never waits for it.
         final int id = item.getId();
-        final AppDatabaseHelper db = dbHelper;
-        if (db != null) {
-            VaultWarmCache.get(this).executeVaultIo(() -> db.touchSocialAccountUpdatedAt(id));
-        }
+        vaultIo(() -> db().touchSocialAccountUpdatedAt(id));
         startActivity(SocialAccountActivity.editIntent(this, item));
     }
 
@@ -582,10 +509,7 @@ public class DashboardActivity extends AppCompatActivity {
      */
     private void openIdEditor(GovernmentIDModel item) {
         final int id = item.getId();
-        final AppDatabaseHelper db = dbHelper;
-        if (db != null) {
-            VaultWarmCache.get(this).executeVaultIo(() -> db.touchIdCardUpdatedAt(id));
-        }
+        vaultIo(() -> db().touchIdCardUpdatedAt(id));
         startActivity(GovernmentIDActivity.editIntent(this, item));
     }
 
@@ -602,10 +526,7 @@ public class DashboardActivity extends AppCompatActivity {
      */
     private void openBankEditor(BankCardModel item) {
         final int id = item.getId();
-        final AppDatabaseHelper db = dbHelper;
-        if (db != null) {
-            VaultWarmCache.get(this).executeVaultIo(() -> db.touchBankCardUpdatedAt(id));
-        }
+        vaultIo(() -> db().touchBankCardUpdatedAt(id));
         startActivity(BankCardActivity.editIntent(this, item));
     }
 
@@ -774,7 +695,7 @@ public class DashboardActivity extends AppCompatActivity {
      * revalidates afterward.
      */
     private void bindCachedSnapshot() {
-        VaultWarmCache.Snapshot cached = VaultWarmCache.get(this).snapshot();
+        com.akin.wallet.db.VaultWarmCache.Snapshot cached = cache().snapshot();
         if (cached == null || !cached.hasActive()) {
             return;
         }
@@ -787,22 +708,17 @@ public class DashboardActivity extends AppCompatActivity {
     }
 
     private void refreshDashboard() {
-        final AppDatabaseHelper db = dbHelper;
-        if (db == null) {
-            return;
-        }
         // Vault reads ride the shared funnel (ordered with warm-up/preload);
         // only the latest generation binds, so rotation/rapid resume cannot
         // show stale rows or touch a dead activity.
-        final int generation = ++loadGeneration;
-        VaultWarmCache.get(this).executeVaultIo(() -> {
-            final List<GovernmentIDModel> ids = db.getAllIdCards();
-            final List<BankCardModel> cards = db.getAllBankCards();
-            final List<SocialAccountModel> accounts = db.getAllSocialAccounts();
-            VaultWarmCache.get(DashboardActivity.this)
-                    .publishActive(ids, cards, accounts);
+        final int generation = nextLoadGeneration();
+        vaultIo(() -> {
+            final List<GovernmentIDModel> ids = db().getAllIdCards();
+            final List<BankCardModel> cards = db().getAllBankCards();
+            final List<SocialAccountModel> accounts = db().getAllSocialAccounts();
+            cache().publishActive(ids, cards, accounts);
             runOnUiThread(() -> {
-                if (generation != loadGeneration || isFinishing()) {
+                if (!isCurrentGeneration(generation) || isFinishing()) {
                     return;
                 }
                 allIds = ids;

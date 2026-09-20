@@ -7,22 +7,16 @@ import android.view.View;
 
 import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
-import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.akin.wallet.R;
 import com.akin.wallet.adapter.TrashAdapter;
-import com.akin.wallet.db.AppDatabaseHelper;
-import com.akin.wallet.db.VaultWarmCache;
 import com.akin.wallet.model.BankCardModel;
 import com.akin.wallet.model.SocialAccountModel;
 import com.akin.wallet.model.GovernmentIDModel;
-import com.akin.wallet.util.Ui;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
-import com.google.android.material.snackbar.Snackbar;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -35,9 +29,8 @@ import java.util.List;
  * its selection; the toolbar turns contextual (count + select-all) and the
  * bottom bar restores or permanently deletes the selection in bulk.
  */
-public class TrashActivity extends AppCompatActivity {
+public class TrashActivity extends BaseVaultActivity {
 
-    private AppDatabaseHelper dbHelper;
     private MaterialToolbar toolbar;
     private RecyclerView recyclerTrash;
     private TrashAdapter trashAdapter;
@@ -45,12 +38,9 @@ public class TrashActivity extends AppCompatActivity {
     private View bottomActionBar;
     private MaterialButton btnBulkRestore;
     private MaterialButton btnBulkDelete;
-    private AlertDialog bulkDeleteDialog;
 
     private static final String KEY_SELECTION = "trash_selection";
 
-    /** Drops stale loads (rotation / rapid resume) — only the latest binds. */
-    private int loadGeneration;
     /** Selection restored once after the first post-rotation load. */
     private ArrayList<String> pendingSelection;
 
@@ -58,12 +48,9 @@ public class TrashActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_trash);
-        Ui.applySystemBars(this);
-
-        dbHelper = VaultWarmCache.get(this).helper();
+        applyChrome();
 
         toolbar = findViewById(R.id.toolbar);
-        toolbar.setNavigationOnClickListener(v -> onNavigationBack());
         // Select All lives in code, not a menu XML: single always-shown item,
         // hidden until a selection starts (see updateChrome).
         MenuItem selectAllItem = toolbar.getMenu().add(Menu.NONE, R.id.action_select_all,
@@ -146,18 +133,9 @@ public class TrashActivity extends AppCompatActivity {
         loadTrash();
     }
 
-    @Override
-    protected void onDestroy() {
-        Ui.dismissOwnedDialog(bulkDeleteDialog);
-        bulkDeleteDialog = null;
-        // Vault I/O runs on the shared funnel (never shut down per-screen).
-        // Shared helper lives with the process (VaultWarmCache); never close per-screen.
-        dbHelper = null;
-        super.onDestroy();
-    }
-
     /** Back/close: clears an active selection first, finishes otherwise. */
-    private void onNavigationBack() {
+    @Override
+    protected void onNavigateBack() {
         if (trashAdapter != null && trashAdapter.getSelectedCount() > 0) {
             trashAdapter.clearSelection();
         } else {
@@ -166,32 +144,27 @@ public class TrashActivity extends AppCompatActivity {
     }
 
     private void loadTrash() {
-        final AppDatabaseHelper db = dbHelper;
-        if (db == null) {
-            return;
-        }
-        final int generation = ++loadGeneration;
-        VaultWarmCache.get(this).executeVaultIo(() -> {
+        final int generation = nextLoadGeneration();
+        vaultIo(() -> {
             final List<GovernmentIDModel> ids;
             final List<BankCardModel> cards;
             final List<SocialAccountModel> accounts;
             try {
-                ids = db.getTrashedIdCards();
-                cards = db.getTrashedBankCards();
-                accounts = db.getTrashedSocialAccounts();
+                ids = db().getTrashedIdCards();
+                cards = db().getTrashedBankCards();
+                accounts = db().getTrashedSocialAccounts();
             } catch (RuntimeException e) {
                 runOnUiThread(() -> {
-                    if (generation != loadGeneration || isFinishing()) {
+                    if (!isCurrentGeneration(generation) || isFinishing()) {
                         return;
                     }
-                    Snackbar.make(findViewById(android.R.id.content),
-                            R.string.err_trash_load, Snackbar.LENGTH_SHORT).show();
+                    showError(R.string.err_trash_load);
                 });
                 return;
             }
-            VaultWarmCache.get(TrashActivity.this).publishTrash(ids, cards, accounts);
+            cache().publishTrash(ids, cards, accounts);
             runOnUiThread(() -> {
-                if (generation != loadGeneration || isFinishing()) {
+                if (!isCurrentGeneration(generation) || isFinishing()) {
                     return;
                 }
                 bindTrash(ids, cards, accounts);
@@ -205,7 +178,7 @@ public class TrashActivity extends AppCompatActivity {
      * {@link #loadTrash()} in {@code onResume} always revalidates afterward.
      */
     private void bindCachedSnapshot() {
-        VaultWarmCache.Snapshot cached = VaultWarmCache.get(this).snapshot();
+        com.akin.wallet.db.VaultWarmCache.Snapshot cached = cache().snapshot();
         if (cached == null || !cached.hasTrash() || trashAdapter == null) {
             return;
         }
@@ -278,8 +251,7 @@ public class TrashActivity extends AppCompatActivity {
     /** Restores every selected item to its vault, then reloads. */
     private void bulkRestore() {
         List<TrashAdapter.Entry> selected = trashAdapter.selectedEntries();
-        final AppDatabaseHelper db = dbHelper;
-        if (selected.isEmpty() || db == null) {
+        if (selected.isEmpty()) {
             return;
         }
         List<Integer> ids = new ArrayList<>();
@@ -287,19 +259,17 @@ public class TrashActivity extends AppCompatActivity {
         List<Integer> socials = new ArrayList<>();
         splitSelection(selected, ids, cards, socials);
         final int count = selected.size();
-        VaultWarmCache.get(this).executeVaultIo(() -> {
-            db.restoreIdCards(ids);
-            db.restoreBankCards(cards);
-            db.restoreSocialAccounts(socials);
-            VaultWarmCache.get(TrashActivity.this).invalidate();
+        vaultIo(() -> {
+            db().restoreIdCards(ids);
+            db().restoreBankCards(cards);
+            db().restoreSocialAccounts(socials);
+            cache().invalidate();
             runOnUiThread(() -> {
                 if (isFinishing()) {
                     return;
                 }
                 loadTrash();
-                Snackbar.make(findViewById(android.R.id.content),
-                        getString(R.string.trash_restored_count, count),
-                        Snackbar.LENGTH_SHORT).show();
+                showMessage(getString(R.string.trash_restored_count, count));
             });
         });
     }
@@ -322,8 +292,7 @@ public class TrashActivity extends AppCompatActivity {
     /** Confirms, then permanently deletes every selected item. */
     private void confirmBulkDelete() {
         List<TrashAdapter.Entry> selected = trashAdapter.selectedEntries();
-        final AppDatabaseHelper db = dbHelper;
-        if (selected.isEmpty() || db == null) {
+        if (selected.isEmpty()) {
             return;
         }
         // Snapshot: deletes mutate the backing rows while the adapter
@@ -333,22 +302,20 @@ public class TrashActivity extends AppCompatActivity {
         List<Integer> socials = new ArrayList<>();
         splitSelection(selected, ids, cards, socials);
         final int count = selected.size();
-        bulkDeleteDialog = Ui.confirmDelete(this,
+        confirmDeleteToTrash(
                 getString(R.string.trash_delete_forever),
                 getString(R.string.trash_delete_many, count),
-                () -> VaultWarmCache.get(this).executeVaultIo(() -> {
-                    db.deleteIdCards(ids);
-                    db.deleteBankCards(cards);
-                    db.deleteSocialAccounts(socials);
-                    VaultWarmCache.get(TrashActivity.this).invalidate();
+                () -> vaultIo(() -> {
+                    db().deleteIdCards(ids);
+                    db().deleteBankCards(cards);
+                    db().deleteSocialAccounts(socials);
+                    cache().invalidate();
                     runOnUiThread(() -> {
                         if (isFinishing()) {
                             return;
                         }
                         loadTrash();
-                        Snackbar.make(findViewById(android.R.id.content),
-                                getString(R.string.trash_deleted_count, count),
-                                Snackbar.LENGTH_SHORT).show();
+                        showMessage(getString(R.string.trash_deleted_count, count));
                     });
                 }));
     }

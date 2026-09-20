@@ -12,19 +12,15 @@ import android.widget.TextView;
 
 import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.akin.wallet.R;
 import com.akin.wallet.adapter.AssociatedAccountAdapter;
 import com.akin.wallet.adapter.SocialPlatformAdapter;
-import com.akin.wallet.db.AppDatabaseHelper;
-import com.akin.wallet.db.VaultWarmCache;
 import com.akin.wallet.model.SocialAccountModel;
 import com.akin.wallet.model.SocialPlatformModel;
 import com.akin.wallet.util.Ui;
-import com.google.android.material.snackbar.Snackbar;
 import com.google.android.material.search.SearchView;
 
 import java.util.ArrayList;
@@ -36,7 +32,7 @@ import java.util.List;
  * full-screen activities. Callers refresh in onResume; RESULT_OK is set on
  * successful save.
  */
-public class SocialAccountActivity extends AppCompatActivity {
+public class SocialAccountActivity extends BaseVaultActivity {
 
     public static final String EXTRA_ACCOUNT_ID = "extra_account_id";
 
@@ -54,7 +50,6 @@ public class SocialAccountActivity extends AppCompatActivity {
                 .putExtra(EXTRA_ACCOUNT_ID, (long) item.getId());
     }
 
-    private AppDatabaseHelper dbHelper;
     private int selectedIcon = SocialPlatformModel.iconFor(DEFAULT_PLATFORM_NAME);
     private String selectedName = DEFAULT_PLATFORM_NAME;
     private ImageView platformIcon;
@@ -92,18 +87,12 @@ public class SocialAccountActivity extends AppCompatActivity {
     private View emptyLinkResults;
     private String linkQuery = "";
     private boolean linkSearchOpen = false;
-    /** Owned delete dialog: dismissed in onDestroy so rotation cannot leak it. */
-    private androidx.appcompat.app.AlertDialog deleteDialog;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_social_account);
-        Ui.applySystemBars(this);
-
-        dbHelper = VaultWarmCache.get(this).helper();
-
-        Ui.setupBackToolbar(this, R.id.toolbar);
+        applyChrome();
 
         setupPlatformSearch(savedInstanceState);
 
@@ -113,7 +102,7 @@ public class SocialAccountActivity extends AppCompatActivity {
         } else {
             // Re-query by id: secrets never ride the Intent, and a row
             // deleted elsewhere opens nothing instead of a stale copy.
-            SocialAccountModel item = dbHelper.getSocialAccountById((int) id);
+            SocialAccountModel item = db().getSocialAccountById((int) id);
             if (item == null) {
                 finish();
                 return;
@@ -143,15 +132,6 @@ public class SocialAccountActivity extends AppCompatActivity {
             }
             outState.putIntArray(KEY_LINKED_IDS, ids);
         }
-    }
-
-    @Override
-    protected void onDestroy() {
-        Ui.dismissOwnedDialog(deleteDialog);
-        deleteDialog = null;
-        // Shared helper lives with the process (VaultWarmCache); never close per-screen.
-        dbHelper = null;
-        super.onDestroy();
     }
 
     /** Re-applies picker + link picks that views cannot restore themselves. */
@@ -197,7 +177,7 @@ public class SocialAccountActivity extends AppCompatActivity {
         recyclerPlatformSearch = findViewById(R.id.recycler_platform_search);
         emptyPlatformResults = findViewById(R.id.empty_platform_results);
 
-        platformAdapter = new SocialPlatformAdapter(VaultWarmCache.get(this).catalog(),
+        platformAdapter = new SocialPlatformAdapter(cache().catalog(),
                 (iconRes, name, url) -> {
                     selectedIcon = iconRes;
                     selectedName = name;
@@ -324,8 +304,7 @@ public class SocialAccountActivity extends AppCompatActivity {
         }
 
         if (available.isEmpty()) {
-            Snackbar.make(findViewById(android.R.id.content),
-                    "All accounts already linked", Snackbar.LENGTH_SHORT).show();
+            showMessage("All accounts already linked");
             return;
         }
 
@@ -410,7 +389,7 @@ public class SocialAccountActivity extends AppCompatActivity {
             }
 
             List<Integer> linkedIds = collectLinkedIds();
-            long newId = dbHelper.saveSocialAccountWithLinks(
+            long newId = db().saveSocialAccountWithLinks(
                     new SocialAccountModel(selectedName, username, password, pin,
                             selectedIcon, 0, 0),
                     linkedIds);
@@ -419,10 +398,10 @@ public class SocialAccountActivity extends AppCompatActivity {
                 return;
             }
 
-            VaultWarmCache.get(SocialAccountActivity.this).invalidate();
+            cache().invalidate();
             setResult(RESULT_OK);
             finish();
-            Ui.notifyOnReturn(R.string.msg_account_saved);
+            app().notifyOnReturn(R.string.msg_account_saved);
         });
 
     }
@@ -438,7 +417,7 @@ public class SocialAccountActivity extends AppCompatActivity {
         linkedCard = findViewById(R.id.linked_card);
 
         if (selfId != -1) {
-            List<Integer> linkedIds = dbHelper.getLinkedAccountIds(selfId);
+            List<Integer> linkedIds = db().getLinkedAccountIds(selfId);
             for (SocialAccountModel account : linkPool) {
                 for (int linkedId : linkedIds) {
                     if (account.getId() == linkedId) {
@@ -494,8 +473,7 @@ public class SocialAccountActivity extends AppCompatActivity {
     }
 
     private void showSaveFailed() {
-        Snackbar.make(findViewById(android.R.id.content),
-                R.string.err_save_failed, Snackbar.LENGTH_SHORT).show();
+        showError(R.string.err_save_failed);
     }
 
     private void bindEditForm(@NonNull SocialAccountModel item) {
@@ -538,7 +516,7 @@ public class SocialAccountActivity extends AppCompatActivity {
             // In-place update: same row id, so reverse links from other
             // accounts survive; the whole save is one transaction.
             List<Integer> linkedIds = collectLinkedIds();
-            long savedId = dbHelper.saveSocialAccountWithLinks(
+            long savedId = db().saveSocialAccountWithLinks(
                     new SocialAccountModel(item.getId(), selectedName, username, password, pin,
                             selectedIcon, item.getCreatedAt(), 0),
                     linkedIds);
@@ -547,10 +525,10 @@ public class SocialAccountActivity extends AppCompatActivity {
                 return;
             }
 
-            VaultWarmCache.get(SocialAccountActivity.this).invalidate();
+            cache().invalidate();
             setResult(RESULT_OK);
             finish();
-            Ui.notifyOnReturn(R.string.msg_updated);
+            app().notifyOnReturn(R.string.msg_updated);
         });
 
         // Delete in edit mode, same in-row outline-red pattern as the bank
@@ -558,20 +536,17 @@ public class SocialAccountActivity extends AppCompatActivity {
         // delete dialog.
         View btnDelete = findViewById(R.id.btn_delete);
         btnDelete.setVisibility(View.VISIBLE);
-        btnDelete.setOnClickListener(v -> {
-            Ui.dismissOwnedDialog(deleteDialog);
-            deleteDialog = Ui.confirmDelete(SocialAccountActivity.this,
-                    "Delete Account",
-                    "Are you sure you want to delete this "
-                            + item.getPlatform() + " account?",
-                    () -> {
-                        dbHelper.moveSocialAccountToTrash(item.getId());
-                        VaultWarmCache.get(SocialAccountActivity.this).invalidate();
-                        setResult(RESULT_OK);
-                        finish();
-                        Ui.notifyOnReturn(R.string.msg_deleted);
-                    });
-        });
+        btnDelete.setOnClickListener(v -> confirmDeleteToTrash(
+                "Delete Account",
+                "Are you sure you want to delete this "
+                        + item.getPlatform() + " account?",
+                () -> {
+                    db().moveSocialAccountToTrash(item.getId());
+                    cache().invalidate();
+                    setResult(RESULT_OK);
+                    finish();
+                    app().notifyOnReturn(R.string.msg_deleted);
+                }));
 
     }
 
@@ -581,10 +556,10 @@ public class SocialAccountActivity extends AppCompatActivity {
      * itself then only filters in memory — opening search never hits the DB.
      */
     private List<SocialAccountModel> cachedLinkPool() {
-        VaultWarmCache.Snapshot cached = VaultWarmCache.get(this).snapshot();
+        com.akin.wallet.db.VaultWarmCache.Snapshot cached = cache().snapshot();
         if (cached != null && cached.activeAccounts != null) {
             return new ArrayList<>(cached.activeAccounts);
         }
-        return dbHelper.getAllSocialAccounts();
+        return db().getAllSocialAccounts();
     }
 }

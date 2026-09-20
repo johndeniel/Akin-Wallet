@@ -13,8 +13,8 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.biometric.BiometricPrompt;
 import androidx.core.content.ContextCompat;
 
+import com.akin.wallet.AkinWallet;
 import com.akin.wallet.R;
-import com.akin.wallet.db.VaultWarmCache;
 import com.akin.wallet.security.AppLockManager;
 import com.akin.wallet.util.Ui;
 
@@ -118,11 +118,11 @@ public class LockActivity extends AppCompatActivity {
 
         // Vault warm-up (pre-auth half): connection + catalog only, never rows.
         // Runs while the keypad inflates so the post-auth preload below starts
-        // from an open connection. AkinApp already kicked this; redundant here
-        // is intentional for process-warm re-entry.
+        // from an open connection. AkinWallet.onCreate already kicked this;
+        // repeating here is intentional for process-warm re-entry and collapses
+        // inside the cache when already warmed.
         if (AppLockManager.isPinSet(this)) {
-            VaultWarmCache.get(this).warmConnectionAsync();
-            VaultWarmCache.get(this).warmCatalogAsync();
+            app().warmPreAuth();
         }
 
         if (savedInstanceState != null) {
@@ -431,10 +431,12 @@ public class LockActivity extends AppCompatActivity {
     }
 
     private void unlockSuccess() {
-        AppLockManager.setSessionUnlocked(true);
         cancelBiometric();
         if (MODE_CHANGE.equals(mode)) {
-            Ui.notifyOnReturn(R.string.lock_pin_updated);
+            // PIN change returns to Settings, not the vault lists: mark the
+            // session unlocked but skip the row preload.
+            AppLockManager.setSessionUnlocked(true);
+            app().notifyOnReturn(R.string.lock_pin_updated);
             setResult(RESULT_OK);
             finish();
         } else {
@@ -442,7 +444,7 @@ public class LockActivity extends AppCompatActivity {
             // Overlapped handoff — DashboardActivity binds from the snapshot
             // the moment it lands instead of querying from a cold open.
             // Skipped for MODE_CHANGE (returns to Settings, no vault lists).
-            VaultWarmCache.get(this).preloadPostAuthAsync();
+            app().onUnlocked();
             if (MODE_VERIFY.equals(mode)) {
                 setResult(RESULT_OK);
                 finish();
@@ -451,6 +453,10 @@ public class LockActivity extends AppCompatActivity {
                 finish();
             }
         }
+    }
+
+    private AkinWallet app() {
+        return (AkinWallet) getApplication();
     }
 
     // ------------------------------------------------------------------
