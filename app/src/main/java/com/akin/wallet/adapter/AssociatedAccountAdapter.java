@@ -54,7 +54,7 @@ public class AssociatedAccountAdapter extends RecyclerView.Adapter<AssociatedAcc
     @NonNull
     @Override
     public AccountViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_linked_account, parent, false);
+        View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_associated_account, parent, false);
         return new AccountViewHolder(view);
     }
 
@@ -203,10 +203,10 @@ public class AssociatedAccountAdapter extends RecyclerView.Adapter<AssociatedAcc
 
         AccountViewHolder(@NonNull View itemView) {
             super(itemView);
-            icon = itemView.findViewById(R.id.linked_icon);
-            name = itemView.findViewById(R.id.linked_name);
-            username = itemView.findViewById(R.id.linked_username);
-            action = itemView.findViewById(R.id.btn_action);
+            icon = itemView.findViewById(R.id.associated_account_icon);
+            name = itemView.findViewById(R.id.associated_account_name);
+            username = itemView.findViewById(R.id.associated_account_username);
+            action = itemView.findViewById(R.id.associated_account_action);
         }
     }
 }

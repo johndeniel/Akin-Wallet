@@ -23,7 +23,7 @@ import androidx.recyclerview.widget.PagerSnapHelper;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.akin.wallet.R;
-import com.akin.wallet.adapter.GovermentIdDesignAdapter;
+import com.akin.wallet.adapter.GovernmentIdDesignAdapter;
 import com.akin.wallet.model.GovernmentIDModel;
 import com.akin.wallet.util.Ui;
 
@@ -138,11 +138,11 @@ public class GovernmentIDActivity extends BaseVaultActivity {
         final boolean isEdit = existing != null;
 
 
-        LinearLayout formContainer = findViewById(R.id.form_container);
-        // Action row mirrors the bank card screen: btn_save is the outline
-        // container, text_save_label carries the Save/Update caption.
-        View btnSave = findViewById(R.id.btn_save);
-        TextView textSaveLabel = findViewById(R.id.text_save_label);
+        LinearLayout formContainer = findViewById(R.id.government_id_form_container);
+        // Action row mirrors the bank card screen: form_save_button is the outline
+        // container, form_save_label carries the Save/Update caption.
+        View btnSave = findViewById(R.id.form_save_button);
+        TextView textSaveLabel = findViewById(R.id.form_save_label);
 
         // Draft holds EVERY typed value (even for hidden types) so switching
         // ID type back and forth never loses input; save filters to active spec.
@@ -190,9 +190,9 @@ public class GovernmentIDActivity extends BaseVaultActivity {
             }
         }
 
-        final GovermentIdDesignAdapter[] adapterRef = new GovermentIdDesignAdapter[1];
+        final GovernmentIdDesignAdapter[] adapterRef = new GovernmentIdDesignAdapter[1];
         final RecyclerView[] carouselRef = new RecyclerView[1];
-        final LinearLayout dotsContainer = findViewById(R.id.dots_container);
+        final LinearLayout dotsContainer = findViewById(R.id.government_id_design_dots);
         dotsContainer.setVisibility(View.VISIBLE);
 
         Runnable refreshPreview = () -> {
@@ -203,7 +203,7 @@ public class GovernmentIDActivity extends BaseVaultActivity {
 
         // Bank-style picker: each carousel page IS an ID type's authentic face.
         // Swiping (or tapping) a page selects that type and rebuilds the form.
-        GovermentIdDesignAdapter designAdapter = new GovermentIdDesignAdapter(pos -> {
+        GovernmentIdDesignAdapter designAdapter = new GovernmentIdDesignAdapter(pos -> {
             if (isEdit && !knownType[0]) {
                 showMessage("ID type is fixed for entries from a newer version");
                 return;
@@ -217,7 +217,7 @@ public class GovernmentIDActivity extends BaseVaultActivity {
             }
         });
         adapterRef[0] = designAdapter;
-        RecyclerView recyclerDesign = findViewById(R.id.recycler_card_design);
+        RecyclerView recyclerDesign = findViewById(R.id.government_id_design_list);
         carouselRef[0] = recyclerDesign;
         LinearLayoutManager layoutManager =
                 new LinearLayoutManager(GovernmentIDActivity.this, LinearLayoutManager.HORIZONTAL, false);
@@ -339,7 +339,7 @@ public class GovernmentIDActivity extends BaseVaultActivity {
         // only — same placement and outline-red style as the bank card screen.
         // Soft-delete behind the scenes: the dialog reads as a normal delete
         // while the row moves to Trash (Settings). Copy and toasts stay ID-specific.
-        View btnDelete = findViewById(R.id.btn_delete);
+        View btnDelete = findViewById(R.id.form_delete_button);
         if (isEdit) {
             btnDelete.setVisibility(View.VISIBLE);
             btnDelete.setOnClickListener(v -> confirmDeleteToTrash(
@@ -886,7 +886,7 @@ public class GovernmentIDActivity extends BaseVaultActivity {
                                       Map<String, String> draft, Map<String, EditText> textInputs,
                                       Map<String, TextView> dropdownValues,
                                       Runnable refreshPreview, LinearLayout dotsContainer,
-                                      GovermentIdDesignAdapter designAdapter, int[] selectedType) {
+                                      GovernmentIdDesignAdapter designAdapter, int[] selectedType) {
         if (pos < 0 || pos >= GovernmentIDModel.getTypeNames().length) {
             return;
         }

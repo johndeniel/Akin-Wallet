@@ -18,7 +18,7 @@ import java.util.Map;
 /**
  * Single owner of Government ID face painting.
  *
- * <p>There is exactly ONE ID layout: {@code item_dashboard_id_card}. The
+ * <p>There is exactly ONE ID layout: {@code item_government_id_card}. The
  * dashboard carousel and the Government ID picker both inflate it and
  * render it here with identical metrics, so look and feel cannot drift
  * between the two screens.
@@ -50,22 +50,22 @@ public final class GovernmentIdFaceRenderer {
         public final float density;
 
         private FaceViews(@NonNull View root) {
-            cardRoot = root.findViewById(R.id.card_root);
-            eyebrow = root.findViewById(R.id.preview_eyebrow);
-            title = root.findViewById(R.id.preview_id_type);
-            subtitle = root.findViewById(R.id.preview_subtitle);
-            rule = root.findViewById(R.id.preview_rule);
-            holderLabel = root.findViewById(R.id.preview_holder_label);
-            holder = root.findViewById(R.id.preview_holder);
-            numberLabel = root.findViewById(R.id.preview_number_label);
-            number = root.findViewById(R.id.preview_number);
-            barcode = root.findViewById(R.id.preview_barcode);
-            dob = root.findViewById(R.id.preview_dob);
-            dobLabel = root.findViewById(R.id.preview_dob_label);
-            expiry = root.findViewById(R.id.preview_expiry);
-            expiryLabel = root.findViewById(R.id.preview_expiry_label);
-            photoBox = root.findViewById(R.id.preview_photo_box);
-            photoIcon = root.findViewById(R.id.preview_photo_icon);
+            cardRoot = root.findViewById(R.id.government_id_card_root);
+            eyebrow = root.findViewById(R.id.government_id_eyebrow);
+            title = root.findViewById(R.id.government_id_title);
+            subtitle = root.findViewById(R.id.government_id_subtitle);
+            rule = root.findViewById(R.id.government_id_rule);
+            holderLabel = root.findViewById(R.id.government_id_holder_label);
+            holder = root.findViewById(R.id.government_id_holder);
+            numberLabel = root.findViewById(R.id.government_id_number_label);
+            number = root.findViewById(R.id.government_id_number);
+            barcode = root.findViewById(R.id.government_id_barcode);
+            dob = root.findViewById(R.id.government_id_dob);
+            dobLabel = root.findViewById(R.id.government_id_dob_label);
+            expiry = root.findViewById(R.id.government_id_expiry);
+            expiryLabel = root.findViewById(R.id.government_id_expiry_label);
+            photoBox = root.findViewById(R.id.government_id_photo_box);
+            photoIcon = root.findViewById(R.id.government_id_photo_icon);
             res = root.getResources();
             density = res.getDisplayMetrics().density;
         }

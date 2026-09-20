@@ -16,7 +16,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.akin.wallet.R;
 import com.akin.wallet.adapter.BankCardAdapter;
-import com.akin.wallet.adapter.GovermentIdAdapter;
+import com.akin.wallet.adapter.GovernmentIdAdapter;
 import com.akin.wallet.adapter.SocialAccountAdapter;
 import com.akin.wallet.model.BankCardModel;
 import com.akin.wallet.model.SocialAccountModel;
@@ -42,7 +42,7 @@ public class DashboardActivity extends BaseVaultActivity {
     private BankCardAdapter cardAdapter;
     private RecyclerView recyclerCarousel;
     private View emptyCards;
-    private GovermentIdAdapter idAdapter;
+    private GovernmentIdAdapter idAdapter;
     private RecyclerView recyclerIdsCarousel;
     private View emptyIds;
     private SocialAccountAdapter socialAdapter;
@@ -76,7 +76,7 @@ public class DashboardActivity extends BaseVaultActivity {
     private BankCardAdapter searchCardAdapter;
     private RecyclerView recyclerSearchCards;
     private View searchHeaderCards;
-    private GovermentIdAdapter searchIdAdapter;
+    private GovernmentIdAdapter searchIdAdapter;
     private RecyclerView recyclerSearchIds;
     private View searchHeaderIds;
     private SocialAccountAdapter searchSocialAdapter;
@@ -160,11 +160,11 @@ public class DashboardActivity extends BaseVaultActivity {
      * (biometrics live there). Back closes search first.
      */
     private void setupHeader() {
-        headerIds = findViewById(R.id.header_ids);
-        headerCards = findViewById(R.id.header_cards);
-        headerSocial = findViewById(R.id.header_social);
+        headerIds = findViewById(R.id.dashboard_header_ids);
+        headerCards = findViewById(R.id.dashboard_header_cards);
+        headerSocial = findViewById(R.id.dashboard_header_social);
 
-        View btnSearch = findViewById(R.id.btn_header_search);
+        View btnSearch = findViewById(R.id.dashboard_header_search_button);
         if (btnSearch != null) {
             btnSearch.setOnClickListener(v -> {
                 if (searchView != null) {
@@ -172,7 +172,7 @@ public class DashboardActivity extends BaseVaultActivity {
                 }
             });
         }
-        View btnSettings = findViewById(R.id.btn_header_settings);
+        View btnSettings = findViewById(R.id.dashboard_header_settings_button);
         if (btnSettings != null) {
             btnSettings.setOnClickListener(
                     v -> startActivity(new Intent(this, SettingsActivity.class)));
@@ -198,7 +198,7 @@ public class DashboardActivity extends BaseVaultActivity {
      * stays whole. The FAB hides while results cover it.
      */
     private void setupSearch() {
-        searchView = findViewById(R.id.search_view);
+        searchView = findViewById(R.id.dashboard_search_view);
         if (searchView == null) {
             return;
         }
@@ -206,8 +206,8 @@ public class DashboardActivity extends BaseVaultActivity {
         RecyclerView.RecycledViewPool sharedPool = new RecyclerView.RecycledViewPool();
         sharedPool.setMaxRecycledViews(0, 8);
 
-        searchIdAdapter = new GovermentIdAdapter(this::openIdEditor);
-        recyclerSearchIds = findViewById(R.id.recycler_search_ids);
+        searchIdAdapter = new GovernmentIdAdapter(this::openIdEditor);
+        recyclerSearchIds = findViewById(R.id.dashboard_search_ids_list);
         recyclerSearchIds.setLayoutManager(
                 new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
         recyclerSearchIds.setAdapter(searchIdAdapter);
@@ -215,10 +215,10 @@ public class DashboardActivity extends BaseVaultActivity {
         recyclerSearchIds.setHasFixedSize(true);
         recyclerSearchIds.setItemViewCacheSize(4);
         recyclerSearchIds.setRecycledViewPool(sharedPool);
-        searchHeaderIds = findViewById(R.id.search_header_ids);
+        searchHeaderIds = findViewById(R.id.dashboard_search_header_ids);
 
         searchCardAdapter = new BankCardAdapter(this::openBankEditor);
-        recyclerSearchCards = findViewById(R.id.recycler_search_cards);
+        recyclerSearchCards = findViewById(R.id.dashboard_search_cards_list);
         recyclerSearchCards.setLayoutManager(
                 new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
         recyclerSearchCards.setAdapter(searchCardAdapter);
@@ -226,20 +226,20 @@ public class DashboardActivity extends BaseVaultActivity {
         recyclerSearchCards.setHasFixedSize(true);
         recyclerSearchCards.setItemViewCacheSize(4);
         recyclerSearchCards.setRecycledViewPool(sharedPool);
-        searchHeaderCards = findViewById(R.id.search_header_cards);
+        searchHeaderCards = findViewById(R.id.dashboard_search_header_cards);
 
         // Row taps open the account's edit screen, same as the dashboard list.
         searchSocialAdapter = new SocialAccountAdapter(this::openSocialEditor);
-        RecyclerView recyclerSearchSocial = findViewById(R.id.recycler_search_social);
+        RecyclerView recyclerSearchSocial = findViewById(R.id.dashboard_search_social_list);
         recyclerSearchSocial.setLayoutManager(new LinearLayoutManager(this));
         recyclerSearchSocial.setAdapter(searchSocialAdapter);
         recyclerSearchSocial.setHasFixedSize(true);
-        cardSearchSocial = findViewById(R.id.card_search_social);
-        searchHeaderSocial = findViewById(R.id.search_header_social);
+        cardSearchSocial = findViewById(R.id.dashboard_search_social_card);
+        searchHeaderSocial = findViewById(R.id.dashboard_search_header_social);
 
-        emptySearchResults = findViewById(R.id.empty_search_results);
-        emptySearchTitle = findViewById(R.id.empty_search_title);
-        emptySearchSub = findViewById(R.id.empty_search_sub);
+        emptySearchResults = findViewById(R.id.dashboard_search_empty_state);
+        emptySearchTitle = findViewById(R.id.dashboard_search_empty_title);
+        emptySearchSub = findViewById(R.id.dashboard_search_empty_subtitle);
 
         searchView.getEditText().addTextChangedListener(new Ui.SimpleTextWatcher() {
             @Override
@@ -439,9 +439,9 @@ public class DashboardActivity extends BaseVaultActivity {
 
     /** Extended FAB: round main button expanding the 3-option menu above it. */
     private void setupAddMenu() {
-        fabAdd = findViewById(R.id.fab_add);
-        fabAddMenu = findViewById(R.id.fab_add_menu);
-        fabScrim = findViewById(R.id.fab_scrim);
+        fabAdd = findViewById(R.id.dashboard_fab_add);
+        fabAddMenu = findViewById(R.id.dashboard_fab_menu);
+        fabScrim = findViewById(R.id.dashboard_fab_scrim);
         if (fabAdd == null) {
             return;
         }
@@ -453,9 +453,9 @@ public class DashboardActivity extends BaseVaultActivity {
                 }
             });
         }
-        setMenuOption(R.id.fab_option_id, this::openIdCreator);
-        setMenuOption(R.id.fab_option_card, this::openBankCreator);
-        setMenuOption(R.id.fab_option_account, this::openSocialCreator);
+        setMenuOption(R.id.dashboard_fab_option_id, this::openIdCreator);
+        setMenuOption(R.id.dashboard_fab_option_card, this::openBankCreator);
+        setMenuOption(R.id.dashboard_fab_option_account, this::openSocialCreator);
     }
 
     private void setMenuOption(int viewId, Runnable action) {
@@ -576,8 +576,8 @@ public class DashboardActivity extends BaseVaultActivity {
 
     /** Horizontal snap carousel rendering the user's real bank cards. */
     private void setupCardCarousel() {
-        recyclerCarousel = findViewById(R.id.recycler_cards_carousel);
-        emptyCards = findViewById(R.id.empty_cards);
+        recyclerCarousel = findViewById(R.id.dashboard_cards_carousel);
+        emptyCards = findViewById(R.id.dashboard_cards_empty_state);
 
         cardAdapter = new BankCardAdapter(this::openBankEditor);
         recyclerCarousel.setLayoutManager(
@@ -591,7 +591,7 @@ public class DashboardActivity extends BaseVaultActivity {
         if (emptyCards != null) {
             emptyCards.setOnClickListener(v -> openBankCreator());
         }
-        View btnEmptyCards = findViewById(R.id.btn_empty_cards);
+        View btnEmptyCards = findViewById(R.id.dashboard_cards_empty_action);
         if (btnEmptyCards != null) {
             btnEmptyCards.setOnClickListener(v -> openBankCreator());
         }
@@ -654,10 +654,10 @@ public class DashboardActivity extends BaseVaultActivity {
 
     /** Horizontal snap carousel rendering the user's real government IDs. */
     private void setupIdsCarousel() {
-        recyclerIdsCarousel = findViewById(R.id.recycler_ids_carousel);
-        emptyIds = findViewById(R.id.empty_ids);
+        recyclerIdsCarousel = findViewById(R.id.dashboard_ids_carousel);
+        emptyIds = findViewById(R.id.dashboard_ids_empty_state);
 
-        idAdapter = new GovermentIdAdapter(this::openIdEditor);
+        idAdapter = new GovernmentIdAdapter(this::openIdEditor);
         recyclerIdsCarousel.setLayoutManager(
                 new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
         recyclerIdsCarousel.setAdapter(idAdapter);
@@ -669,7 +669,7 @@ public class DashboardActivity extends BaseVaultActivity {
         if (emptyIds != null) {
             emptyIds.setOnClickListener(v -> openIdCreator());
         }
-        View btnEmptyIds = findViewById(R.id.btn_empty_ids);
+        View btnEmptyIds = findViewById(R.id.dashboard_ids_empty_action);
         if (btnEmptyIds != null) {
             btnEmptyIds.setOnClickListener(v -> openIdCreator());
         }
@@ -695,9 +695,9 @@ public class DashboardActivity extends BaseVaultActivity {
 
     /** Social Account — vertical list of created social accounts only. */
     private void setupSocialAccounts() {
-        cardSocialAccounts = findViewById(R.id.card_social_accounts);
-        recyclerSocialAccounts = findViewById(R.id.recycler_social_accounts);
-        emptySocialAccounts = findViewById(R.id.empty_social_accounts);
+        cardSocialAccounts = findViewById(R.id.dashboard_social_card);
+        recyclerSocialAccounts = findViewById(R.id.dashboard_social_list);
+        emptySocialAccounts = findViewById(R.id.dashboard_social_empty_state);
 
         // Row taps open the account's edit screen, same as the IDs and cards above.
         socialAdapter = new SocialAccountAdapter(this::openSocialEditor);
@@ -708,7 +708,7 @@ public class DashboardActivity extends BaseVaultActivity {
         if (emptySocialAccounts != null) {
             emptySocialAccounts.setOnClickListener(v -> openSocialCreator());
         }
-        View btnEmptySocial = findViewById(R.id.btn_empty_social);
+        View btnEmptySocial = findViewById(R.id.dashboard_social_empty_action);
         if (btnEmptySocial != null) {
             btnEmptySocial.setOnClickListener(v -> openSocialCreator());
         }

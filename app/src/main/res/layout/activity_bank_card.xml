@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:context=".activity.BankCardActivity"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/bg_dashboard_root"
@@ -19,13 +21,13 @@
         <!-- M3 small top app bar: 64dp, nav icon + title. Same insets as Settings
              so all headers match. -->
         <com.google.android.material.appbar.MaterialToolbar
-            android:id="@+id/toolbar"
+            android:id="@+id/bank_card_toolbar"
             style="@style/Widget.Akin.Toolbar"
             android:layout_width="match_parent"
             app:title="@string/dialog_bank_title" />
 
         <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/recycler_card_design"
+            android:id="@+id/bank_card_design_list"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="20dp"
@@ -34,7 +36,7 @@
             android:overScrollMode="never" />
 
         <LinearLayout
-            android:id="@+id/dots_container"
+            android:id="@+id/bank_card_design_dots"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center_horizontal"
@@ -63,7 +65,7 @@
                     android:textSize="13sp" />
 
                 <LinearLayout
-                    android:id="@+id/row_card_type"
+                    android:id="@+id/bank_card_type_row"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
@@ -76,7 +78,7 @@
                     android:focusable="true">
 
                     <TextView
-                        android:id="@+id/text_card_type"
+                        android:id="@+id/bank_card_type_value"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
@@ -110,7 +112,7 @@
                     android:textSize="13sp" />
 
                 <LinearLayout
-                    android:id="@+id/row_card_network"
+                    android:id="@+id/bank_card_network_row"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
@@ -123,7 +125,7 @@
                     android:focusable="true">
 
                     <TextView
-                        android:id="@+id/text_card_network"
+                        android:id="@+id/bank_card_network_value"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
@@ -153,7 +155,7 @@
             android:textSize="13sp" />
 
         <EditText
-            android:id="@+id/input_bank_name"
+            android:id="@+id/bank_card_input_bank_name"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
@@ -176,7 +178,7 @@
             android:textSize="13sp" />
 
         <EditText
-            android:id="@+id/input_holder_name"
+            android:id="@+id/bank_card_input_holder_name"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
@@ -211,7 +213,7 @@
                     android:textSize="13sp" />
 
                 <EditText
-                    android:id="@+id/input_card_number"
+                    android:id="@+id/bank_card_input_card_number"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
@@ -243,7 +245,7 @@
                     android:textSize="13sp" />
 
                 <EditText
-                    android:id="@+id/input_expiry"
+                    android:id="@+id/bank_card_input_expiry"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
@@ -293,7 +295,7 @@
                     android:paddingVertical="4dp">
 
                     <EditText
-                        android:id="@+id/input_cvv"
+                        android:id="@+id/bank_card_input_cvv"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
@@ -308,7 +310,7 @@
                         android:paddingVertical="10dp" />
 
                     <ImageView
-                        android:id="@+id/btn_toggle_cvv"
+                        android:id="@+id/bank_card_toggle_cvv_visibility"
                         android:layout_width="22dp"
                         android:layout_height="22dp"
                         android:src="@drawable/ic_eye"
@@ -345,7 +347,7 @@
                     android:paddingVertical="4dp">
 
                     <EditText
-                        android:id="@+id/input_pin"
+                        android:id="@+id/bank_card_input_pin"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
@@ -360,7 +362,7 @@
                         android:paddingVertical="10dp" />
 
                     <ImageView
-                        android:id="@+id/btn_toggle_pin"
+                        android:id="@+id/bank_card_toggle_pin_visibility"
                         android:layout_width="22dp"
                         android:layout_height="22dp"
                         android:src="@drawable/ic_eye"
@@ -374,7 +376,7 @@
 
         </LinearLayout>
 
-        <include layout="@layout/form_action_row" />
+        <include layout="@layout/partial_form_action_row" />
 
     </LinearLayout>
 

@@ -50,7 +50,7 @@ public class TrashActivity extends BaseVaultActivity {
         setContentView(R.layout.activity_trash);
         applyChrome();
 
-        toolbar = findViewById(R.id.toolbar);
+        toolbar = findViewById(R.id.trash_toolbar);
         // Select All lives in code, not a menu XML: single always-shown item,
         // hidden until a selection starts (see updateChrome).
         MenuItem selectAllItem = toolbar.getMenu().add(Menu.NONE, R.id.action_select_all,
@@ -65,7 +65,7 @@ public class TrashActivity extends BaseVaultActivity {
             return false;
         });
 
-        recyclerTrash = findViewById(R.id.recycler_trash);
+        recyclerTrash = findViewById(R.id.trash_list);
         recyclerTrash.setLayoutManager(createGridLayoutManager());
         trashAdapter = new TrashAdapter();
         trashAdapter.setOnSelectionChangedListener(this::updateChrome);
@@ -73,10 +73,10 @@ public class TrashActivity extends BaseVaultActivity {
         recyclerTrash.setHasFixedSize(true);
         recyclerTrash.setItemViewCacheSize(6);
 
-        emptyTrash = findViewById(R.id.empty_trash);
-        bottomActionBar = findViewById(R.id.action_bar);
-        btnBulkRestore = findViewById(R.id.btn_bulk_restore);
-        btnBulkDelete = findViewById(R.id.btn_bulk_delete);
+        emptyTrash = findViewById(R.id.trash_empty_state);
+        bottomActionBar = findViewById(R.id.trash_bulk_action_bar);
+        btnBulkRestore = findViewById(R.id.trash_bulk_restore_button);
+        btnBulkDelete = findViewById(R.id.trash_bulk_delete_button);
         btnBulkRestore.setOnClickListener(v -> bulkRestore());
         btnBulkDelete.setOnClickListener(v -> confirmBulkDelete());
 

@@ -71,7 +71,7 @@ public class SocialAccountAdapter extends RecyclerView.Adapter<SocialAccountAdap
     @Override
     public AccountViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         View view = LayoutInflater.from(parent.getContext())
-                .inflate(R.layout.item_dashboard_social_account, parent, false);
+                .inflate(R.layout.item_social_account, parent, false);
         return new AccountViewHolder(view);
     }
 
@@ -107,10 +107,10 @@ public class SocialAccountAdapter extends RecyclerView.Adapter<SocialAccountAdap
 
         AccountViewHolder(@NonNull View itemView) {
             super(itemView);
-            icon = itemView.findViewById(R.id.social_icon);
-            title = itemView.findViewById(R.id.social_title);
-            sub = itemView.findViewById(R.id.social_sub);
-            divider = itemView.findViewById(R.id.social_divider);
+            icon = itemView.findViewById(R.id.social_account_icon);
+            title = itemView.findViewById(R.id.social_account_title);
+            sub = itemView.findViewById(R.id.social_account_subtitle);
+            divider = itemView.findViewById(R.id.social_account_divider);
         }
     }
 }

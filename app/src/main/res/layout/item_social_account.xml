@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Dashboard Social Account row: M3 list item (rounded icon well + title/
+<!-- Social Account row (item_social_account): M3 list item (rounded icon well + title/
      supporting text + trailing chevron) with M3 ripple and divider.
      Hairline divider below every row except the last (toggled by adapter). -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
@@ -23,7 +23,7 @@
         android:paddingBottom="10dp">
 
         <com.google.android.material.imageview.ShapeableImageView
-            android:id="@+id/social_icon"
+            android:id="@+id/social_account_icon"
             android:layout_width="42dp"
             android:layout_height="42dp"
             android:background="@color/white"
@@ -41,7 +41,7 @@
             android:orientation="vertical">
 
         <TextView
-            android:id="@+id/social_title"
+            android:id="@+id/social_account_title"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:ellipsize="end"
@@ -51,7 +51,7 @@
             tools:text="Platform" />
 
             <TextView
-                android:id="@+id/social_sub"
+                android:id="@+id/social_account_subtitle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="2dp"
@@ -75,7 +75,7 @@
     </LinearLayout>
 
     <com.google.android.material.divider.MaterialDivider
-        android:id="@+id/social_divider"
+        android:id="@+id/social_account_divider"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         app:dividerColor="@color/dashboard_surface_border"

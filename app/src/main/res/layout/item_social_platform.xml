@@ -9,7 +9,7 @@
     android:background="?attr/selectableItemBackground">
 
     <ImageView
-        android:id="@+id/platform_icon"
+        android:id="@+id/social_platform_icon"
         android:layout_width="40dp"
         android:layout_height="40dp"
         android:adjustViewBounds="true"
@@ -19,7 +19,7 @@
         android:contentDescription="@null" />
 
     <TextView
-        android:id="@+id/platform_name"
+        android:id="@+id/social_platform_name"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight="1"
@@ -28,7 +28,7 @@
         android:textSize="16sp" />
 
     <TextView
-        android:id="@+id/platform_url"
+        android:id="@+id/social_platform_url"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:textColor="@color/text_secondary"

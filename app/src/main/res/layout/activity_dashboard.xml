@@ -40,7 +40,7 @@
             android:paddingBottom="4dp">
 
             <com.google.android.material.appbar.MaterialToolbar
-                android:id="@+id/toolbar_dashboard"
+                android:id="@+id/dashboard_toolbar"
                 style="@style/Widget.Akin.Toolbar"
                 android:layout_width="0dp"
                 android:layout_weight="1"
@@ -50,7 +50,7 @@
                 app:title="@string/app_name" />
 
             <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_header_search"
+                android:id="@+id/dashboard_header_search_button"
                 style="@style/Widget.Material3.Button.IconButton.Filled.Tonal"
                 android:layout_width="40dp"
                 android:layout_height="40dp"
@@ -71,7 +71,7 @@
                 app:strokeWidth="1dp" />
 
             <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_header_settings"
+                android:id="@+id/dashboard_header_settings_button"
                 style="@style/Widget.Material3.Button.IconButton.Filled.Tonal"
                 android:layout_width="40dp"
                 android:layout_height="40dp"
@@ -95,7 +95,7 @@
 
         <!-- Government ID section header (no tab: View All removed) -->
         <LinearLayout
-            android:id="@+id/header_ids"
+            android:id="@+id/dashboard_header_ids"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="2dp"
@@ -112,7 +112,7 @@
 
         <!-- Government ID carousel (live: renders IDs created in Government ID) -->
         <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/recycler_ids_carousel"
+            android:id="@+id/dashboard_ids_carousel"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
@@ -123,7 +123,7 @@
         <!-- Empty state: M3 filled card with title + supporting text + tonal
              action (whole card also opens the creator, keeping old behavior). -->
         <com.google.android.material.card.MaterialCardView
-            android:id="@+id/empty_ids"
+            android:id="@+id/dashboard_ids_empty_state"
             style="@style/Widget.Akin.DashboardCard"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -159,7 +159,7 @@
                     android:textAppearance="@style/TextAppearance.Akin.BodyMuted" />
 
                 <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btn_empty_ids"
+                    android:id="@+id/dashboard_ids_empty_action"
                     style="@style/Widget.Material3.Button.TonalButton"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -177,7 +177,7 @@
 
         <!-- Bank Card section header (no tab: View All removed) -->
         <LinearLayout
-            android:id="@+id/header_cards"
+            android:id="@+id/dashboard_header_cards"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="28dp"
@@ -194,7 +194,7 @@
 
         <!-- Bank card carousel (live: renders cards created in Bank Card) -->
         <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/recycler_cards_carousel"
+            android:id="@+id/dashboard_cards_carousel"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
@@ -204,7 +204,7 @@
 
         <!-- Empty state: M3 filled card with title + supporting text + tonal action. -->
         <com.google.android.material.card.MaterialCardView
-            android:id="@+id/empty_cards"
+            android:id="@+id/dashboard_cards_empty_state"
             style="@style/Widget.Akin.DashboardCard"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -240,7 +240,7 @@
                     android:textAppearance="@style/TextAppearance.Akin.BodyMuted" />
 
                 <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btn_empty_cards"
+                    android:id="@+id/dashboard_cards_empty_action"
                     style="@style/Widget.Material3.Button.TonalButton"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -258,7 +258,7 @@
 
         <!-- Social Account section header (rows open the editor directly) -->
         <LinearLayout
-            android:id="@+id/header_social"
+            android:id="@+id/dashboard_header_social"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="28dp"
@@ -275,7 +275,7 @@
 
         <!-- Social Account M3 card: filled vault surface hosting the account rows. -->
         <com.google.android.material.card.MaterialCardView
-            android:id="@+id/card_social_accounts"
+            android:id="@+id/dashboard_social_card"
             style="@style/Widget.Akin.DashboardCard"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -286,7 +286,7 @@
             android:paddingBottom="4dp">
 
             <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/recycler_social_accounts"
+                android:id="@+id/dashboard_social_list"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:clipToPadding="false"
@@ -297,7 +297,7 @@
         <!-- Empty state: M3 filled card, weight 1 stretches it to fill the rest
              of the screen. Tonal action + whole-card tap both open the creator. -->
         <com.google.android.material.card.MaterialCardView
-            android:id="@+id/empty_social_accounts"
+            android:id="@+id/dashboard_social_empty_state"
             style="@style/Widget.Akin.DashboardCard"
             android:layout_width="match_parent"
             android:layout_height="0dp"
@@ -334,7 +334,7 @@
                     android:textAppearance="@style/TextAppearance.Akin.BodyMuted" />
 
                 <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btn_empty_social"
+                    android:id="@+id/dashboard_social_empty_action"
                     style="@style/Widget.Material3.Button.TonalButton"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -354,7 +354,7 @@
 
     <!-- Scrim: dims content while the quick-add menu is open; tap closes the menu -->
     <View
-        android:id="@+id/fab_scrim"
+        android:id="@+id/dashboard_fab_scrim"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:background="@color/text_shadow"
@@ -365,7 +365,7 @@
     <!-- M3 FAB menu: tonal pills (theme container, light label, blue icon),
          equal widths, trailing-edge aligned, 4dp FAB-to-menu gap. -->
     <LinearLayout
-        android:id="@+id/fab_add_menu"
+        android:id="@+id/dashboard_fab_menu"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|end"
@@ -375,7 +375,7 @@
         android:visibility="gone">
 
         <com.google.android.material.button.MaterialButton
-            android:id="@+id/fab_option_id"
+            android:id="@+id/dashboard_fab_option_id"
             style="@style/Widget.Material3.Button.TonalButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -388,7 +388,7 @@
             app:strokeWidth="1dp" />
 
         <com.google.android.material.button.MaterialButton
-            android:id="@+id/fab_option_card"
+            android:id="@+id/dashboard_fab_option_card"
             style="@style/Widget.Material3.Button.TonalButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -401,7 +401,7 @@
             app:strokeWidth="1dp" />
 
         <com.google.android.material.button.MaterialButton
-            android:id="@+id/fab_option_account"
+            android:id="@+id/dashboard_fab_option_account"
             style="@style/Widget.Material3.Button.TonalButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -418,7 +418,7 @@
          ignored by FAB), no compat padding so the 56dp visual sits exactly
          on the 16dp margins and clears the menu above it. -->
     <com.google.android.material.floatingactionbutton.FloatingActionButton
-        android:id="@+id/fab_add"
+        android:id="@+id/dashboard_fab_add"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|end"
@@ -439,7 +439,7 @@
          (not scrollable) with paddings/margins mirroring the dashboard
          content above so both screens line up exactly. -->
     <com.google.android.material.search.SearchView
-        android:id="@+id/search_view"
+        android:id="@+id/dashboard_search_view"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:theme="@style/ThemeOverlay.Material3.Dark"
@@ -455,7 +455,7 @@
                 android:paddingBottom="16dp">
 
                 <LinearLayout
-                    android:id="@+id/search_header_ids"
+                    android:id="@+id/dashboard_search_header_ids"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
@@ -472,7 +472,7 @@
                 </LinearLayout>
 
                 <androidx.recyclerview.widget.RecyclerView
-                    android:id="@+id/recycler_search_ids"
+                    android:id="@+id/dashboard_search_ids_list"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
@@ -482,7 +482,7 @@
                     android:visibility="gone" />
 
                 <LinearLayout
-                    android:id="@+id/search_header_cards"
+                    android:id="@+id/dashboard_search_header_cards"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="28dp"
@@ -499,7 +499,7 @@
                 </LinearLayout>
 
                 <androidx.recyclerview.widget.RecyclerView
-                    android:id="@+id/recycler_search_cards"
+                    android:id="@+id/dashboard_search_cards_list"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
@@ -509,7 +509,7 @@
                     android:visibility="gone" />
 
                 <LinearLayout
-                    android:id="@+id/search_header_social"
+                    android:id="@+id/dashboard_search_header_social"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="28dp"
@@ -526,7 +526,7 @@
                 </LinearLayout>
 
                 <com.google.android.material.card.MaterialCardView
-                    android:id="@+id/card_search_social"
+                    android:id="@+id/dashboard_search_social_card"
                     style="@style/Widget.Akin.DashboardCard"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -538,7 +538,7 @@
                     android:visibility="gone">
 
                     <androidx.recyclerview.widget.RecyclerView
-                        android:id="@+id/recycler_search_social"
+                        android:id="@+id/dashboard_search_social_list"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:clipToPadding="false"
@@ -547,7 +547,7 @@
                 </com.google.android.material.card.MaterialCardView>
 
                 <com.google.android.material.card.MaterialCardView
-                    android:id="@+id/empty_search_results"
+                    android:id="@+id/dashboard_search_empty_state"
                     style="@style/Widget.Akin.DashboardCard"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -565,7 +565,7 @@
                         android:paddingBottom="20dp">
 
                         <TextView
-                            android:id="@+id/empty_search_title"
+                            android:id="@+id/dashboard_search_empty_title"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:gravity="center"
@@ -573,7 +573,7 @@
                             android:textAppearance="@style/TextAppearance.Akin.CardTitle" />
 
                         <TextView
-                            android:id="@+id/empty_search_sub"
+                            android:id="@+id/dashboard_search_empty_subtitle"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="4dp"

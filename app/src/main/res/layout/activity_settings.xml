@@ -4,13 +4,15 @@
      (Widget.Akin.DashboardCard) with ShapeableImageView icon wells,
      MaterialDivider hairlines and M3 text appearances for section
      labels, row titles and supporting text.
-     Ripple matches item_dashboard_social_account: each row is a
+     Ripple matches item_social_account: each row is a
      full-bleed vertical container (clickable + foreground ripple,
      no padding) holding a padded content row; its divider lives
      INSIDE the ripple container with 12dp/8dp insets.
      ============================================================ -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:context=".activity.SettingsActivity"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/bg_dashboard_root"
@@ -23,7 +25,7 @@
          margin pulls the 48dp nav target to the padding edge; insets are
          zeroed so the title sits a fixed 12dp past the arrow. -->
     <com.google.android.material.appbar.MaterialToolbar
-        android:id="@+id/toolbar"
+        android:id="@+id/settings_toolbar"
         style="@style/Widget.Akin.Toolbar"
         android:layout_width="match_parent"
         app:title="@string/settings_title" />
@@ -86,7 +88,7 @@
                             android:textAppearance="@style/TextAppearance.Akin.CardTitle" />
 
                         <TextView
-                            android:id="@+id/biometric_status"
+                            android:id="@+id/settings_biometric_status"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="2dp"
@@ -96,7 +98,7 @@
                     </LinearLayout>
 
                     <com.google.android.material.materialswitch.MaterialSwitch
-                        android:id="@+id/switch_biometric"
+                        android:id="@+id/settings_biometric_switch"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="8dp"
@@ -116,7 +118,7 @@
 
             <!-- Change app PIN. -->
             <LinearLayout
-                android:id="@+id/row_change_pin"
+                android:id="@+id/settings_row_change_pin"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:clickable="true"
@@ -202,7 +204,7 @@
             android:orientation="vertical">
 
             <LinearLayout
-                android:id="@+id/row_trash"
+                android:id="@+id/settings_row_trash"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:clickable="true"
@@ -281,7 +283,7 @@
             android:orientation="vertical">
 
             <LinearLayout
-                android:id="@+id/row_privacy"
+                android:id="@+id/settings_row_privacy"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:clickable="true"
@@ -344,7 +346,7 @@
             </LinearLayout>
 
             <LinearLayout
-                android:id="@+id/row_terms"
+                android:id="@+id/settings_row_terms"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:clickable="true"
@@ -407,7 +409,7 @@
             </LinearLayout>
 
             <LinearLayout
-                android:id="@+id/row_about"
+                android:id="@+id/settings_row_about"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:clickable="true"

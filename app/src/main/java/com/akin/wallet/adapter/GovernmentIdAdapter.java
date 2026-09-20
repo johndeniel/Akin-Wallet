@@ -17,12 +17,12 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Goverment ID carousel — the user's real IDs through the shared
+ * Government ID carousel — the user's real IDs through the shared
  * {@link GovernmentIdFaceRenderer} face (compact mode for the 0.68-width page). Pages
  * are sized exactly like the Bank Card carousel. Tapping a card opens its
  * editor.
  */
-public class GovermentIdAdapter extends RecyclerView.Adapter<GovermentIdAdapter.IdCardViewHolder> {
+public class GovernmentIdAdapter extends RecyclerView.Adapter<GovernmentIdAdapter.IdCardViewHolder> {
 
     public interface OnIdClickListener {
         void onIdClick(GovernmentIDModel item);
@@ -31,7 +31,7 @@ public class GovermentIdAdapter extends RecyclerView.Adapter<GovermentIdAdapter.
     private final List<GovernmentIDModel> idCards = new ArrayList<>();
     private final OnIdClickListener listener;
 
-    public GovermentIdAdapter(OnIdClickListener listener) {
+    public GovernmentIdAdapter(OnIdClickListener listener) {
         this.listener = listener;
     }
 
@@ -68,7 +68,7 @@ public class GovermentIdAdapter extends RecyclerView.Adapter<GovermentIdAdapter.
     @Override
     public IdCardViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         View view = LayoutInflater.from(parent.getContext())
-                .inflate(R.layout.item_dashboard_id_card, parent, false);
+                .inflate(R.layout.item_government_id_card, parent, false);
         // Same page size as the bank-card carousel.
         ViewGroup.LayoutParams lp = view.getLayoutParams();
         int parentWidth = parent.getMeasuredWidth();

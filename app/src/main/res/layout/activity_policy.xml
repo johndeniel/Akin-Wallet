@@ -4,6 +4,8 @@
      by PolicyActivity from the bundled string. -->
 <androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:context=".activity.PolicyActivity"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/bg_dashboard_root"
@@ -22,7 +24,7 @@
         <!-- M3 small top app bar: 64dp, nav icon + two-line headline. Title is
              set per type by PolicyActivity; same insets as Settings. -->
         <com.google.android.material.appbar.MaterialToolbar
-            android:id="@+id/toolbar"
+            android:id="@+id/policy_toolbar"
             style="@style/Widget.Akin.Toolbar"
             android:layout_width="match_parent"
             app:title="@string/settings_privacy" />

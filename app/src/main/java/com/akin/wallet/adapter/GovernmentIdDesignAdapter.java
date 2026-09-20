@@ -16,12 +16,12 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Goverment ID type picker for the Goverment ID screen — each page is an ID
+ * Government ID type picker for the Government ID screen — each page is an ID
  * type rendered with the single shared dashboard item and face metrics,
  * driven by the shared draft. Same 0.68-page width, 12dp gap and snap as
  * the dashboard. Swiping pages selects the type; typing updates live.
  */
-public class GovermentIdDesignAdapter extends RecyclerView.Adapter<GovermentIdDesignAdapter.FaceViewHolder> {
+public class GovernmentIdDesignAdapter extends RecyclerView.Adapter<GovernmentIdDesignAdapter.FaceViewHolder> {
 
     public interface OnTypePageListener {
         void onTypePageSelected(int typeIndex);
@@ -31,7 +31,7 @@ public class GovermentIdDesignAdapter extends RecyclerView.Adapter<GovermentIdDe
     private final OnTypePageListener listener;
     private Map<String, String> draftFields = new LinkedHashMap<>();
 
-    public GovermentIdDesignAdapter(OnTypePageListener listener) {
+    public GovernmentIdDesignAdapter(OnTypePageListener listener) {
         this.listener = listener;
     }
 
@@ -66,7 +66,7 @@ public class GovermentIdDesignAdapter extends RecyclerView.Adapter<GovermentIdDe
         // Single shared face: same XML + same 0.68 page-width ratio as the
         // dashboard carousel so the form picker looks identical to Home.
         View view = LayoutInflater.from(parent.getContext())
-                .inflate(R.layout.item_dashboard_id_card, parent, false);
+                .inflate(R.layout.item_government_id_card, parent, false);
         ViewGroup.LayoutParams lp = view.getLayoutParams();
         int parentWidth = parent.getMeasuredWidth();
         if (parentWidth <= 0) {

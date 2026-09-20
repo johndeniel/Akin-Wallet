@@ -44,7 +44,7 @@ public class SocialPlatformAdapter extends RecyclerView.Adapter<SocialPlatformAd
     @NonNull
     @Override
     public PlatformViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_platform_option, parent, false);
+        View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_social_platform, parent, false);
         return new PlatformViewHolder(view);
     }
 
@@ -148,9 +148,9 @@ public class SocialPlatformAdapter extends RecyclerView.Adapter<SocialPlatformAd
 
         PlatformViewHolder(@NonNull View itemView) {
             super(itemView);
-            icon = itemView.findViewById(R.id.platform_icon);
-            name = itemView.findViewById(R.id.platform_name);
-            url = itemView.findViewById(R.id.platform_url);
+            icon = itemView.findViewById(R.id.social_platform_icon);
+            name = itemView.findViewById(R.id.social_platform_name);
+            url = itemView.findViewById(R.id.social_platform_url);
         }
     }
 }

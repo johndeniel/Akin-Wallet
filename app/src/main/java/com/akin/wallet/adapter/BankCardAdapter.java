@@ -106,7 +106,7 @@ public class BankCardAdapter extends RecyclerView.Adapter<BankCardAdapter.CardVi
     @Override
     public CardViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         View view = LayoutInflater.from(parent.getContext())
-                .inflate(R.layout.item_dashboard_card, parent, false);
+                .inflate(R.layout.item_bank_card, parent, false);
         // Slightly narrower than the viewport so the card reads smaller
         // and the next card peeks in from the right.
         ViewGroup.LayoutParams lp = view.getLayoutParams();
@@ -147,13 +147,13 @@ public class BankCardAdapter extends RecyclerView.Adapter<BankCardAdapter.CardVi
 
         CardViewHolder(@NonNull View itemView) {
             super(itemView);
-            cardRoot = itemView.findViewById(R.id.card_root);
-            bank = itemView.findViewById(R.id.preview_bank);
-            network = itemView.findViewById(R.id.preview_network);
-            type = itemView.findViewById(R.id.preview_type);
-            number = itemView.findViewById(R.id.preview_number);
-            cardholder = itemView.findViewById(R.id.preview_holder);
-            expiry = itemView.findViewById(R.id.preview_expiry);
+            cardRoot = itemView.findViewById(R.id.bank_card_root);
+            bank = itemView.findViewById(R.id.bank_preview_bank);
+            network = itemView.findViewById(R.id.bank_preview_network);
+            type = itemView.findViewById(R.id.bank_preview_type);
+            number = itemView.findViewById(R.id.bank_preview_number);
+            cardholder = itemView.findViewById(R.id.bank_preview_holder);
+            expiry = itemView.findViewById(R.id.bank_preview_expiry);
             BankCardDesignAdapter.applyCardOutline(cardRoot);
         }
 

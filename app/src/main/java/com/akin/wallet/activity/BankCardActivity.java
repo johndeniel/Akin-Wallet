@@ -238,19 +238,19 @@ public class BankCardActivity extends BaseVaultActivity {
 
     /** Single findViewById pass; all later code uses these fields. */
     private void cacheViews() {
-        textCardType = findViewById(R.id.text_card_type);
-        textCardNetwork = findViewById(R.id.text_card_network);
-        inputBankName = findViewById(R.id.input_bank_name);
-        inputHolderName = findViewById(R.id.input_holder_name);
-        inputCardNumber = findViewById(R.id.input_card_number);
-        inputExpiry = findViewById(R.id.input_expiry);
-        inputCvv = findViewById(R.id.input_cvv);
-        inputPin = findViewById(R.id.input_pin);
-        btnSave = findViewById(R.id.btn_save);
-        textSaveLabel = findViewById(R.id.text_save_label);
-        btnDelete = findViewById(R.id.btn_delete);
-        recyclerDesign = findViewById(R.id.recycler_card_design);
-        dotsContainer = findViewById(R.id.dots_container);
+        textCardType = findViewById(R.id.bank_card_type_value);
+        textCardNetwork = findViewById(R.id.bank_card_network_value);
+        inputBankName = findViewById(R.id.bank_card_input_bank_name);
+        inputHolderName = findViewById(R.id.bank_card_input_holder_name);
+        inputCardNumber = findViewById(R.id.bank_card_input_card_number);
+        inputExpiry = findViewById(R.id.bank_card_input_expiry);
+        inputCvv = findViewById(R.id.bank_card_input_cvv);
+        inputPin = findViewById(R.id.bank_card_input_pin);
+        btnSave = findViewById(R.id.form_save_button);
+        textSaveLabel = findViewById(R.id.form_save_label);
+        btnDelete = findViewById(R.id.form_delete_button);
+        recyclerDesign = findViewById(R.id.bank_card_design_list);
+        dotsContainer = findViewById(R.id.bank_card_design_dots);
     }
 
     /** Horizontal snap carousel shared with the dashboard (same XML + ratio). */
@@ -435,14 +435,14 @@ public class BankCardActivity extends BaseVaultActivity {
     }
 
     private void setupPickers() {
-        findViewById(R.id.row_card_type).setOnClickListener(v ->
+        findViewById(R.id.bank_card_type_row).setOnClickListener(v ->
                 showChoiceDialog("Card Type", CARD_TYPES, selectedType, selectedPosition -> {
                     selectedType = selectedPosition;
                     textCardType.setText(CARD_TYPES[selectedPosition]);
                     refreshPreview();
                 }));
 
-        findViewById(R.id.row_card_network).setOnClickListener(v ->
+        findViewById(R.id.bank_card_network_row).setOnClickListener(v ->
                 showChoiceDialog("Card Network", CARD_NETWORKS, selectedNetwork, selectedPosition -> {
                     selectedNetwork = selectedPosition;
                     textCardNetwork.setText(CARD_NETWORKS[selectedPosition]);
@@ -452,9 +452,9 @@ public class BankCardActivity extends BaseVaultActivity {
 
     /** Eye icons flip the transformation method without losing cursor. */
     private void setupVisibilityToggles() {
-        findViewById(R.id.btn_toggle_cvv).setOnClickListener(v ->
+        findViewById(R.id.bank_card_toggle_cvv_visibility).setOnClickListener(v ->
                 Ui.togglePasswordVisibility(inputCvv));
-        findViewById(R.id.btn_toggle_pin).setOnClickListener(v ->
+        findViewById(R.id.bank_card_toggle_pin_visibility).setOnClickListener(v ->
                 Ui.togglePasswordVisibility(inputPin));
     }
 

@@ -38,8 +38,8 @@ public class SettingsActivity extends BaseVaultActivity {
         settingsVersion.setText(
                 getString(R.string.settings_version_format, AkinWallet.versionName()));
 
-        biometricSwitch = findViewById(R.id.switch_biometric);
-        biometricStatus = findViewById(R.id.biometric_status);
+        biometricSwitch = findViewById(R.id.settings_biometric_switch);
+        biometricStatus = findViewById(R.id.settings_biometric_status);
 
         biometricAvailable = AppLockManager.isBiometricAvailable(this);
         boolean enabled = AppLockManager.isBiometricEnabled(this) && biometricAvailable;
@@ -60,22 +60,22 @@ public class SettingsActivity extends BaseVaultActivity {
             }
         });
 
-        findViewById(R.id.row_change_pin).setOnClickListener(v ->
+        findViewById(R.id.settings_row_change_pin).setOnClickListener(v ->
                 startActivity(new Intent(this, LockActivity.class)
                         .putExtra(LockActivity.EXTRA_MODE, LockActivity.MODE_CHANGE)));
 
-        findViewById(R.id.row_trash).setOnClickListener(v ->
+        findViewById(R.id.settings_row_trash).setOnClickListener(v ->
                 startActivity(new Intent(this, TrashActivity.class)));
 
-        findViewById(R.id.row_privacy).setOnClickListener(v ->
+        findViewById(R.id.settings_row_privacy).setOnClickListener(v ->
                 startActivity(new Intent(this, PolicyActivity.class)
                         .putExtra(PolicyActivity.EXTRA_TYPE, PolicyActivity.TYPE_PRIVACY)));
 
-        findViewById(R.id.row_terms).setOnClickListener(v ->
+        findViewById(R.id.settings_row_terms).setOnClickListener(v ->
                 startActivity(new Intent(this, PolicyActivity.class)
                         .putExtra(PolicyActivity.EXTRA_TYPE, PolicyActivity.TYPE_TERMS)));
 
-        findViewById(R.id.row_about).setOnClickListener(v ->
+        findViewById(R.id.settings_row_about).setOnClickListener(v ->
                 startActivity(new Intent(this, PolicyActivity.class)
                         .putExtra(PolicyActivity.EXTRA_TYPE, PolicyActivity.TYPE_ABOUT)));
     }

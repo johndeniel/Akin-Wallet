@@ -62,11 +62,10 @@ public class BankCardDesignAdapter extends RecyclerView.Adapter<BankCardDesignAd
     @NonNull
     @Override
     public CardViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        // Reuse the exact dashboard card (item_dashboard_card -> includes
-        // item_bank_card_preview) so the form picker looks identical to the
+        // Reuse the exact bank card item (item_bank_card) so the form picker looks identical to the
         // dashboard carousel. Same 0.68 page-width ratio for same size + peek.
         View view = LayoutInflater.from(parent.getContext())
-                .inflate(R.layout.item_dashboard_card, parent, false);
+                .inflate(R.layout.item_bank_card, parent, false);
         ViewGroup.LayoutParams lp = view.getLayoutParams();
         int parentWidth = parent.getMeasuredWidth();
         if (parentWidth <= 0) {
@@ -160,13 +159,13 @@ public class BankCardDesignAdapter extends RecyclerView.Adapter<BankCardDesignAd
 
         CardViewHolder(@NonNull View itemView) {
             super(itemView);
-            cardRoot = itemView.findViewById(R.id.card_root);
-            bank = itemView.findViewById(R.id.preview_bank);
-            network = itemView.findViewById(R.id.preview_network);
-            type = itemView.findViewById(R.id.preview_type);
-            number = itemView.findViewById(R.id.preview_number);
-            cardholder = itemView.findViewById(R.id.preview_holder);
-            expiry = itemView.findViewById(R.id.preview_expiry);
+            cardRoot = itemView.findViewById(R.id.bank_card_root);
+            bank = itemView.findViewById(R.id.bank_preview_bank);
+            network = itemView.findViewById(R.id.bank_preview_network);
+            type = itemView.findViewById(R.id.bank_preview_type);
+            number = itemView.findViewById(R.id.bank_preview_number);
+            cardholder = itemView.findViewById(R.id.bank_preview_holder);
+            expiry = itemView.findViewById(R.id.bank_preview_expiry);
         }
     }
 }

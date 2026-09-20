@@ -5,7 +5,7 @@
      or sensitive values are shown — titles and masked hints only. -->
 <com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:id="@+id/cell_card"
+    android:id="@+id/trash_tile_card"
     style="@style/Widget.Akin.DashboardCard"
     android:layout_width="match_parent"
     android:layout_height="172dp"
@@ -29,7 +29,7 @@
             android:paddingBottom="20dp">
 
             <com.google.android.material.imageview.ShapeableImageView
-                android:id="@+id/tile_icon"
+                android:id="@+id/trash_tile_icon"
                 android:layout_width="52dp"
                 android:layout_height="52dp"
                 android:background="@color/white"
@@ -38,7 +38,7 @@
                 app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Akin.Rounded12" />
 
             <TextView
-                android:id="@+id/tile_title"
+                android:id="@+id/trash_tile_title"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="10dp"
@@ -49,7 +49,7 @@
                 android:textAppearance="@style/TextAppearance.Akin.CardTitle" />
 
             <TextView
-                android:id="@+id/tile_sub"
+                android:id="@+id/trash_tile_subtitle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="2dp"
@@ -62,7 +62,7 @@
         </LinearLayout>
 
         <FrameLayout
-            android:id="@+id/check_badge"
+            android:id="@+id/trash_tile_check_badge"
             android:layout_width="26dp"
             android:layout_height="26dp"
             android:layout_gravity="top|end"

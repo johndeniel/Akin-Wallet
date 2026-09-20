@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:context=".activity.GovernmentIDActivity"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/bg_dashboard_root"
@@ -19,13 +21,13 @@
         <!-- M3 small top app bar: 64dp, nav icon + title. Same insets as Settings
              so all headers match. -->
         <com.google.android.material.appbar.MaterialToolbar
-            android:id="@+id/toolbar"
+            android:id="@+id/government_id_toolbar"
             style="@style/Widget.Akin.Toolbar"
             android:layout_width="match_parent"
             app:title="@string/dialog_id_title" />
 
         <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/recycler_card_design"
+            android:id="@+id/government_id_design_list"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="20dp"
@@ -34,7 +36,7 @@
             android:overScrollMode="never" />
 
         <LinearLayout
-            android:id="@+id/dots_container"
+            android:id="@+id/government_id_design_dots"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center_horizontal"
@@ -43,15 +45,15 @@
             android:gravity="center_vertical" />
 
         <LinearLayout
-            android:id="@+id/form_container"
+            android:id="@+id/government_id_form_container"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
             android:orientation="vertical" />
 
-        <!-- Save/Delete action row: shared form_action_row include (twin 44dp
+        <!-- Save/Delete action row: shared partial_form_action_row include (twin 44dp
              outline buttons; delete visible in edit mode only). -->
-        <include layout="@layout/form_action_row" />
+        <include layout="@layout/partial_form_action_row" />
 
     </LinearLayout>
 

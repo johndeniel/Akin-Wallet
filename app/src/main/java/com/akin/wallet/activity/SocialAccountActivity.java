@@ -190,12 +190,12 @@ public class SocialAccountActivity extends BaseVaultActivity {
      * the old picker activity returned); back closes search first.
      */
     private void setupPlatformSearch(Bundle savedInstanceState) {
-        platformSearchView = findViewById(R.id.platform_search_view);
+        platformSearchView = findViewById(R.id.social_account_platform_search_view);
         if (platformSearchView == null) {
             return;
         }
-        recyclerPlatformSearch = findViewById(R.id.recycler_platform_search);
-        emptyPlatformResults = findViewById(R.id.empty_platform_results);
+        recyclerPlatformSearch = findViewById(R.id.social_account_platform_search_list);
+        emptyPlatformResults = findViewById(R.id.social_account_platform_empty_state);
 
         platformAdapter = new SocialPlatformAdapter(cache().catalog(),
                 (iconRes, name, url) -> {
@@ -272,12 +272,12 @@ public class SocialAccountActivity extends BaseVaultActivity {
      * (same exclusion the old picker activity received as ID extras).
      */
     private void setupLinkSearch(Bundle savedInstanceState) {
-        linkSearchView = findViewById(R.id.link_search_view);
+        linkSearchView = findViewById(R.id.social_account_link_search_view);
         if (linkSearchView == null) {
             return;
         }
-        recyclerLinkSearch = findViewById(R.id.recycler_link_search);
-        emptyLinkResults = findViewById(R.id.empty_link_results);
+        recyclerLinkSearch = findViewById(R.id.social_account_link_search_list);
+        emptyLinkResults = findViewById(R.id.social_account_link_empty_state);
         recyclerLinkSearch.setLayoutManager(new LinearLayoutManager(this));
 
         linkSearchView.getEditText().addTextChangedListener(new Ui.SimpleTextWatcher() {
@@ -371,31 +371,31 @@ public class SocialAccountActivity extends BaseVaultActivity {
         selectedIcon = SocialPlatformModel.iconFor(DEFAULT_PLATFORM_NAME);
         selectedName = DEFAULT_PLATFORM_NAME;
 
-        platformIcon = findViewById(R.id.platform_icon);
-        platformName = findViewById(R.id.platform_name);
+        platformIcon = findViewById(R.id.social_account_selector_icon);
+        platformName = findViewById(R.id.social_account_selector_name);
 
         SocialPlatformModel.bindIcon(platformIcon, selectedName, selectedIcon);
         platformName.setText(selectedName);
 
-        findViewById(R.id.platform_selector).setOnClickListener(v -> openPlatformSearch());
+        findViewById(R.id.social_account_platform_selector).setOnClickListener(v -> openPlatformSearch());
 
-        EditText inputPassword = findViewById(R.id.input_password);
-        findViewById(R.id.btn_toggle_password).setOnClickListener(v ->
+        EditText inputPassword = findViewById(R.id.social_account_input_password);
+        findViewById(R.id.social_account_toggle_password_visibility).setOnClickListener(v ->
                 Ui.togglePasswordVisibility(inputPassword));
 
-        EditText inputPin = findViewById(R.id.input_pin);
-        findViewById(R.id.btn_toggle_pin).setOnClickListener(v ->
+        EditText inputPin = findViewById(R.id.social_account_input_pin);
+        findViewById(R.id.social_account_toggle_pin_visibility).setOnClickListener(v ->
                 Ui.togglePasswordVisibility(inputPin));
 
         setupAssociateSection(pool, -1, java.util.Collections.emptyList());
 
         // Add mode keeps a single full-width Save button, same as the bank
         // screen: the delete view is GONE, so its row margin is dropped.
-        View btnSaveAdd = findViewById(R.id.btn_save);
+        View btnSaveAdd = findViewById(R.id.form_save_button);
         Ui.makeSaveButtonFullWidth(btnSaveAdd);
 
-        findViewById(R.id.btn_save).setOnClickListener(v -> {
-            EditText inputUsername = findViewById(R.id.input_username);
+        findViewById(R.id.form_save_button).setOnClickListener(v -> {
+            EditText inputUsername = findViewById(R.id.social_account_input_username);
             String username = inputUsername.getText().toString().trim();
             // Secrets are stored verbatim: trimming would silently mutate
             // credentials with significant leading/trailing spaces.
@@ -436,9 +436,9 @@ public class SocialAccountActivity extends BaseVaultActivity {
         linkPool = existingAccounts != null ? existingAccounts : new ArrayList<>();
         linkSelfId = selfId;
         linkedItems = new ArrayList<>();
-        LinearLayout associateSection = findViewById(R.id.associate_section);
-        RecyclerView recyclerLinked = findViewById(R.id.recycler_linked);
-        linkedCard = findViewById(R.id.linked_card);
+        LinearLayout associateSection = findViewById(R.id.social_account_linked_section);
+        RecyclerView recyclerLinked = findViewById(R.id.social_account_linked_list);
+        linkedCard = findViewById(R.id.social_account_linked_card);
 
         setupAssociateSectionIds(preloadedLinkedIds != null
                 ? preloadedLinkedIds : java.util.Collections.emptyList());
@@ -454,7 +454,7 @@ public class SocialAccountActivity extends BaseVaultActivity {
         recyclerLinked.setAdapter(linkedAdapter);
         refreshLinkedVisibility();
 
-        findViewById(R.id.btn_add_associate).setOnClickListener(v -> openLinkSearch());
+        findViewById(R.id.social_account_add_linked_button).setOnClickListener(v -> openLinkSearch());
     }
 
     /** O(n) link resolution via id set (was O(n*m) nested scan). */
@@ -508,12 +508,12 @@ public class SocialAccountActivity extends BaseVaultActivity {
     private void bindEditForm(@NonNull SocialAccountModel item,
                               @NonNull List<SocialAccountModel> pool,
                               @NonNull java.util.List<Integer> linkedIds) {
-        platformIcon = findViewById(R.id.platform_icon);
-        platformName = findViewById(R.id.platform_name);
-        TextView textSaveLabel = findViewById(R.id.text_save_label);
-        EditText inputUsername = findViewById(R.id.input_username);
-        EditText inputPassword = findViewById(R.id.input_password);
-        EditText inputPin = findViewById(R.id.input_pin);
+        platformIcon = findViewById(R.id.social_account_selector_icon);
+        platformName = findViewById(R.id.social_account_selector_name);
+        TextView textSaveLabel = findViewById(R.id.form_save_label);
+        EditText inputUsername = findViewById(R.id.social_account_input_username);
+        EditText inputPassword = findViewById(R.id.social_account_input_password);
+        EditText inputPin = findViewById(R.id.social_account_input_pin);
 
         textSaveLabel.setText(R.string.action_update);
 
@@ -525,18 +525,18 @@ public class SocialAccountActivity extends BaseVaultActivity {
         inputPassword.setText(item.getPassword());
         inputPin.setText(item.getPin());
 
-        findViewById(R.id.platform_selector).setOnClickListener(v -> openPlatformSearch());
+        findViewById(R.id.social_account_platform_selector).setOnClickListener(v -> openPlatformSearch());
 
-        findViewById(R.id.btn_toggle_password).setOnClickListener(v ->
+        findViewById(R.id.social_account_toggle_password_visibility).setOnClickListener(v ->
                 Ui.togglePasswordVisibility(inputPassword));
 
-        findViewById(R.id.btn_toggle_pin).setOnClickListener(v ->
+        findViewById(R.id.social_account_toggle_pin_visibility).setOnClickListener(v ->
                 Ui.togglePasswordVisibility(inputPin));
 
         setupAssociateSection(pool, item.getId(), linkedIds != null
                 ? linkedIds : java.util.Collections.emptyList());
 
-        findViewById(R.id.btn_save).setOnClickListener(v -> {
+        findViewById(R.id.form_save_button).setOnClickListener(v -> {
             String username = inputUsername.getText().toString().trim();
             String password = inputPassword.getText().toString();
             String pin = inputPin.getText().toString();
@@ -572,7 +572,7 @@ public class SocialAccountActivity extends BaseVaultActivity {
         // Delete in edit mode, same in-row outline-red pattern as the bank
         // and government ID screens. Soft-deletes to Trash behind a normal
         // delete dialog.
-        View btnDelete = findViewById(R.id.btn_delete);
+        View btnDelete = findViewById(R.id.form_delete_button);
         btnDelete.setVisibility(View.VISIBLE);
         btnDelete.setOnClickListener(v -> confirmDeleteToTrash(
                 "Delete Account",

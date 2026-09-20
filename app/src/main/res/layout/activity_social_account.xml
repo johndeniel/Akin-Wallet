@@ -8,6 +8,8 @@
      copied from the bank card form; keep the rows in sync. -->
 <androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:context=".activity.SocialAccountActivity"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/bg_dashboard_root">
@@ -30,7 +32,7 @@
     <!-- M3 small top app bar: 64dp, nav icon + title. Same insets as Settings
          so all headers match. -->
     <com.google.android.material.appbar.MaterialToolbar
-        android:id="@+id/toolbar"
+        android:id="@+id/social_account_toolbar"
         style="@style/Widget.Akin.Toolbar"
         android:layout_width="match_parent"
         app:title="@string/dialog_social_title" />
@@ -44,7 +46,7 @@
         android:layout_marginTop="12dp" />
 
     <LinearLayout
-        android:id="@+id/platform_selector"
+        android:id="@+id/social_account_platform_selector"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
@@ -57,7 +59,7 @@
         android:focusable="true">
 
         <ImageView
-            android:id="@+id/platform_icon"
+            android:id="@+id/social_account_selector_icon"
             android:layout_width="36dp"
             android:layout_height="36dp"
             android:adjustViewBounds="true"
@@ -67,7 +69,7 @@
             android:contentDescription="@null" />
 
         <TextView
-            android:id="@+id/platform_name"
+            android:id="@+id/social_account_selector_name"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
@@ -125,7 +127,7 @@
                 android:textSize="12sp" />
 
             <EditText
-                android:id="@+id/input_username"
+                android:id="@+id/social_account_input_username"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:background="@null"
@@ -175,7 +177,7 @@
                 android:textSize="12sp" />
 
             <EditText
-                android:id="@+id/input_password"
+                android:id="@+id/social_account_input_password"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:background="@null"
@@ -191,7 +193,7 @@
         </LinearLayout>
 
         <ImageView
-            android:id="@+id/btn_toggle_password"
+            android:id="@+id/social_account_toggle_password_visibility"
             android:layout_width="22dp"
             android:layout_height="22dp"
             android:src="@drawable/ic_eye"
@@ -234,7 +236,7 @@
                 android:textSize="12sp" />
 
             <EditText
-                android:id="@+id/input_pin"
+                android:id="@+id/social_account_input_pin"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:background="@null"
@@ -251,7 +253,7 @@
         </LinearLayout>
 
         <ImageView
-            android:id="@+id/btn_toggle_pin"
+            android:id="@+id/social_account_toggle_pin_visibility"
             android:layout_width="22dp"
             android:layout_height="22dp"
             android:src="@drawable/ic_eye"
@@ -265,7 +267,7 @@
          icon-only Add button right) over a dashboard card holding the rows.
          The card is hidden entirely when nothing is linked. -->
     <LinearLayout
-        android:id="@+id/associate_section"
+        android:id="@+id/social_account_linked_section"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical">
@@ -291,7 +293,7 @@
                 android:layout_weight="1" />
 
             <LinearLayout
-                android:id="@+id/btn_add_associate"
+                android:id="@+id/social_account_add_linked_button"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:background="@drawable/bg_button_outline"
@@ -313,7 +315,7 @@
         </LinearLayout>
 
         <LinearLayout
-            android:id="@+id/linked_card"
+            android:id="@+id/social_account_linked_card"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
@@ -325,7 +327,7 @@
             android:paddingBottom="4dp">
 
             <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/recycler_linked"
+                android:id="@+id/social_account_linked_list"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:overScrollMode="never"
@@ -337,7 +339,7 @@
 
     <!-- Save/Delete action row, same twin-outline pattern as the bank and
          government ID forms. Delete shows in edit mode only. -->
-    <include layout="@layout/form_action_row" />
+    <include layout="@layout/partial_form_action_row" />
 
 </LinearLayout>
 
@@ -346,7 +348,7 @@
          selector above. Same adapters/rows as the old picker activity;
          typing filters the catalog, tapping a row picks it and closes. -->
     <com.google.android.material.search.SearchView
-        android:id="@+id/platform_search_view"
+        android:id="@+id/social_account_platform_search_view"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:hint="@string/hint_search_platforms"
@@ -363,7 +365,7 @@
             android:paddingBottom="16dp">
 
             <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/recycler_platform_search"
+                android:id="@+id/social_account_platform_search_list"
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
                 android:layout_weight="1"
@@ -371,7 +373,7 @@
                 android:overScrollMode="never" />
 
             <com.google.android.material.card.MaterialCardView
-                android:id="@+id/empty_platform_results"
+                android:id="@+id/social_account_platform_empty_state"
                 style="@style/Widget.Akin.DashboardCard"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -412,7 +414,7 @@
          action in Associated Accounts. Same rows as the old picker
          activity; tapping a row links it and closes. -->
     <com.google.android.material.search.SearchView
-        android:id="@+id/link_search_view"
+        android:id="@+id/social_account_link_search_view"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:hint="@string/hint_search_accounts"
@@ -429,7 +431,7 @@
             android:paddingBottom="16dp">
 
             <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/recycler_link_search"
+                android:id="@+id/social_account_link_search_list"
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
                 android:layout_weight="1"
@@ -437,7 +439,7 @@
                 android:overScrollMode="never" />
 
             <com.google.android.material.card.MaterialCardView
-                android:id="@+id/empty_link_results"
+                android:id="@+id/social_account_link_empty_state"
                 style="@style/Widget.Akin.DashboardCard"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"

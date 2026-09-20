@@ -79,15 +79,37 @@ public abstract class BaseVaultActivity extends AppCompatActivity {
 
     /**
      * Paints system bars and wires the back toolbar when the layout has one.
-     * Call once after {@code setContentView}. Layouts without
-     * {@code R.id.toolbar} (dashboard, lock) just get the bars.
+     * Call once after {@code setContentView}. Each form uses its own
+     * descriptive toolbar id (bank_card_toolbar, government_id_toolbar,
+     * social_account_toolbar, trash_toolbar, settings_toolbar,
+     * policy_toolbar); layouts without a toolbar (dashboard, lock) just get
+     * the bars.
      */
     protected void applyChrome() {
         Ui.applySystemBars(this);
-        MaterialToolbar toolbar = findViewById(R.id.toolbar);
+        MaterialToolbar toolbar = findToolbar();
         if (toolbar != null) {
             toolbar.setNavigationOnClickListener(v -> onNavigateBack());
         }
+    }
+
+    /** Resolves whichever per-screen toolbar the current layout owns, or null. */
+    private MaterialToolbar findToolbar() {
+        int[] toolbarIds = {
+                R.id.bank_card_toolbar,
+                R.id.government_id_toolbar,
+                R.id.social_account_toolbar,
+                R.id.trash_toolbar,
+                R.id.settings_toolbar,
+                R.id.policy_toolbar,
+        };
+        for (int id : toolbarIds) {
+            MaterialToolbar toolbar = findViewById(id);
+            if (toolbar != null) {
+                return toolbar;
+            }
+        }
+        return null;
     }
 
     /** Back/close action. Trash overrides to clear selection first. */

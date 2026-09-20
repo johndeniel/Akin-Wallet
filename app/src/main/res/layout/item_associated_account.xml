@@ -8,7 +8,7 @@
     android:paddingHorizontal="8dp">
 
     <ImageView
-        android:id="@+id/linked_icon"
+        android:id="@+id/associated_account_icon"
         android:layout_width="40dp"
         android:layout_height="40dp"
         android:adjustViewBounds="true"
@@ -25,7 +25,7 @@
         android:layout_marginStart="12dp">
 
         <TextView
-            android:id="@+id/linked_name"
+            android:id="@+id/associated_account_name"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textColor="@color/text_primary"
@@ -33,7 +33,7 @@
             android:textStyle="bold" />
 
         <TextView
-            android:id="@+id/linked_username"
+            android:id="@+id/associated_account_username"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textColor="@color/dashboard_muted"
@@ -42,7 +42,7 @@
     </LinearLayout>
 
     <ImageView
-        android:id="@+id/btn_action"
+        android:id="@+id/associated_account_action"
         android:layout_width="20dp"
         android:layout_height="20dp"
         android:src="@drawable/ic_link"

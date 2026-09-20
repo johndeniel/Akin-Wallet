@@ -35,7 +35,7 @@ public class PolicyActivity extends BaseVaultActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_policy);
         applyChrome();
-        MaterialToolbar toolbar = findViewById(R.id.toolbar);
+        MaterialToolbar toolbar = findViewById(R.id.policy_toolbar);
 
         LinearLayout sections = findViewById(R.id.policy_sections);
         if (sections == null) {

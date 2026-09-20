@@ -100,12 +100,12 @@ public class LockActivity extends AppCompatActivity {
             mode = extra;
         }
 
-        error = findViewById(R.id.lock_error);
+        error = findViewById(R.id.lock_error_message);
         tagline = findViewById(R.id.lock_tagline);
-        dotsRow = findViewById(R.id.dots_row);
-        keypad = findViewById(R.id.keypad);
-        bioKey = findViewById(R.id.key_bio);
-        int[] dotIds = {R.id.dot_0, R.id.dot_1, R.id.dot_2, R.id.dot_3};
+        dotsRow = findViewById(R.id.lock_pin_dots_row);
+        keypad = findViewById(R.id.lock_keypad);
+        bioKey = findViewById(R.id.lock_key_biometric);
+        int[] dotIds = {R.id.lock_dot_0, R.id.lock_dot_1, R.id.lock_dot_2, R.id.lock_dot_3};
         for (int i = 0; i < dotIds.length; i++) {
             dots[i] = findViewById(dotIds[i]);
         }
@@ -334,8 +334,8 @@ public class LockActivity extends AppCompatActivity {
     // ------------------------------------------------------------------
 
     private void wireKeypad() {
-        int[] keyIds = {R.id.key_1, R.id.key_2, R.id.key_3, R.id.key_4, R.id.key_5,
-                R.id.key_6, R.id.key_7, R.id.key_8, R.id.key_9, R.id.key_0};
+        int[] keyIds = {R.id.lock_key_1, R.id.lock_key_2, R.id.lock_key_3, R.id.lock_key_4, R.id.lock_key_5,
+                R.id.lock_key_6, R.id.lock_key_7, R.id.lock_key_8, R.id.lock_key_9, R.id.lock_key_0};
         for (int i = 0; i < keyIds.length; i++) {
             // i = 0..8 -> '1'..'9', i = 9 -> '0'.
             final char digit = i == 9 ? '0' : (char) ('1' + i);
@@ -344,7 +344,7 @@ public class LockActivity extends AppCompatActivity {
                 key.setOnClickListener(v -> onDigit(digit));
             }
         }
-        View backKey = findViewById(R.id.key_back);
+        View backKey = findViewById(R.id.lock_key_backspace);
         if (backKey != null) {
             backKey.setOnClickListener(v -> onBackspace());
         }

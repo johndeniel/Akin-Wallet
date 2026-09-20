@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- SINGLE government-ID face. Dashboard carousel (DashboardActivity) and the
+<!-- SINGLE government-ID face (item_government_id_card). Dashboard carousel (DashboardActivity) and the
      Government ID form picker (GovernmentIDActivity) both inflate THIS
      file only, through the shared GovernmentIdFaceRenderer, so look and feel can never
      drift. True 1.586:1 ratio; page width set to 68% of viewport in code. -->
@@ -13,7 +13,7 @@
         android:layout_height="wrap_content">
 
         <FrameLayout
-            android:id="@+id/card_root"
+            android:id="@+id/government_id_card_root"
             android:layout_width="0dp"
             android:layout_height="0dp"
             android:layout_marginHorizontal="4dp"
@@ -37,7 +37,7 @@
                 <!-- Retired eyebrow: kept (gone) so existing adapter bindings
                      still resolve; subtitle carries the agency. -->
                 <TextView
-                    android:id="@+id/preview_eyebrow"
+                    android:id="@+id/government_id_eyebrow"
                     style="@style/IdFaceEyebrow"
                     android:text="@string/preview_republic"
                     android:textColor="@color/national_muted"
@@ -46,7 +46,7 @@
                     android:ellipsize="end" />
 
                 <TextView
-                    android:id="@+id/preview_id_type"
+                    android:id="@+id/government_id_title"
                     style="@style/IdFaceTitle"
                     android:text="@string/preview_government_id"
                     android:textColor="@color/national_ink"
@@ -54,7 +54,7 @@
                     android:ellipsize="end" />
 
                 <TextView
-                    android:id="@+id/preview_subtitle"
+                    android:id="@+id/government_id_subtitle"
                     style="@style/IdFaceSubtitle"
                     android:text="@string/preview_government_id"
                     android:textColor="@color/national_muted"
@@ -62,7 +62,7 @@
                     android:ellipsize="end" />
 
                 <View
-                    android:id="@+id/preview_rule"
+                    android:id="@+id/government_id_rule"
                     style="@style/IdFaceRule"
                     android:background="@color/national_rule" />
 
@@ -88,14 +88,14 @@
                         android:orientation="vertical">
 
                         <FrameLayout
-                            android:id="@+id/preview_photo_box"
+                            android:id="@+id/government_id_photo_box"
                             android:layout_width="46dp"
                             android:layout_height="60dp"
                             android:elevation="2dp"
                             android:background="@drawable/bg_id_photo_placeholder">
 
                             <ImageView
-                                android:id="@+id/preview_photo_icon"
+                                android:id="@+id/government_id_photo_icon"
                                 android:layout_width="22dp"
                                 android:layout_height="22dp"
                                 android:layout_gravity="center"
@@ -105,7 +105,7 @@
                         </FrameLayout>
 
                         <com.akin.wallet.util.BarcodeView
-                            android:id="@+id/preview_barcode"
+                            android:id="@+id/government_id_barcode"
                             android:layout_width="wrap_content"
                             android:layout_height="8dp"
                             android:layout_marginTop="4dp" />
@@ -120,7 +120,7 @@
                         android:orientation="vertical">
 
                         <TextView
-                            android:id="@+id/preview_holder_label"
+                            android:id="@+id/government_id_holder_label"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="@string/preview_person_label"
@@ -132,7 +132,7 @@
                             android:singleLine="true" />
 
                         <TextView
-                            android:id="@+id/preview_holder"
+                            android:id="@+id/government_id_holder"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="2dp"
@@ -160,7 +160,7 @@
                                 android:paddingEnd="8dp">
 
                                 <TextView
-                                    android:id="@+id/preview_dob_label"
+                                    android:id="@+id/government_id_dob_label"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:text="@string/label_date_of_birth"
@@ -172,7 +172,7 @@
                                     android:singleLine="true" />
 
                                 <TextView
-                                    android:id="@+id/preview_dob"
+                                    android:id="@+id/government_id_dob"
                                     android:layout_width="match_parent"
                                     android:layout_height="wrap_content"
                                     android:layout_marginTop="2dp"
@@ -194,7 +194,7 @@
                                 android:orientation="vertical">
 
                                 <TextView
-                                    android:id="@+id/preview_expiry_label"
+                                    android:id="@+id/government_id_expiry_label"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:text="@string/label_expiry_date"
@@ -206,7 +206,7 @@
                                     android:singleLine="true" />
 
                                 <TextView
-                                    android:id="@+id/preview_expiry"
+                                    android:id="@+id/government_id_expiry"
                                     android:layout_width="match_parent"
                                     android:layout_height="wrap_content"
                                     android:layout_marginTop="2dp"
@@ -224,7 +224,7 @@
                         </LinearLayout>
 
                         <TextView
-                            android:id="@+id/preview_number_label"
+                            android:id="@+id/government_id_number_label"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="6dp"
@@ -237,7 +237,7 @@
                             android:singleLine="true" />
 
                         <TextView
-                            android:id="@+id/preview_number"
+                            android:id="@+id/government_id_number"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="2dp"
