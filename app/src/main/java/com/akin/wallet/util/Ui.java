@@ -19,7 +19,6 @@ import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
 
 import com.akin.wallet.R;
-import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 /**
@@ -91,14 +90,6 @@ public final class Ui {
         WindowCompat.getInsetsController(
                         activity.getWindow(), activity.getWindow().getDecorView())
                 .show(WindowInsetsCompat.Type.navigationBars());
-    }
-
-    /** Back-chevron toolbar wiring shared by every form screen. */
-    public static void setupBackToolbar(Activity activity, int toolbarId) {
-        MaterialToolbar toolbar = activity.findViewById(toolbarId);
-        if (toolbar != null) {
-            toolbar.setNavigationOnClickListener(v -> activity.finish());
-        }
     }
 
     /** Dismisses an owned dialog without leaking windows across rotation. */

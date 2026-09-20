@@ -17,10 +17,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-// Spell checking is off for this file: it names the SQLCipher library
-// ("sqlcipher" in loadLibrary and the package path), which the IDE
-// dictionary does not know and which must stay spelled exactly so.
-@SuppressWarnings("SpellCheckingInspection")
+
 /**
  * Process-shared vault connection, owned by {@code VaultWarmCache}: exactly
  * one instance lives with the process, so no method here may close the
@@ -29,7 +26,8 @@ import java.util.List;
  * {@code VaultWarmCache.executeVaultIo}), so reads and write transactions
  * never interleave on the shared connection.
  */
-public class AppDatabaseHelper extends SQLiteOpenHelper {
+@SuppressWarnings("SpellCheckingInspection")
+public final class AppDatabaseHelper extends SQLiteOpenHelper {
 
     private static final String DATABASE_NAME = "akin_wallet.db";
     // v1 schema: SQLCipher-encrypted vault (AES-256) with a Keystore-wrapped

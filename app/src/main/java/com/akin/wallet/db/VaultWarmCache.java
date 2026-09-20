@@ -13,7 +13,6 @@ import com.akin.wallet.model.SocialAccountModel;
 import com.akin.wallet.model.SocialPlatformModel;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -85,22 +84,22 @@ public final class VaultWarmCache {
                  List<SocialAccountModel> trashedAccounts,
                  long loadedAt) {
             this.activeIds = activeIds != null
-                    ? Collections.unmodifiableList(new ArrayList<>(activeIds))
+                    ? List.copyOf(activeIds)
                     : null;
             this.activeCards = activeCards != null
-                    ? Collections.unmodifiableList(new ArrayList<>(activeCards))
+                    ? List.copyOf(activeCards)
                     : null;
             this.activeAccounts = activeAccounts != null
-                    ? Collections.unmodifiableList(new ArrayList<>(activeAccounts))
+                    ? List.copyOf(activeAccounts)
                     : null;
             this.trashedIds = trashedIds != null
-                    ? Collections.unmodifiableList(new ArrayList<>(trashedIds))
+                    ? List.copyOf(trashedIds)
                     : null;
             this.trashedCards = trashedCards != null
-                    ? Collections.unmodifiableList(new ArrayList<>(trashedCards))
+                    ? List.copyOf(trashedCards)
                     : null;
             this.trashedAccounts = trashedAccounts != null
-                    ? Collections.unmodifiableList(new ArrayList<>(trashedAccounts))
+                    ? List.copyOf(trashedAccounts)
                     : null;
             this.loadedAt = loadedAt;
         }
@@ -197,7 +196,7 @@ public final class VaultWarmCache {
             return new ArrayList<>(cached);
         }
         List<SocialPlatformModel.Option> fresh = SocialPlatformModel.catalog();
-        platformCatalog = Collections.unmodifiableList(new ArrayList<>(fresh));
+        platformCatalog = List.copyOf(fresh);
         return new ArrayList<>(fresh);
     }
 

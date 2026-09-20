@@ -13,7 +13,7 @@ import androidx.annotation.NonNull;
  * The bar pattern is fixed and identical on every card (it encodes
  * nothing) — use {@link #setBarColor(int)} to follow the face scheme.
  */
-public class BarcodeView extends View {
+public final class BarcodeView extends View {
 
     private static final int[] BARS = {
             2, 1, 1, 3, 1, 2, 1, 1, 3, 2, 1, 2, 1, 3, 1, 2
