@@ -233,7 +233,8 @@ public class DashboardActivity extends BaseVaultActivity {
         RecyclerView recyclerSearchSocial = findViewById(R.id.dashboard_search_social_list);
         recyclerSearchSocial.setLayoutManager(new LinearLayoutManager(this));
         recyclerSearchSocial.setAdapter(searchSocialAdapter);
-        recyclerSearchSocial.setHasFixedSize(true);
+        // Same wrap_content vertical list contract as the dashboard list.
+        recyclerSearchSocial.setHasFixedSize(false);
         cardSearchSocial = findViewById(R.id.dashboard_search_social_card);
         searchHeaderSocial = findViewById(R.id.dashboard_search_header_social);
 
@@ -703,7 +704,10 @@ public class DashboardActivity extends BaseVaultActivity {
         socialAdapter = new SocialAccountAdapter(this::openSocialEditor);
         recyclerSocialAccounts.setLayoutManager(new LinearLayoutManager(this));
         recyclerSocialAccounts.setAdapter(socialAdapter);
-        recyclerSocialAccounts.setHasFixedSize(true);
+        // Vertical wrap_content list: height = f(item count), so it must
+        // re-measure on every adapter change (delete/restore/add). Fixed
+        // size would freeze the old height until activity recreation.
+        recyclerSocialAccounts.setHasFixedSize(false);
 
         if (emptySocialAccounts != null) {
             emptySocialAccounts.setOnClickListener(v -> openSocialCreator());
@@ -728,6 +732,13 @@ public class DashboardActivity extends BaseVaultActivity {
         }
         if (emptySocialAccounts != null) {
             emptySocialAccounts.setVisibility(!hasAccounts ? View.VISIBLE : View.GONE);
+        }
+        // Force a new measure pass so the wrap_content card adopts the new
+        // row count immediately (N-1 delete, 0-1 restore, N+1 add) instead of
+        // keeping the previously measured height until recreation.
+        recyclerSocialAccounts.requestLayout();
+        if (cardSocialAccounts != null) {
+            cardSocialAccounts.requestLayout();
         }
     }
 
@@ -757,9 +768,25 @@ public class DashboardActivity extends BaseVaultActivity {
         // show stale rows or touch a dead activity.
         final int generation = nextLoadGeneration();
         vaultIo(() -> {
-            final List<GovernmentIDModel> ids = db().getAllIdCards();
-            final List<BankCardModel> cards = db().getAllBankCards();
-            final List<SocialAccountModel> accounts = db().getAllSocialAccounts();
+            final List<GovernmentIDModel> ids;
+            final List<BankCardModel> cards;
+            final List<SocialAccountModel> accounts;
+            try {
+                ids = db().getAllIdCards();
+                cards = db().getAllBankCards();
+                accounts = db().getAllSocialAccounts();
+            } catch (RuntimeException e) {
+                // Mirror TrashActivity.loadTrash: never leave the screen
+                // blank-and-silent. Keep the previous rows; the next onResume
+                // retries the load.
+                runOnUiThread(() -> {
+                    if (!isCurrentGeneration(generation) || isFinishing()) {
+                        return;
+                    }
+                    showError(R.string.err_dashboard_load);
+                });
+                return;
+            }
             cache().publishActive(ids, cards, accounts);
             runOnUiThread(() -> {
                 if (!isCurrentGeneration(generation) || isFinishing()) {

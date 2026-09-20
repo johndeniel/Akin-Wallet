@@ -76,6 +76,7 @@
     <string name="trash_restore">Restore</string>
     <string name="trash_header_count">\u2022 %1$d</string>
     <string name="err_trash_load">Couldn\'t load Trash. Please try again</string>
+    <string name="err_dashboard_load">Couldn\'t load vault. Please try again</string>
     <string name="trash_delete_forever">Delete</string>
     <!-- Trash: multi-select grid of soft-deleted items -->
     <string name="trash_empty_title">Trash is empty</string>
