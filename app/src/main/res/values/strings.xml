@@ -37,6 +37,8 @@
     <string name="search_empty_title">No results found</string>
     <string name="search_empty_sub">Try a different keyword</string>
     <string name="search_empty_sub_for">%1$s for \u201c%2$s\u201d</string>
+    <string name="search_empty_vault_title">Nothing here yet</string>
+    <string name="search_empty_vault_sub">Items you add will appear here</string>
     <!-- App lock (first-run PIN setup, PIN entry, fingerprint unlock) -->
     <string name="lock_sub_create">Create a 4-digit PIN</string>
     <string name="lock_sub_confirm">Confirm your 4-digit PIN</string>

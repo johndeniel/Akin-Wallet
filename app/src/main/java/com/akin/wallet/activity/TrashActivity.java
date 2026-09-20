@@ -15,6 +15,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.akin.wallet.R;
 import com.akin.wallet.adapter.TrashAdapter;
 import com.akin.wallet.db.AppDatabaseHelper;
+import com.akin.wallet.db.VaultWarmCache;
 import com.akin.wallet.model.BankCardModel;
 import com.akin.wallet.model.SocialAccountModel;
 import com.akin.wallet.model.GovernmentIDModel;
@@ -25,8 +26,6 @@ import com.google.android.material.snackbar.Snackbar;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 /**
  * Trash — restorable soft-deletes as selectable tiles. Deleting a Government
@@ -50,8 +49,7 @@ public class TrashActivity extends AppCompatActivity {
 
     private static final String KEY_SELECTION = "trash_selection";
 
-    /** Single-thread vault I/O: reads and bulk writes stay off the UI thread. */
-    private final ExecutorService dbIo = Executors.newSingleThreadExecutor();
+    /** Drops stale loads (rotation / rapid resume) — only the latest binds. */
     private int loadGeneration;
     /** Selection restored once after the first post-rotation load. */
     private ArrayList<String> pendingSelection;
@@ -62,7 +60,7 @@ public class TrashActivity extends AppCompatActivity {
         setContentView(R.layout.activity_trash);
         Ui.applySystemBars(this);
 
-        dbHelper = new AppDatabaseHelper(this);
+        dbHelper = VaultWarmCache.get(this).helper();
 
         toolbar = findViewById(R.id.toolbar);
         toolbar.setNavigationOnClickListener(v -> onNavigationBack());
@@ -100,6 +98,7 @@ public class TrashActivity extends AppCompatActivity {
         if (savedInstanceState != null) {
             pendingSelection = savedInstanceState.getStringArrayList(KEY_SELECTION);
         }
+        bindCachedSnapshot();
 
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
             @Override
@@ -151,10 +150,9 @@ public class TrashActivity extends AppCompatActivity {
     protected void onDestroy() {
         Ui.dismissOwnedDialog(bulkDeleteDialog);
         bulkDeleteDialog = null;
-        dbIo.shutdownNow();
-        if (dbHelper != null) {
-            dbHelper.close();
-        }
+        // Vault I/O runs on the shared funnel (never shut down per-screen).
+        // Shared helper lives with the process (VaultWarmCache); never close per-screen.
+        dbHelper = null;
         super.onDestroy();
     }
 
@@ -168,18 +166,19 @@ public class TrashActivity extends AppCompatActivity {
     }
 
     private void loadTrash() {
-        if (dbHelper == null) {
+        final AppDatabaseHelper db = dbHelper;
+        if (db == null) {
             return;
         }
         final int generation = ++loadGeneration;
-        dbIo.execute(() -> {
+        VaultWarmCache.get(this).executeVaultIo(() -> {
             final List<GovernmentIDModel> ids;
             final List<BankCardModel> cards;
             final List<SocialAccountModel> accounts;
             try {
-                ids = dbHelper.getTrashedIdCards();
-                cards = dbHelper.getTrashedBankCards();
-                accounts = dbHelper.getTrashedSocialAccounts();
+                ids = db.getTrashedIdCards();
+                cards = db.getTrashedBankCards();
+                accounts = db.getTrashedSocialAccounts();
             } catch (RuntimeException e) {
                 runOnUiThread(() -> {
                     if (generation != loadGeneration || isFinishing()) {
@@ -190,6 +189,7 @@ public class TrashActivity extends AppCompatActivity {
                 });
                 return;
             }
+            VaultWarmCache.get(TrashActivity.this).publishTrash(ids, cards, accounts);
             runOnUiThread(() -> {
                 if (generation != loadGeneration || isFinishing()) {
                     return;
@@ -197,6 +197,21 @@ public class TrashActivity extends AppCompatActivity {
                 bindTrash(ids, cards, accounts);
             });
         });
+    }
+
+    /**
+     * Cache-first bind: when the post-auth preload already ran, tiles render
+     * synchronously before first draw. Falls back to async load on miss;
+     * {@link #loadTrash()} in {@code onResume} always revalidates afterward.
+     */
+    private void bindCachedSnapshot() {
+        VaultWarmCache.Snapshot cached = VaultWarmCache.get(this).snapshot();
+        if (cached == null || !cached.hasTrash() || trashAdapter == null) {
+            return;
+        }
+        bindTrash(new ArrayList<>(cached.trashedIds),
+                new ArrayList<>(cached.trashedCards),
+                new ArrayList<>(cached.trashedAccounts));
     }
 
     /** Binds one loaded snapshot on the UI thread (adapter + chrome). */
@@ -263,7 +278,8 @@ public class TrashActivity extends AppCompatActivity {
     /** Restores every selected item to its vault, then reloads. */
     private void bulkRestore() {
         List<TrashAdapter.Entry> selected = trashAdapter.selectedEntries();
-        if (selected.isEmpty() || dbHelper == null) {
+        final AppDatabaseHelper db = dbHelper;
+        if (selected.isEmpty() || db == null) {
             return;
         }
         List<Integer> ids = new ArrayList<>();
@@ -271,10 +287,11 @@ public class TrashActivity extends AppCompatActivity {
         List<Integer> socials = new ArrayList<>();
         splitSelection(selected, ids, cards, socials);
         final int count = selected.size();
-        dbIo.execute(() -> {
-            dbHelper.restoreIdCards(ids);
-            dbHelper.restoreBankCards(cards);
-            dbHelper.restoreSocialAccounts(socials);
+        VaultWarmCache.get(this).executeVaultIo(() -> {
+            db.restoreIdCards(ids);
+            db.restoreBankCards(cards);
+            db.restoreSocialAccounts(socials);
+            VaultWarmCache.get(TrashActivity.this).invalidate();
             runOnUiThread(() -> {
                 if (isFinishing()) {
                     return;
@@ -305,7 +322,8 @@ public class TrashActivity extends AppCompatActivity {
     /** Confirms, then permanently deletes every selected item. */
     private void confirmBulkDelete() {
         List<TrashAdapter.Entry> selected = trashAdapter.selectedEntries();
-        if (selected.isEmpty() || dbHelper == null) {
+        final AppDatabaseHelper db = dbHelper;
+        if (selected.isEmpty() || db == null) {
             return;
         }
         // Snapshot: deletes mutate the backing rows while the adapter
@@ -318,10 +336,11 @@ public class TrashActivity extends AppCompatActivity {
         bulkDeleteDialog = Ui.confirmDelete(this,
                 getString(R.string.trash_delete_forever),
                 getString(R.string.trash_delete_many, count),
-                () -> dbIo.execute(() -> {
-                    dbHelper.deleteIdCards(ids);
-                    dbHelper.deleteBankCards(cards);
-                    dbHelper.deleteSocialAccounts(socials);
+                () -> VaultWarmCache.get(this).executeVaultIo(() -> {
+                    db.deleteIdCards(ids);
+                    db.deleteBankCards(cards);
+                    db.deleteSocialAccounts(socials);
+                    VaultWarmCache.get(TrashActivity.this).invalidate();
                     runOnUiThread(() -> {
                         if (isFinishing()) {
                             return;

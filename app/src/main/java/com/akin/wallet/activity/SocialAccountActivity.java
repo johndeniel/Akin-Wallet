@@ -20,6 +20,7 @@ import com.akin.wallet.R;
 import com.akin.wallet.adapter.AssociatedAccountAdapter;
 import com.akin.wallet.adapter.SocialPlatformAdapter;
 import com.akin.wallet.db.AppDatabaseHelper;
+import com.akin.wallet.db.VaultWarmCache;
 import com.akin.wallet.model.SocialAccountModel;
 import com.akin.wallet.model.SocialPlatformModel;
 import com.akin.wallet.util.Ui;
@@ -100,7 +101,7 @@ public class SocialAccountActivity extends AppCompatActivity {
         setContentView(R.layout.activity_social_account);
         Ui.applySystemBars(this);
 
-        dbHelper = new AppDatabaseHelper(this);
+        dbHelper = VaultWarmCache.get(this).helper();
 
         Ui.setupBackToolbar(this, R.id.toolbar);
 
@@ -148,9 +149,8 @@ public class SocialAccountActivity extends AppCompatActivity {
     protected void onDestroy() {
         Ui.dismissOwnedDialog(deleteDialog);
         deleteDialog = null;
-        if (dbHelper != null) {
-            dbHelper.close();
-        }
+        // Shared helper lives with the process (VaultWarmCache); never close per-screen.
+        dbHelper = null;
         super.onDestroy();
     }
 
@@ -197,7 +197,7 @@ public class SocialAccountActivity extends AppCompatActivity {
         recyclerPlatformSearch = findViewById(R.id.recycler_platform_search);
         emptyPlatformResults = findViewById(R.id.empty_platform_results);
 
-        platformAdapter = new SocialPlatformAdapter(SocialPlatformModel.catalog(),
+        platformAdapter = new SocialPlatformAdapter(VaultWarmCache.get(this).catalog(),
                 (iconRes, name, url) -> {
                     selectedIcon = iconRes;
                     selectedName = name;
@@ -390,7 +390,7 @@ public class SocialAccountActivity extends AppCompatActivity {
         findViewById(R.id.btn_toggle_pin).setOnClickListener(v ->
                 Ui.togglePasswordVisibility(inputPin));
 
-        setupAssociateSection(dbHelper.getAllSocialAccounts(), -1);
+        setupAssociateSection(cachedLinkPool(), -1);
 
         // Add mode keeps a single full-width Save button, same as the bank
         // screen: the delete view is GONE, so its row margin is dropped.
@@ -419,6 +419,7 @@ public class SocialAccountActivity extends AppCompatActivity {
                 return;
             }
 
+            VaultWarmCache.get(SocialAccountActivity.this).invalidate();
             setResult(RESULT_OK);
             finish();
             Ui.notifyOnReturn(R.string.msg_account_saved);
@@ -523,7 +524,7 @@ public class SocialAccountActivity extends AppCompatActivity {
         findViewById(R.id.btn_toggle_pin).setOnClickListener(v ->
                 Ui.togglePasswordVisibility(inputPin));
 
-        setupAssociateSection(dbHelper.getAllSocialAccounts(), item.getId());
+        setupAssociateSection(cachedLinkPool(), item.getId());
 
         findViewById(R.id.btn_save).setOnClickListener(v -> {
             String username = inputUsername.getText().toString().trim();
@@ -546,6 +547,7 @@ public class SocialAccountActivity extends AppCompatActivity {
                 return;
             }
 
+            VaultWarmCache.get(SocialAccountActivity.this).invalidate();
             setResult(RESULT_OK);
             finish();
             Ui.notifyOnReturn(R.string.msg_updated);
@@ -564,11 +566,25 @@ public class SocialAccountActivity extends AppCompatActivity {
                             + item.getPlatform() + " account?",
                     () -> {
                         dbHelper.moveSocialAccountToTrash(item.getId());
+                        VaultWarmCache.get(SocialAccountActivity.this).invalidate();
                         setResult(RESULT_OK);
                         finish();
                         Ui.notifyOnReturn(R.string.msg_deleted);
                     });
         });
 
+    }
+
+    /**
+     * Link pool for the associated-account picker: warmed dashboard masters
+     * when present (post-auth preload), direct query on miss. The picker
+     * itself then only filters in memory — opening search never hits the DB.
+     */
+    private List<SocialAccountModel> cachedLinkPool() {
+        VaultWarmCache.Snapshot cached = VaultWarmCache.get(this).snapshot();
+        if (cached != null && cached.activeAccounts != null) {
+            return new ArrayList<>(cached.activeAccounts);
+        }
+        return dbHelper.getAllSocialAccounts();
     }
 }

@@ -460,7 +460,8 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
                     android:gravity="center_vertical"
-                    android:orientation="horizontal">
+                    android:orientation="horizontal"
+                    android:visibility="gone">
 
                     <TextView
                         android:layout_width="wrap_content"
@@ -477,7 +478,8 @@
                     android:layout_marginTop="8dp"
                     android:clipToPadding="false"
                     android:orientation="horizontal"
-                    android:paddingEnd="36dp" />
+                    android:paddingEnd="36dp"
+                    android:visibility="gone" />
 
                 <LinearLayout
                     android:id="@+id/search_header_cards"
@@ -485,7 +487,8 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="28dp"
                     android:gravity="center_vertical"
-                    android:orientation="horizontal">
+                    android:orientation="horizontal"
+                    android:visibility="gone">
 
                     <TextView
                         android:layout_width="wrap_content"
@@ -502,7 +505,8 @@
                     android:layout_marginTop="8dp"
                     android:clipToPadding="false"
                     android:orientation="horizontal"
-                    android:paddingEnd="36dp" />
+                    android:paddingEnd="36dp"
+                    android:visibility="gone" />
 
                 <LinearLayout
                     android:id="@+id/search_header_social"
@@ -510,7 +514,8 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="28dp"
                     android:gravity="center_vertical"
-                    android:orientation="horizontal">
+                    android:orientation="horizontal"
+                    android:visibility="gone">
 
                     <TextView
                         android:layout_width="wrap_content"
@@ -529,7 +534,8 @@
                     android:paddingStart="6dp"
                     android:paddingEnd="6dp"
                     android:paddingTop="4dp"
-                    android:paddingBottom="4dp">
+                    android:paddingBottom="4dp"
+                    android:visibility="gone">
 
                     <androidx.recyclerview.widget.RecyclerView
                         android:id="@+id/recycler_search_social"
@@ -559,6 +565,7 @@
                         android:paddingBottom="20dp">
 
                         <TextView
+                            android:id="@+id/empty_search_title"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:gravity="center"

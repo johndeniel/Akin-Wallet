@@ -21,6 +21,14 @@ import java.util.List;
 // ("sqlcipher" in loadLibrary and the package path), which the IDE
 // dictionary does not know and which must stay spelled exactly so.
 @SuppressWarnings("SpellCheckingInspection")
+/**
+ * Process-shared vault connection, owned by {@code VaultWarmCache}: exactly
+ * one instance lives with the process, so no method here may close the
+ * {@code SQLiteDatabase} — only {@code Cursor}s close per call. All vault
+ * I/O is funneled through one serialized executor (see
+ * {@code VaultWarmCache.executeVaultIo}), so reads and write transactions
+ * never interleave on the shared connection.
+ */
 public class AppDatabaseHelper extends SQLiteOpenHelper {
 
     private static final String DATABASE_NAME = "akin_wallet.db";
@@ -69,6 +77,9 @@ public class AppDatabaseHelper extends SQLiteOpenHelper {
         super(context.getApplicationContext(), DATABASE_NAME,
                 toPassword(context.getApplicationContext()),
                 null, DATABASE_VERSION, 0, null, null, false);
+    }
+
+    static {
         System.loadLibrary("sqlcipher");
     }
 
@@ -270,7 +281,10 @@ public class AppDatabaseHelper extends SQLiteOpenHelper {
      * @return the row id (existing id for edits, new id for adds).
      */
     public long saveSocialAccountWithLinks(SocialAccountModel item, List<Integer> linkedIds) {
-        try (SQLiteDatabase db = this.getWritableDatabase()) {
+        // Shared process connection (VaultWarmCache): never closed per call.
+        // The block scopes the write; transactions still end in finally.
+        SQLiteDatabase db = this.getWritableDatabase();
+        {
             db.beginTransaction();
             try {
                 long id;
@@ -305,8 +319,10 @@ public class AppDatabaseHelper extends SQLiteOpenHelper {
     }
 
     public SocialAccountModel getSocialAccountById(int id) {
-        try (SQLiteDatabase db = this.getReadableDatabase();
-                Cursor cursor = db.rawQuery("SELECT * FROM " + TABLE_SOCIAL_ACCOUNTS
+        // Shared process connection (VaultWarmCache): the Cursor closes per
+        // query, the database itself never closes.
+        SQLiteDatabase db = this.getReadableDatabase();
+        try (Cursor cursor = db.rawQuery("SELECT * FROM " + TABLE_SOCIAL_ACCOUNTS
                 + " WHERE " + COL_ID + "=?", new String[]{String.valueOf(id)})) {
             if (cursor.moveToFirst()) {
                 return mapSocialAccount(cursor);
@@ -319,8 +335,10 @@ public class AppDatabaseHelper extends SQLiteOpenHelper {
         List<SocialAccountModel> list = new ArrayList<>();
         // Active rows only: trashed rows live in Trash (Settings).
         // Newest-first by recency; id breaks ties on equal stamps.
-        try (SQLiteDatabase db = this.getReadableDatabase();
-                Cursor cursor = db.rawQuery("SELECT * FROM " + TABLE_SOCIAL_ACCOUNTS
+        // Shared process connection (VaultWarmCache): the Cursor closes per
+        // query, the database itself never closes.
+        SQLiteDatabase db = this.getReadableDatabase();
+        try (Cursor cursor = db.rawQuery("SELECT * FROM " + TABLE_SOCIAL_ACCOUNTS
                 + " WHERE " + ACTIVE_SOCIAL_ACCOUNTS_WHERE
                 + " ORDER BY " + COL_UPDATED_AT + " DESC, " + COL_ID + " DESC", null)) {
             if (cursor.moveToFirst()) {
@@ -337,7 +355,10 @@ public class AppDatabaseHelper extends SQLiteOpenHelper {
         if (ids == null || ids.isEmpty()) {
             return;
         }
-        try (SQLiteDatabase db = this.getWritableDatabase()) {
+        // Shared process connection (VaultWarmCache): never closed per call.
+        // The block scopes the write; transactions still end in finally.
+        SQLiteDatabase db = this.getWritableDatabase();
+        {
             db.beginTransaction();
             try {
                 for (Integer id : ids) {
@@ -363,7 +384,10 @@ public class AppDatabaseHelper extends SQLiteOpenHelper {
      * restore brings links back; permanent delete cleans them up.
      */
     public void moveSocialAccountToTrash(int id) {
-        try (SQLiteDatabase db = this.getWritableDatabase()) {
+        // Shared process connection (VaultWarmCache): never closed per call.
+        // The block scopes the write; transactions still end in finally.
+        SQLiteDatabase db = this.getWritableDatabase();
+        {
             ContentValues cv = new ContentValues();
             cv.put(COL_DELETED_AT, System.currentTimeMillis());
             db.update(TABLE_SOCIAL_ACCOUNTS, cv, COL_ID + "=?",
@@ -376,7 +400,10 @@ public class AppDatabaseHelper extends SQLiteOpenHelper {
         if (ids == null || ids.isEmpty()) {
             return;
         }
-        try (SQLiteDatabase db = this.getWritableDatabase()) {
+        // Shared process connection (VaultWarmCache): never closed per call.
+        // The block scopes the write; transactions still end in finally.
+        SQLiteDatabase db = this.getWritableDatabase();
+        {
             db.beginTransaction();
             try {
                 ContentValues cv = new ContentValues();
@@ -398,8 +425,10 @@ public class AppDatabaseHelper extends SQLiteOpenHelper {
     /** Trashed social accounts, newest-deleted first. */
     public List<SocialAccountModel> getTrashedSocialAccounts() {
         List<SocialAccountModel> list = new ArrayList<>();
-        try (SQLiteDatabase db = this.getReadableDatabase();
-                Cursor cursor = db.rawQuery("SELECT * FROM " + TABLE_SOCIAL_ACCOUNTS
+        // Shared process connection (VaultWarmCache): the Cursor closes per
+        // query, the database itself never closes.
+        SQLiteDatabase db = this.getReadableDatabase();
+        try (Cursor cursor = db.rawQuery("SELECT * FROM " + TABLE_SOCIAL_ACCOUNTS
                 + " WHERE " + TRASHED_WHERE
                 + " ORDER BY " + COL_DELETED_AT + " DESC, " + COL_ID + " DESC", null)) {
             if (cursor.moveToFirst()) {
@@ -417,7 +446,10 @@ public class AppDatabaseHelper extends SQLiteOpenHelper {
      * account is opened for editing; the list re-sorts on the next refresh.
      */
     public void touchSocialAccountUpdatedAt(int id) {
-        try (SQLiteDatabase db = this.getWritableDatabase()) {
+        // Shared process connection (VaultWarmCache): never closed per call.
+        // The block scopes the write; transactions still end in finally.
+        SQLiteDatabase db = this.getWritableDatabase();
+        {
             ContentValues cv = new ContentValues();
             cv.put(COL_UPDATED_AT, System.currentTimeMillis());
             db.update(TABLE_SOCIAL_ACCOUNTS, cv, COL_ID + "=?",
@@ -453,15 +485,20 @@ public class AppDatabaseHelper extends SQLiteOpenHelper {
     }
 
     public void insertBankCard(BankCardModel item) {
-        try (SQLiteDatabase db = this.getWritableDatabase()) {
+        // Shared process connection (VaultWarmCache): never closed per call.
+        // The block scopes the write; transactions still end in finally.
+        SQLiteDatabase db = this.getWritableDatabase();
+        {
             db.insert(TABLE_BANK_CARDS, null,
                     bankCardValues(item, System.currentTimeMillis(), true));
         }
     }
 
     public BankCardModel getBankCardById(int id) {
-        try (SQLiteDatabase db = this.getReadableDatabase();
-                Cursor cursor = db.rawQuery("SELECT * FROM " + TABLE_BANK_CARDS
+        // Shared process connection (VaultWarmCache): the Cursor closes per
+        // query, the database itself never closes.
+        SQLiteDatabase db = this.getReadableDatabase();
+        try (Cursor cursor = db.rawQuery("SELECT * FROM " + TABLE_BANK_CARDS
                 + " WHERE " + COL_CARD_ID + "=?", new String[]{String.valueOf(id)})) {
             if (cursor.moveToFirst()) {
                 return mapBankCard(cursor);
@@ -474,8 +511,10 @@ public class AppDatabaseHelper extends SQLiteOpenHelper {
         List<BankCardModel> list = new ArrayList<>();
         // Active rows only; trashed cards live in Trash.
         // Newest-first by recency; id breaks ties on equal stamps.
-        try (SQLiteDatabase db = this.getReadableDatabase();
-                Cursor cursor = db.rawQuery("SELECT * FROM " + TABLE_BANK_CARDS
+        // Shared process connection (VaultWarmCache): the Cursor closes per
+        // query, the database itself never closes.
+        SQLiteDatabase db = this.getReadableDatabase();
+        try (Cursor cursor = db.rawQuery("SELECT * FROM " + TABLE_BANK_CARDS
                 + " WHERE " + ACTIVE_SOCIAL_ACCOUNTS_WHERE
                 + " ORDER BY " + COL_UPDATED_AT + " DESC, " + COL_CARD_ID + " DESC", null)) {
             if (cursor.moveToFirst()) {
@@ -488,7 +527,10 @@ public class AppDatabaseHelper extends SQLiteOpenHelper {
     }
 
     public void updateBankCard(BankCardModel item) {
-        try (SQLiteDatabase db = this.getWritableDatabase()) {
+        // Shared process connection (VaultWarmCache): never closed per call.
+        // The block scopes the write; transactions still end in finally.
+        SQLiteDatabase db = this.getWritableDatabase();
+        {
             db.update(TABLE_BANK_CARDS,
                     bankCardValues(item, System.currentTimeMillis(), false),
                     COL_CARD_ID + "=?", new String[]{String.valueOf(item.getId())});
@@ -500,7 +542,10 @@ public class AppDatabaseHelper extends SQLiteOpenHelper {
         if (ids == null || ids.isEmpty()) {
             return;
         }
-        try (SQLiteDatabase db = this.getWritableDatabase()) {
+        // Shared process connection (VaultWarmCache): never closed per call.
+        // The block scopes the write; transactions still end in finally.
+        SQLiteDatabase db = this.getWritableDatabase();
+        {
             db.beginTransaction();
             try {
                 for (Integer id : ids) {
@@ -522,7 +567,10 @@ public class AppDatabaseHelper extends SQLiteOpenHelper {
      * until restored or permanently deleted.
      */
     public void moveBankCardToTrash(int id) {
-        try (SQLiteDatabase db = this.getWritableDatabase()) {
+        // Shared process connection (VaultWarmCache): never closed per call.
+        // The block scopes the write; transactions still end in finally.
+        SQLiteDatabase db = this.getWritableDatabase();
+        {
             ContentValues cv = new ContentValues();
             cv.put(COL_DELETED_AT, System.currentTimeMillis());
             db.update(TABLE_BANK_CARDS, cv, COL_CARD_ID + "=?",
@@ -535,7 +583,10 @@ public class AppDatabaseHelper extends SQLiteOpenHelper {
         if (ids == null || ids.isEmpty()) {
             return;
         }
-        try (SQLiteDatabase db = this.getWritableDatabase()) {
+        // Shared process connection (VaultWarmCache): never closed per call.
+        // The block scopes the write; transactions still end in finally.
+        SQLiteDatabase db = this.getWritableDatabase();
+        {
             db.beginTransaction();
             try {
                 ContentValues cv = new ContentValues();
@@ -557,8 +608,10 @@ public class AppDatabaseHelper extends SQLiteOpenHelper {
     /** Trashed bank cards, newest-deleted first. */
     public List<BankCardModel> getTrashedBankCards() {
         List<BankCardModel> list = new ArrayList<>();
-        try (SQLiteDatabase db = this.getReadableDatabase();
-                Cursor cursor = db.rawQuery("SELECT * FROM " + TABLE_BANK_CARDS
+        // Shared process connection (VaultWarmCache): the Cursor closes per
+        // query, the database itself never closes.
+        SQLiteDatabase db = this.getReadableDatabase();
+        try (Cursor cursor = db.rawQuery("SELECT * FROM " + TABLE_BANK_CARDS
                 + " WHERE " + TRASHED_WHERE
                 + " ORDER BY " + COL_DELETED_AT + " DESC, " + COL_CARD_ID + " DESC", null)) {
             if (cursor.moveToFirst()) {
@@ -576,7 +629,10 @@ public class AppDatabaseHelper extends SQLiteOpenHelper {
      * dashboard tap; the list re-sorts on the next refresh.
      */
     public void touchBankCardUpdatedAt(int id) {
-        try (SQLiteDatabase db = this.getWritableDatabase()) {
+        // Shared process connection (VaultWarmCache): never closed per call.
+        // The block scopes the write; transactions still end in finally.
+        SQLiteDatabase db = this.getWritableDatabase();
+        {
             ContentValues cv = new ContentValues();
             cv.put(COL_UPDATED_AT, System.currentTimeMillis());
             db.update(TABLE_BANK_CARDS, cv, COL_CARD_ID + "=?",
@@ -605,15 +661,20 @@ public class AppDatabaseHelper extends SQLiteOpenHelper {
     }
 
     public void insertIdCard(GovernmentIDModel item) {
-        try (SQLiteDatabase db = this.getWritableDatabase()) {
+        // Shared process connection (VaultWarmCache): never closed per call.
+        // The block scopes the write; transactions still end in finally.
+        SQLiteDatabase db = this.getWritableDatabase();
+        {
             db.insert(TABLE_ID_CARDS, null,
                     idCardValues(item, System.currentTimeMillis(), true));
         }
     }
 
     public GovernmentIDModel getIdCardById(int id) {
-        try (SQLiteDatabase db = this.getReadableDatabase();
-                Cursor cursor = db.rawQuery("SELECT * FROM " + TABLE_ID_CARDS
+        // Shared process connection (VaultWarmCache): the Cursor closes per
+        // query, the database itself never closes.
+        SQLiteDatabase db = this.getReadableDatabase();
+        try (Cursor cursor = db.rawQuery("SELECT * FROM " + TABLE_ID_CARDS
                 + " WHERE " + COL_ID_CARD_ID + "=?", new String[]{String.valueOf(id)})) {
             if (cursor.moveToFirst()) {
                 return mapIdCard(cursor);
@@ -627,8 +688,10 @@ public class AppDatabaseHelper extends SQLiteOpenHelper {
         // Active rows only; trashed IDs live in Trash.
         // Newest-first by recency, matching bank cards and social accounts;
         // id breaks ties on equal stamps.
-        try (SQLiteDatabase db = this.getReadableDatabase();
-                Cursor cursor = db.rawQuery("SELECT * FROM " + TABLE_ID_CARDS
+        // Shared process connection (VaultWarmCache): the Cursor closes per
+        // query, the database itself never closes.
+        SQLiteDatabase db = this.getReadableDatabase();
+        try (Cursor cursor = db.rawQuery("SELECT * FROM " + TABLE_ID_CARDS
                 + " WHERE " + ACTIVE_SOCIAL_ACCOUNTS_WHERE
                 + " ORDER BY " + COL_UPDATED_AT + " DESC, " + COL_ID_CARD_ID + " DESC", null)) {
             if (cursor.moveToFirst()) {
@@ -641,7 +704,10 @@ public class AppDatabaseHelper extends SQLiteOpenHelper {
     }
 
     public void updateIdCard(GovernmentIDModel item) {
-        try (SQLiteDatabase db = this.getWritableDatabase()) {
+        // Shared process connection (VaultWarmCache): never closed per call.
+        // The block scopes the write; transactions still end in finally.
+        SQLiteDatabase db = this.getWritableDatabase();
+        {
             db.update(TABLE_ID_CARDS,
                     idCardValues(item, System.currentTimeMillis(), false),
                     COL_ID_CARD_ID + "=?", new String[]{String.valueOf(item.getId())});
@@ -655,7 +721,10 @@ public class AppDatabaseHelper extends SQLiteOpenHelper {
      * list re-sorts on the next refresh.
      */
     public void touchIdCardUpdatedAt(int id) {
-        try (SQLiteDatabase db = this.getWritableDatabase()) {
+        // Shared process connection (VaultWarmCache): never closed per call.
+        // The block scopes the write; transactions still end in finally.
+        SQLiteDatabase db = this.getWritableDatabase();
+        {
             ContentValues cv = new ContentValues();
             cv.put(COL_UPDATED_AT, System.currentTimeMillis());
             db.update(TABLE_ID_CARDS, cv, COL_ID_CARD_ID + "=?",
@@ -668,7 +737,10 @@ public class AppDatabaseHelper extends SQLiteOpenHelper {
         if (ids == null || ids.isEmpty()) {
             return;
         }
-        try (SQLiteDatabase db = this.getWritableDatabase()) {
+        // Shared process connection (VaultWarmCache): never closed per call.
+        // The block scopes the write; transactions still end in finally.
+        SQLiteDatabase db = this.getWritableDatabase();
+        {
             db.beginTransaction();
             try {
                 for (Integer id : ids) {
@@ -690,7 +762,10 @@ public class AppDatabaseHelper extends SQLiteOpenHelper {
      * until restored or permanently deleted.
      */
     public void moveIdCardToTrash(int id) {
-        try (SQLiteDatabase db = this.getWritableDatabase()) {
+        // Shared process connection (VaultWarmCache): never closed per call.
+        // The block scopes the write; transactions still end in finally.
+        SQLiteDatabase db = this.getWritableDatabase();
+        {
             ContentValues cv = new ContentValues();
             cv.put(COL_DELETED_AT, System.currentTimeMillis());
             db.update(TABLE_ID_CARDS, cv, COL_ID_CARD_ID + "=?",
@@ -703,7 +778,10 @@ public class AppDatabaseHelper extends SQLiteOpenHelper {
         if (ids == null || ids.isEmpty()) {
             return;
         }
-        try (SQLiteDatabase db = this.getWritableDatabase()) {
+        // Shared process connection (VaultWarmCache): never closed per call.
+        // The block scopes the write; transactions still end in finally.
+        SQLiteDatabase db = this.getWritableDatabase();
+        {
             db.beginTransaction();
             try {
                 ContentValues cv = new ContentValues();
@@ -725,8 +803,10 @@ public class AppDatabaseHelper extends SQLiteOpenHelper {
     /** Trashed government IDs, newest-deleted first. */
     public List<GovernmentIDModel> getTrashedIdCards() {
         List<GovernmentIDModel> list = new ArrayList<>();
-        try (SQLiteDatabase db = this.getReadableDatabase();
-                Cursor cursor = db.rawQuery("SELECT * FROM " + TABLE_ID_CARDS
+        // Shared process connection (VaultWarmCache): the Cursor closes per
+        // query, the database itself never closes.
+        SQLiteDatabase db = this.getReadableDatabase();
+        try (Cursor cursor = db.rawQuery("SELECT * FROM " + TABLE_ID_CARDS
                 + " WHERE " + TRASHED_WHERE
                 + " ORDER BY " + COL_DELETED_AT + " DESC, " + COL_ID_CARD_ID + " DESC", null)) {
             if (cursor.moveToFirst()) {
@@ -740,8 +820,10 @@ public class AppDatabaseHelper extends SQLiteOpenHelper {
 
     public List<Integer> getLinkedAccountIds(long accountId) {
         List<Integer> list = new ArrayList<>();
-        try (SQLiteDatabase db = this.getReadableDatabase();
-                Cursor cursor = db.rawQuery("SELECT " + COL_LINKED_ACCOUNT_ID + " FROM " + TABLE_ACCOUNT_LINKS
+        // Shared process connection (VaultWarmCache): the Cursor closes per
+        // query, the database itself never closes.
+        SQLiteDatabase db = this.getReadableDatabase();
+        try (Cursor cursor = db.rawQuery("SELECT " + COL_LINKED_ACCOUNT_ID + " FROM " + TABLE_ACCOUNT_LINKS
                 + " WHERE " + COL_ACCOUNT_ID + "=?", new String[]{String.valueOf(accountId)})) {
             if (cursor.moveToFirst()) {
                 do {

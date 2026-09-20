@@ -14,6 +14,7 @@ import androidx.biometric.BiometricPrompt;
 import androidx.core.content.ContextCompat;
 
 import com.akin.wallet.R;
+import com.akin.wallet.db.VaultWarmCache;
 import com.akin.wallet.security.AppLockManager;
 import com.akin.wallet.util.Ui;
 
@@ -114,6 +115,15 @@ public class LockActivity extends AppCompatActivity {
 
         biometricPrompt = new BiometricPrompt(this,
                 ContextCompat.getMainExecutor(this), biometricCallback());
+
+        // Vault warm-up (pre-auth half): connection + catalog only, never rows.
+        // Runs while the keypad inflates so the post-auth preload below starts
+        // from an open connection. AkinApp already kicked this; redundant here
+        // is intentional for process-warm re-entry.
+        if (AppLockManager.isPinSet(this)) {
+            VaultWarmCache.get(this).warmConnectionAsync();
+            VaultWarmCache.get(this).warmCatalogAsync();
+        }
 
         if (savedInstanceState != null) {
             // Rotation: resume exactly where the user was (prompt itself is
@@ -427,12 +437,19 @@ public class LockActivity extends AppCompatActivity {
             Ui.notifyOnReturn(R.string.lock_pin_updated);
             setResult(RESULT_OK);
             finish();
-        } else if (MODE_VERIFY.equals(mode)) {
-            setResult(RESULT_OK);
-            finish();
         } else {
-            startActivity(new Intent(this, DashboardActivity.class));
-            finish();
+            // Vault warm-up (post-auth half): dashboard/trash/link-pool rows.
+            // Overlapped handoff — DashboardActivity binds from the snapshot
+            // the moment it lands instead of querying from a cold open.
+            // Skipped for MODE_CHANGE (returns to Settings, no vault lists).
+            VaultWarmCache.get(this).preloadPostAuthAsync();
+            if (MODE_VERIFY.equals(mode)) {
+                setResult(RESULT_OK);
+                finish();
+            } else {
+                startActivity(new Intent(this, DashboardActivity.class));
+                finish();
+            }
         }
     }
 

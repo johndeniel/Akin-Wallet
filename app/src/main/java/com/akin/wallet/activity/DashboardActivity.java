@@ -22,6 +22,7 @@ import com.akin.wallet.adapter.BankCardAdapter;
 import com.akin.wallet.adapter.GovermentIdAdapter;
 import com.akin.wallet.adapter.SocialAccountAdapter;
 import com.akin.wallet.db.AppDatabaseHelper;
+import com.akin.wallet.db.VaultWarmCache;
 import com.akin.wallet.security.AppLockManager;
 import com.akin.wallet.model.BankCardModel;
 import com.akin.wallet.model.SocialAccountModel;
@@ -34,8 +35,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 /**
  * Dashboard (Home) — single-screen host, no fragments. Shows live Government
@@ -58,8 +57,6 @@ public class DashboardActivity extends AppCompatActivity {
     private RecyclerView recyclerSocialAccounts;
     private View emptySocialAccounts;
 
-    /** Single-thread vault I/O: keeps SQLCipher off the UI thread, in order. */
-    private final ExecutorService dbIo = Executors.newSingleThreadExecutor();
     /** Drops stale loads (rotation / rapid resume) — only the latest binds. */
     private int loadGeneration;
     /** One stateless 12dp gap shared by every carousel (never per-item state). */
@@ -98,6 +95,7 @@ public class DashboardActivity extends AppCompatActivity {
     private View headerCards;
     private View headerSocial;
     private View emptySearchResults;
+    private TextView emptySearchTitle;
     private TextView emptySearchSub;
     private long lastBackgroundAt;
 
@@ -118,7 +116,7 @@ public class DashboardActivity extends AppCompatActivity {
         setContentView(R.layout.activity_dashboard);
         setupSystemBars();
 
-        dbHelper = new AppDatabaseHelper(this);
+        dbHelper = VaultWarmCache.get(this).helper();
         sharedGap = gapDecoration();
 
         setupHeader();
@@ -127,6 +125,7 @@ public class DashboardActivity extends AppCompatActivity {
         setupSocialAccounts();
         setupSearch();
         setupAddMenu();
+        bindCachedSnapshot();
 
         if (savedInstanceState != null) {
             // Rotation: restore the query and re-open the SearchView exactly
@@ -165,6 +164,9 @@ public class DashboardActivity extends AppCompatActivity {
                 && System.currentTimeMillis() - lastBackgroundAt
                 > AppLockManager.SESSION_GRACE_MS;
         if (!AppLockManager.isSessionUnlocked() || graceExpired) {
+            // Drop row plaintext before the lock screen covers us; the
+            // post-auth preload repopulates before we are visible again.
+            VaultWarmCache.get(this).clearSensitiveOnLock();
             verifyLauncher.launch(new Intent(this, LockActivity.class)
                     .putExtra(LockActivity.EXTRA_MODE, LockActivity.MODE_VERIFY));
         }
@@ -187,11 +189,8 @@ public class DashboardActivity extends AppCompatActivity {
     protected void onDestroy() {
         // Animators hold child views; cancel so a mid-entrance finish cannot leak them.
         cancelMenuEntrance();
-        dbIo.shutdownNow();
-        // SQLiteOpenHelper holds a pooled connection; release it with the screen.
-        if (dbHelper != null) {
-            dbHelper.close();
-        }
+        // Vault I/O runs on the shared funnel (never shut down per-screen).
+        dbHelper = null;
         super.onDestroy();
     }
 
@@ -286,6 +285,7 @@ public class DashboardActivity extends AppCompatActivity {
         searchHeaderSocial = findViewById(R.id.search_header_social);
 
         emptySearchResults = findViewById(R.id.empty_search_results);
+        emptySearchTitle = findViewById(R.id.empty_search_title);
         emptySearchSub = findViewById(R.id.empty_search_sub);
 
         searchView.getEditText().addTextChangedListener(new Ui.SimpleTextWatcher() {
@@ -350,6 +350,8 @@ public class DashboardActivity extends AppCompatActivity {
         if (allIds == null || allCards == null || allAccounts == null
                 || searchIdAdapter == null || searchCardAdapter == null
                 || searchSocialAdapter == null) {
+            // Pre-load: search sections default to gone in XML; the first
+            // bind restores them.
             return;
         }
         String query = currentQuery.trim().toLowerCase(Locale.US);
@@ -363,7 +365,7 @@ public class DashboardActivity extends AppCompatActivity {
     }
 
     private void bindSearchResults(List<GovernmentIDModel> ids, List<BankCardModel> cards,
-                                   List<SocialAccountModel> accounts, boolean searching) {
+                                    List<SocialAccountModel> accounts, boolean searching) {
         searchIdAdapter.updateData(ids);
         boolean hasIds = ids != null && !ids.isEmpty();
         recyclerSearchIds.setVisibility(hasIds ? View.VISIBLE : View.GONE);
@@ -380,11 +382,26 @@ public class DashboardActivity extends AppCompatActivity {
         searchHeaderSocial.setVisibility(hasAccounts ? View.VISIBLE : View.GONE);
 
         boolean allEmpty = !hasIds && !hasCards && !hasAccounts;
-        emptySearchResults.setVisibility(
-                searching && allEmpty ? View.VISIBLE : View.GONE);
-        if (searching && allEmpty && emptySearchSub != null) {
-            emptySearchSub.setText(getString(R.string.search_empty_sub_for,
-                    getString(R.string.search_empty_sub), currentQuery.trim()));
+        emptySearchResults.setVisibility(allEmpty ? View.VISIBLE : View.GONE);
+        if (allEmpty) {
+            // One card, two jobs: a dead-end query keeps the no-results
+            // wording, while a genuinely empty vault gets its own invite.
+            if (searching) {
+                if (emptySearchTitle != null) {
+                    emptySearchTitle.setText(R.string.search_empty_title);
+                }
+                if (emptySearchSub != null) {
+                    emptySearchSub.setText(getString(R.string.search_empty_sub_for,
+                            getString(R.string.search_empty_sub), currentQuery.trim()));
+                }
+            } else {
+                if (emptySearchTitle != null) {
+                    emptySearchTitle.setText(R.string.search_empty_vault_title);
+                }
+                if (emptySearchSub != null) {
+                    emptySearchSub.setText(R.string.search_empty_vault_sub);
+                }
+            }
         }
     }
 
@@ -537,7 +554,10 @@ public class DashboardActivity extends AppCompatActivity {
     private void openSocialEditor(SocialAccountModel item) {
         // Recency bump rides the I/O thread; navigation never waits for it.
         final int id = item.getId();
-        dbIo.execute(() -> dbHelper.touchSocialAccountUpdatedAt(id));
+        final AppDatabaseHelper db = dbHelper;
+        if (db != null) {
+            VaultWarmCache.get(this).executeVaultIo(() -> db.touchSocialAccountUpdatedAt(id));
+        }
         startActivity(SocialAccountActivity.editIntent(this, item));
     }
 
@@ -562,7 +582,10 @@ public class DashboardActivity extends AppCompatActivity {
      */
     private void openIdEditor(GovernmentIDModel item) {
         final int id = item.getId();
-        dbIo.execute(() -> dbHelper.touchIdCardUpdatedAt(id));
+        final AppDatabaseHelper db = dbHelper;
+        if (db != null) {
+            VaultWarmCache.get(this).executeVaultIo(() -> db.touchIdCardUpdatedAt(id));
+        }
         startActivity(GovernmentIDActivity.editIntent(this, item));
     }
 
@@ -579,7 +602,10 @@ public class DashboardActivity extends AppCompatActivity {
      */
     private void openBankEditor(BankCardModel item) {
         final int id = item.getId();
-        dbIo.execute(() -> dbHelper.touchBankCardUpdatedAt(id));
+        final AppDatabaseHelper db = dbHelper;
+        if (db != null) {
+            VaultWarmCache.get(this).executeVaultIo(() -> db.touchBankCardUpdatedAt(id));
+        }
         startActivity(BankCardActivity.editIntent(this, item));
     }
 
@@ -740,18 +766,41 @@ public class DashboardActivity extends AppCompatActivity {
         }
     }
 
-    private void refreshDashboard() {
-        if (dbHelper == null) {
+    /**
+     * Cache-first bind: when the post-auth preload already ran (the common
+     * unlock path), the carousels and search masters bind synchronously
+     * before first draw — no header-only flash. Falls back to async load
+     * on miss; {@link #refreshDashboard()} in {@code onResume} always
+     * revalidates afterward.
+     */
+    private void bindCachedSnapshot() {
+        VaultWarmCache.Snapshot cached = VaultWarmCache.get(this).snapshot();
+        if (cached == null || !cached.hasActive()) {
             return;
         }
-        // Vault reads (decrypt + 3 queries) ride the I/O thread; only the
-        // latest generation binds, so rotation/rapid resume cannot show
-        // stale rows or touch a dead activity.
+        allIds = new ArrayList<>(cached.activeIds);
+        allCards = new ArrayList<>(cached.activeCards);
+        allAccounts = new ArrayList<>(cached.activeAccounts);
+        refreshIdsCarousel(allIds);
+        refreshCardCarousel(allCards);
+        refreshSocialAccounts(allAccounts);
+    }
+
+    private void refreshDashboard() {
+        final AppDatabaseHelper db = dbHelper;
+        if (db == null) {
+            return;
+        }
+        // Vault reads ride the shared funnel (ordered with warm-up/preload);
+        // only the latest generation binds, so rotation/rapid resume cannot
+        // show stale rows or touch a dead activity.
         final int generation = ++loadGeneration;
-        dbIo.execute(() -> {
-            final List<GovernmentIDModel> ids = dbHelper.getAllIdCards();
-            final List<BankCardModel> cards = dbHelper.getAllBankCards();
-            final List<SocialAccountModel> accounts = dbHelper.getAllSocialAccounts();
+        VaultWarmCache.get(this).executeVaultIo(() -> {
+            final List<GovernmentIDModel> ids = db.getAllIdCards();
+            final List<BankCardModel> cards = db.getAllBankCards();
+            final List<SocialAccountModel> accounts = db.getAllSocialAccounts();
+            VaultWarmCache.get(DashboardActivity.this)
+                    .publishActive(ids, cards, accounts);
             runOnUiThread(() -> {
                 if (generation != loadGeneration || isFinishing()) {
                     return;

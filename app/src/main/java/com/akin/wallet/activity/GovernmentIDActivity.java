@@ -26,6 +26,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.akin.wallet.R;
 import com.akin.wallet.adapter.GovermentIdDesignAdapter;
 import com.akin.wallet.db.AppDatabaseHelper;
+import com.akin.wallet.db.VaultWarmCache;
 import com.akin.wallet.model.GovernmentIDModel;
 import com.akin.wallet.util.Ui;
 import com.google.android.material.snackbar.Snackbar;
@@ -75,7 +76,7 @@ public class GovernmentIDActivity extends AppCompatActivity {
         setContentView(R.layout.activity_government_id);
         Ui.applySystemBars(this);
 
-        dbHelper = new AppDatabaseHelper(this);
+        dbHelper = VaultWarmCache.get(this).helper();
 
         Ui.setupBackToolbar(this, R.id.toolbar);
 
@@ -133,9 +134,8 @@ public class GovernmentIDActivity extends AppCompatActivity {
     protected void onDestroy() {
         Ui.dismissOwnedDialog(activeDialog);
         activeDialog = null;
-        if (dbHelper != null) {
-            dbHelper.close();
-        }
+        // Shared helper lives with the process (VaultWarmCache); never close per-screen.
+        dbHelper = null;
         super.onDestroy();
     }
 
@@ -325,6 +325,7 @@ public class GovernmentIDActivity extends AppCompatActivity {
                 dbHelper.insertIdCard(newCard);
                 Ui.notifyOnReturn(R.string.msg_id_saved);
             }
+            VaultWarmCache.get(GovernmentIDActivity.this).invalidate();
             setResult(RESULT_OK);
             finish();
         });
@@ -344,6 +345,7 @@ public class GovernmentIDActivity extends AppCompatActivity {
                                 + existing.getIdType() + "?",
                         () -> {
                             dbHelper.moveIdCardToTrash(existing.getId());
+                            VaultWarmCache.get(GovernmentIDActivity.this).invalidate();
                             setResult(RESULT_OK);
                             finish();
                             Ui.notifyOnReturn(R.string.msg_deleted);

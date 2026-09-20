@@ -20,6 +20,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.akin.wallet.R;
 import com.akin.wallet.adapter.BankCardDesignAdapter;
 import com.akin.wallet.db.AppDatabaseHelper;
+import com.akin.wallet.db.VaultWarmCache;
 import com.akin.wallet.model.BankCardModel;
 import com.akin.wallet.util.Ui;
 
@@ -110,7 +111,7 @@ public class BankCardActivity extends AppCompatActivity {
         setContentView(R.layout.activity_bank_card);
         Ui.applySystemBars(this);
 
-        dbHelper = new AppDatabaseHelper(this);
+        dbHelper = VaultWarmCache.get(this).helper();
 
         Ui.setupBackToolbar(this, R.id.toolbar);
 
@@ -151,10 +152,8 @@ public class BankCardActivity extends AppCompatActivity {
         choiceDialog = null;
         Ui.dismissOwnedDialog(deleteDialog);
         deleteDialog = null;
-        // SQLiteOpenHelper holds a pooled connection; release it with the screen.
-        if (dbHelper != null) {
-            dbHelper.close();
-        }
+        // Shared helper lives with the process (VaultWarmCache); never close per-screen.
+        dbHelper = null;
         super.onDestroy();
     }
 
@@ -473,6 +472,7 @@ public class BankCardActivity extends AppCompatActivity {
                         selectedDesign));
                 Ui.notifyOnReturn(R.string.msg_card_saved);
             }
+            VaultWarmCache.get(BankCardActivity.this).invalidate();
             setResult(RESULT_OK);
             finish();
         });
@@ -491,6 +491,7 @@ public class BankCardActivity extends AppCompatActivity {
                     "Are you sure you want to delete this card?",
                     () -> {
                         dbHelper.moveBankCardToTrash(editingItem.getId());
+                        VaultWarmCache.get(BankCardActivity.this).invalidate();
                         setResult(RESULT_OK);
                         finish();
                         Ui.notifyOnReturn(R.string.msg_deleted);
