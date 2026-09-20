@@ -35,6 +35,7 @@ public final class AppLockManager {
     private static final String KEY_BIOMETRIC_ENABLED = "biometric_enabled";
     private static final String KEY_FAILED_ATTEMPTS = "failed_attempts";
     private static final String KEY_LOCKOUT_UNTIL = "lockout_until";
+    private static final String KEY_LOCKOUT_CYCLES = "lockout_cycles";
 
     /** PBKDF2 work factor. Stored alongside the hash for future agility. */
     private static final int HASH_ITERATIONS = 120_000;
@@ -45,6 +46,10 @@ public final class AppLockManager {
     public static final int MAX_ATTEMPTS = 5;
     public static final long LOCKOUT_DURATION_MS = 30_000L;
     public static final long SESSION_GRACE_MS = 60_000L;
+    /** Escalation cap: 30s, 60s, 120s … capped at 30 min. */
+    public static final long LOCKOUT_MAX_MS = 30 * 60_000L;
+    /** Aggressive posture: after this many lockout cycles the vault is wiped. */
+    public static final int WIPE_AFTER_LOCKOUT_CYCLES = 10;
 
     private static volatile boolean sessionUnlocked = false;
 
@@ -73,6 +78,7 @@ public final class AppLockManager {
         preferences.edit()
                 .remove(KEY_FAILED_ATTEMPTS)
                 .remove(KEY_LOCKOUT_UNTIL)
+                .remove(KEY_LOCKOUT_CYCLES)
                 .apply();
     }
 
@@ -170,16 +176,20 @@ public final class AppLockManager {
      * Records a wrong PIN. Returns attempts left before lockout, or -1 when
      * this failure just triggered the cooldown. Persisted in the background;
      * attempts are human-paced with a slow hash between them, so the counter
-     * cannot meaningfully race.
+     * cannot meaningfully race. Lockout escalates exponentially per cycle.
      */
     public static int recordFailure(@NonNull Context context) {
         SharedPreferences preferences = prefs(context);
         int attempts = preferences.getInt(KEY_FAILED_ATTEMPTS, 0) + 1;
         if (attempts >= MAX_ATTEMPTS) {
+            int cycles = preferences.getInt(KEY_LOCKOUT_CYCLES, 0);
+            long duration = Math.min(
+                    LOCKOUT_DURATION_MS << Math.min(cycles, 6), LOCKOUT_MAX_MS);
             preferences.edit()
                     .remove(KEY_FAILED_ATTEMPTS)
                     .putLong(KEY_LOCKOUT_UNTIL,
-                            SystemClock.elapsedRealtime() + LOCKOUT_DURATION_MS)
+                            SystemClock.elapsedRealtime() + duration)
+                    .putInt(KEY_LOCKOUT_CYCLES, cycles + 1)
                     .apply();
             return -1;
         }
@@ -187,10 +197,21 @@ public final class AppLockManager {
         return MAX_ATTEMPTS - attempts;
     }
 
+    /** Completed lockout cycles (for exponential backoff + wipe policy). */
+    public static int lockoutCycles(@NonNull Context context) {
+        return prefs(context).getInt(KEY_LOCKOUT_CYCLES, 0);
+    }
+
+    /** True when the aggressive wipe threshold has been reached. */
+    public static boolean shouldWipe(@NonNull Context context) {
+        return lockoutCycles(context) >= WIPE_AFTER_LOCKOUT_CYCLES;
+    }
+
     public static void resetFailures(@NonNull Context context) {
         prefs(context).edit()
                 .remove(KEY_FAILED_ATTEMPTS)
                 .remove(KEY_LOCKOUT_UNTIL)
+                .remove(KEY_LOCKOUT_CYCLES)
                 .apply();
     }
 

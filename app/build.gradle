@@ -20,13 +20,16 @@ android {
 
     // Release signing comes from local.properties (never committed):
     //   release.storeFile, release.storePassword, release.keyAlias, release.keyPassword
-    // Without them the release build falls back to the debug key (local use only).
+    // Fail-closed: a release without the key aborts instead of using debug.
     def localProps = new Properties()
     def localPropsFile = rootProject.file("local.properties")
     if (localPropsFile.exists()) {
         localPropsFile.withInputStream { localProps.load(it) }
     }
     def hasReleaseKey = localProps.containsKey("release.storeFile")
+            && localProps.containsKey("release.storePassword")
+            && localProps.containsKey("release.keyAlias")
+            && localProps.containsKey("release.keyPassword")
 
     signingConfigs {
         release {
@@ -48,6 +51,14 @@ android {
             }
             if (hasReleaseKey) {
                 signingConfig signingConfigs.release
+            } else {
+                // Fail-closed: never ship a release signed with the debug key.
+                // CI without local.properties must fail here with a clear error.
+                throw new GradleException(
+                        "Missing release signing config: define release.storeFile, " +
+                        "release.storePassword, release.keyAlias, release.keyPassword " +
+                        "in local.properties (see README). Release builds abort " +
+                        "rather than falling back to the debug key.")
             }
         }
     }

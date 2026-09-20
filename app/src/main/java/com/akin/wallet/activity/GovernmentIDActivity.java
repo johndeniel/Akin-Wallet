@@ -55,6 +55,14 @@ public class GovernmentIDActivity extends BaseVaultActivity {
     // draft + selected type are saved explicitly; bindForm seeds from them.
     private static final String KEY_DRAFT = "draft_values";
     private static final String KEY_SELECTED_TYPE = "selected_type";
+    private static final java.util.regex.Pattern NON_DIGITS =
+            java.util.regex.Pattern.compile("\\D");
+    private static final java.util.regex.Pattern NON_ALNUM =
+            java.util.regex.Pattern.compile("[^A-Za-z0-9]");
+    private static final java.util.regex.Pattern HAS_LETTER =
+            java.util.regex.Pattern.compile(".*[A-Za-z].*");
+    private static final java.util.regex.Pattern DATE_8 =
+            java.util.regex.Pattern.compile("\\d{8}");
     private Map<String, String> savedDraft;
     private int savedSelectedType;
     private boolean hasSavedState;
@@ -78,12 +86,20 @@ public class GovernmentIDActivity extends BaseVaultActivity {
         if (id == -1) {
             bindForm(null);
         } else {
-            GovernmentIDModel stored = db().getIdCardById(id);
-            if (stored == null) {
-                finish();
-                return;
-            }
-            bindForm(stored);
+            // Single-row decrypt + JSON parse off UI to avoid first-draw jank.
+            final int rowId = id;
+            final int gen = nextLoadGeneration();
+            vaultIo(() -> {
+                final GovernmentIDModel stored = db().getIdCardById(rowId);
+                runOnUiThread(() -> {
+                    if (!isCurrentGeneration(gen) || isFinishing()) return;
+                    if (stored == null) {
+                        finish();
+                        return;
+                    }
+                    bindForm(stored);
+                });
+            });
         }
     }
 
@@ -207,8 +223,11 @@ public class GovernmentIDActivity extends BaseVaultActivity {
                 new LinearLayoutManager(GovernmentIDActivity.this, LinearLayoutManager.HORIZONTAL, false);
         recyclerDesign.setLayoutManager(layoutManager);
         recyclerDesign.setAdapter(designAdapter);
+        recyclerDesign.setHasFixedSize(true);
+        recyclerDesign.setItemViewCacheSize(4);
         // Same 12dp inter-card gap as the dashboard carousel so the form
         // picker spaces pages exactly like Home.
+        final int govGapPx = Ui.dp(this, 12);
         recyclerDesign.addItemDecoration(new RecyclerView.ItemDecoration() {
             @Override
             public void getItemOffsets(@NonNull Rect outRect, @NonNull View child,
@@ -217,8 +236,7 @@ public class GovernmentIDActivity extends BaseVaultActivity {
                 int position = parent.getChildAdapterPosition(child);
                 if (position != RecyclerView.NO_POSITION
                         && position < state.getItemCount() - 1) {
-                    float density = parent.getResources().getDisplayMetrics().density;
-                    outRect.right = (int) (12 * density);
+                    outRect.right = govGapPx;
                 }
             }
         });
@@ -285,26 +303,36 @@ public class GovernmentIDActivity extends BaseVaultActivity {
             if (!validate(spec, filtered, textInputs, dropdownValues)) {
                 return;
             }
+            btnSave.setEnabled(false);
 
             if (isEdit) {
-                // createdAt rides along untouched (creation order is immutable);
-                // updatedAt=0 tells the DB helper to stamp now on write.
-                // Known types may have been switched via selector; use the new
-                // name.
                 String finalType = knownType[0] ? typeName : existing.getIdType();
-                GovernmentIDModel updated = new GovernmentIDModel(
+                final GovernmentIDModel updated = new GovernmentIDModel(
                         existing.getId(), finalType, filtered,
                         existing.getCreatedAt(), 0);
-                db().updateIdCard(updated);
-                app().notifyOnReturn(R.string.msg_updated);
+                vaultIo(() -> {
+                    db().updateIdCard(updated);
+                    cache().invalidate();
+                    runOnUiThread(() -> {
+                        if (isFinishing()) return;
+                        app().notifyOnReturn(R.string.msg_updated);
+                        setResult(RESULT_OK);
+                        finish();
+                    });
+                });
             } else {
-                GovernmentIDModel newCard = new GovernmentIDModel(typeName, filtered);
-                db().insertIdCard(newCard);
-                app().notifyOnReturn(R.string.msg_id_saved);
+                final GovernmentIDModel newCard = new GovernmentIDModel(typeName, filtered);
+                vaultIo(() -> {
+                    db().insertIdCard(newCard);
+                    cache().invalidate();
+                    runOnUiThread(() -> {
+                        if (isFinishing()) return;
+                        app().notifyOnReturn(R.string.msg_id_saved);
+                        setResult(RESULT_OK);
+                        finish();
+                    });
+                });
             }
-            cache().invalidate();
-            setResult(RESULT_OK);
-            finish();
         });
 
         // Delete on this screen (no IDs tab), shown in-row in edit mode
@@ -319,11 +347,17 @@ public class GovernmentIDActivity extends BaseVaultActivity {
                     "Are you sure you want to delete this "
                             + existing.getIdType() + "?",
                     () -> {
-                        db().moveIdCardToTrash(existing.getId());
-                        cache().invalidate();
-                        setResult(RESULT_OK);
-                        finish();
-                        app().notifyOnReturn(R.string.msg_deleted);
+                        final int rowId = existing.getId();
+                        vaultIo(() -> {
+                            db().moveIdCardToTrash(rowId);
+                            cache().invalidate();
+                            runOnUiThread(() -> {
+                                if (isFinishing()) return;
+                                setResult(RESULT_OK);
+                                finish();
+                                app().notifyOnReturn(R.string.msg_deleted);
+                            });
+                        });
                     }));
         }
 
@@ -633,7 +667,7 @@ public class GovernmentIDActivity extends BaseVaultActivity {
             if (specField.required && fieldValue.isEmpty()) {
                 return new FieldOffense(specField.key, specField.label + " is required");
             }
-            if (specField.sensitive && !fieldValue.isEmpty() && fieldValue.replaceAll("[^A-Za-z0-9]", "").length() < 4) {
+            if (specField.sensitive && !fieldValue.isEmpty() && NON_ALNUM.matcher(fieldValue).replaceAll("").length() < 4) {
                 return new FieldOffense(specField.key, specField.label + " looks too short");
             }
         }
@@ -751,7 +785,7 @@ public class GovernmentIDActivity extends BaseVaultActivity {
             return new FieldOffense("expiry_date", expiryError);
         }
         String serialRaw = trimmed(values.get("serial_no"));
-        if (!serialRaw.isEmpty() && serialRaw.matches(".*[A-Za-z].*")) {
+        if (!serialRaw.isEmpty() && HAS_LETTER.matcher(serialRaw).matches()) {
             return new FieldOffense("serial_no", "Serial number must contain numbers only (no letters)");
         }
         return null;
@@ -783,10 +817,10 @@ public class GovernmentIDActivity extends BaseVaultActivity {
         if (raw.isEmpty()) {
             return label + " is required";
         }
-        if (raw.matches(".*[A-Za-z].*")) {
+        if (HAS_LETTER.matcher(raw).matches()) {
             return label + " must contain numbers only (no letters)";
         }
-        if (raw.replaceAll("\\D", "").length() != digits) {
+        if (NON_DIGITS.matcher(raw).replaceAll("").length() != digits) {
             return label + " must be exactly " + digits + " digits";
         }
         return null;
@@ -805,7 +839,7 @@ public class GovernmentIDActivity extends BaseVaultActivity {
         }
         // Exactly 8 digits, nothing else. This single check rejects alphabet,
         // month names, dashes, and wrong lengths with one message.
-        if (!raw.matches("\\d{8}")) {
+        if (!DATE_8.matcher(raw).matches()) {
             return label + " must be 8 digits (YYYYMMDD)";
         }
         return null;

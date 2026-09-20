@@ -54,6 +54,8 @@ public class BankCardActivity extends BaseVaultActivity {
     private static final int HOLDER_NAME_MIN_LEN = 2;
     private static final int HOLDER_NAME_MAX_LEN = 50;
     private static final java.util.regex.Pattern NON_DIGITS = java.util.regex.Pattern.compile("\\D");
+    private static final java.util.regex.Pattern HOLDER_NAME =
+            java.util.regex.Pattern.compile("\\p{L}[\\p{L} .'-]*");
 
     // Rotation keys. EditTexts restore their own text; the pickers do not, so
     // the selected indices are saved explicitly.
@@ -112,12 +114,48 @@ public class BankCardActivity extends BaseVaultActivity {
             selectedDesign = Math.max(0, savedInstanceState.getInt(KEY_SELECTED_DESIGN, 0));
         }
 
-        BankCardModel existing = resolveEditingItem(savedInstanceState != null);
-        if (isFinishing()) {
-            // Row vanished mid-edit (deleted elsewhere): nothing to bind.
+        int pendingId = getIntent().getIntExtra(EXTRA_ID, -1);
+        if (pendingId == -1) {
+            bindForm(null);
             return;
         }
-        bindForm(existing);
+        if (savedInstanceState != null) {
+            // Rotation with in-progress picks: keep picks, fetch row off UI.
+            final int id = pendingId;
+            final int gen = nextLoadGeneration();
+            vaultIo(() -> {
+                final BankCardModel item = db().getBankCardById(id);
+                runOnUiThread(() -> {
+                    if (!isCurrentGeneration(gen) || isFinishing()) return;
+                    if (item == null) {
+                        finish();
+                        return;
+                    }
+                    bindFormWithId(item);
+                });
+            });
+            return;
+        }
+        // Fresh launch: single-row decrypt off UI to avoid first-draw jank.
+        final int id = pendingId;
+        final int gen = nextLoadGeneration();
+        // Bind empty shell synchronously so layout exists, then rebind.
+        vaultIo(() -> {
+            final BankCardModel item = db().getBankCardById(id);
+            runOnUiThread(() -> {
+                if (!isCurrentGeneration(gen) || isFinishing()) return;
+                if (item == null) {
+                    finish();
+                    return;
+                }
+                selectedType = sanitizeIndex(Ui.indexOfIgnoreCase(CARD_TYPES, item.getCardType()),
+                        CARD_TYPES.length);
+                selectedNetwork = sanitizeIndex(Ui.indexOfIgnoreCase(CARD_NETWORKS, item.getCardNetwork()),
+                        CARD_NETWORKS.length);
+                selectedDesign = item.getDesign();
+                bindForm(item);
+            });
+        });
     }
 
     private void clampDesign() {
@@ -163,6 +201,16 @@ public class BankCardActivity extends BaseVaultActivity {
             selectedDesign = item.getDesign();
         }
         return item;
+    }
+
+    /** Rotation path: pickers already restored, just bind the fetched row. */
+    private void bindFormWithId(@NonNull BankCardModel item) {
+        clampDesignFor(item.getDesign());
+        bindForm(item);
+    }
+
+    private void clampDesignFor(int design) {
+        selectedDesign = design;
     }
 
     /** Entry point: wires every section in dependency order. */
@@ -212,6 +260,8 @@ public class BankCardActivity extends BaseVaultActivity {
                 this, LinearLayoutManager.HORIZONTAL, false);
         recyclerDesign.setLayoutManager(designLayoutManager);
         recyclerDesign.setAdapter(designAdapter);
+        recyclerDesign.setHasFixedSize(true);
+        recyclerDesign.setItemViewCacheSize(4);
 
         // Same 12dp inter-card gap as the dashboard carousel (computed once;
         // getItemOffsets runs per child per layout pass).
@@ -419,9 +469,10 @@ public class BankCardActivity extends BaseVaultActivity {
             String expDigits = extractDigits(inputExpiry.getText().toString());
             String cvvDigits = extractDigits(inputCvv.getText().toString());
             String pinDigits = extractDigits(inputPin.getText().toString());
+            btnSave.setEnabled(false);
 
             if (isEdit) {
-                db().updateBankCard(new BankCardModel(
+                final BankCardModel updated = new BankCardModel(
                         editingItem.getId(),
                         CARD_TYPES[selectedType],
                         CARD_NETWORKS[selectedNetwork],
@@ -432,12 +483,19 @@ public class BankCardActivity extends BaseVaultActivity {
                         cvvDigits,
                         pinDigits,
                         selectedDesign,
-                        // createdAt rides along untouched; updatedAt=0 tells the
-                        // DB helper to stamp now().
-                        editingItem.getCreatedAt(), 0));
-                app().notifyOnReturn(R.string.msg_updated);
+                        editingItem.getCreatedAt(), 0);
+                vaultIo(() -> {
+                    db().updateBankCard(updated);
+                    cache().invalidate();
+                    runOnUiThread(() -> {
+                        if (isFinishing()) return;
+                        app().notifyOnReturn(R.string.msg_updated);
+                        setResult(RESULT_OK);
+                        finish();
+                    });
+                });
             } else {
-                db().insertBankCard(new BankCardModel(
+                final BankCardModel fresh = new BankCardModel(
                         CARD_TYPES[selectedType],
                         CARD_NETWORKS[selectedNetwork],
                         inputBankName.getText().toString().trim(),
@@ -446,12 +504,18 @@ public class BankCardActivity extends BaseVaultActivity {
                         expDigits,
                         cvvDigits,
                         pinDigits,
-                        selectedDesign));
-                app().notifyOnReturn(R.string.msg_card_saved);
+                        selectedDesign);
+                vaultIo(() -> {
+                    db().insertBankCard(fresh);
+                    cache().invalidate();
+                    runOnUiThread(() -> {
+                        if (isFinishing()) return;
+                        app().notifyOnReturn(R.string.msg_card_saved);
+                        setResult(RESULT_OK);
+                        finish();
+                    });
+                });
             }
-            cache().invalidate();
-            setResult(RESULT_OK);
-            finish();
         });
     }
 
@@ -465,11 +529,17 @@ public class BankCardActivity extends BaseVaultActivity {
                 "Delete Card",
                 "Are you sure you want to delete this card?",
                 () -> {
-                    db().moveBankCardToTrash(editingItem.getId());
-                    cache().invalidate();
-                    setResult(RESULT_OK);
-                    finish();
-                    app().notifyOnReturn(R.string.msg_deleted);
+                    final int id = editingItem.getId();
+                    vaultIo(() -> {
+                        db().moveBankCardToTrash(id);
+                        cache().invalidate();
+                        runOnUiThread(() -> {
+                            if (isFinishing()) return;
+                            setResult(RESULT_OK);
+                            finish();
+                            app().notifyOnReturn(R.string.msg_deleted);
+                        });
+                    });
                 }));
     }
 
@@ -542,7 +612,7 @@ public class BankCardActivity extends BaseVaultActivity {
         } else if (holder.length() > HOLDER_NAME_MAX_LEN) {
             inputHolderName.setError("Cardholder name must be under " + (HOLDER_NAME_MAX_LEN + 1) + " characters");
             return inputHolderName;
-        } else if (!holder.matches("\\p{L}[\\p{L} .'-]*")) {
+        } else if (!HOLDER_NAME.matcher(holder).matches()) {
             // Unicode-aware: allows accented names, denies digits/symbols.
             inputHolderName.setError("Name can only contain letters, spaces, . ' -");
             return inputHolderName;

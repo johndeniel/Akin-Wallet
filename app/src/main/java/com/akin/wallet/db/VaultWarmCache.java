@@ -19,7 +19,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * App-scoped vault warm cache: removes the unlock -&gt; dashboard empty flash
+ * App-scoped vault warm cache: removes the un-lock -&gt; dashboard empty flash
  * without adding any loading UI.
  *
  * <p>Split by authentication boundary (the vault key is not PIN-derived, so
@@ -172,15 +172,12 @@ public final class VaultWarmCache {
             return;
         }
         vaultIo.execute(() -> {
-            long start = SystemClock.elapsedRealtime();
             try {
                 helper().getReadableDatabase();
-                Log.d(TAG, "connection warmed in "
-                        + (SystemClock.elapsedRealtime() - start) + "ms");
             } catch (RuntimeException e) {
                 // Next touch retries: allow a later warm/preload to re-attempt.
                 connectionWarmed.set(false);
-                Log.w(TAG, "connection warm failed", e);
+                android.util.Log.w(TAG, "connection warm failed", e);
             }
         });
     }
@@ -224,12 +221,15 @@ public final class VaultWarmCache {
     public void preloadPostAuthAsync(@Nullable Runnable onDone) {
         if (!preloadInFlight.compareAndSet(false, true)) {
             if (onDone != null) {
+                // Collapse: run on caller thread today (callers pass null);
+                // never execute UI work on the vault IO thread.
                 onDone.run();
             }
             return;
         }
+        final android.os.Handler main =
+                new android.os.Handler(android.os.Looper.getMainLooper());
         vaultIo.execute(() -> {
-            long start = SystemClock.elapsedRealtime();
             try {
                 AppDatabaseHelper db = helper();
                 List<GovernmentIDModel> ids = db.getAllIdCards();
@@ -239,19 +239,12 @@ public final class VaultWarmCache {
                 List<BankCardModel> trashCards = db.getTrashedBankCards();
                 List<SocialAccountModel> trashAccounts = db.getTrashedSocialAccounts();
                 publish(ids, cards, accounts, trashIds, trashCards, trashAccounts);
-                Log.d(TAG, "post-auth preload in "
-                        + (SystemClock.elapsedRealtime() - start) + "ms"
-                        + " (ids=" + ids.size()
-                        + " cards=" + cards.size()
-                        + " accounts=" + accounts.size()
-                        + " trash=" + (trashIds.size() + trashCards.size()
-                        + trashAccounts.size()) + ")");
             } catch (RuntimeException e) {
                 Log.w(TAG, "post-auth preload failed", e);
             } finally {
                 preloadInFlight.set(false);
                 if (onDone != null) {
-                    onDone.run();
+                    main.post(onDone);
                 }
             }
         });
@@ -297,7 +290,7 @@ public final class VaultWarmCache {
                 trashIds, trashCards, trashAccounts, SystemClock.elapsedRealtime());
     }
 
-    /** Drops cached rows after any write (save/restore/delete). Next resume re-queries. */
+    /** Drops cached rows after any write (save/restore/delete). Next, resume re-queries. */
     public synchronized void invalidate() {
         snapshot = null;
     }

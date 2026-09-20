@@ -4,6 +4,9 @@
     <item name="tag_measure" type="id" />
     <!-- View-tag key for the last applied network logo (icon + height). -->
     <item name="tag_network" type="id" />
+    <!-- View-tag keys for ID face: applied background + one-time metrics. -->
+    <item name="tag_face_bg" type="id" />
+    <item name="tag_face_metrics" type="id" />
     <!-- Programmatic toolbar item: Trash Select All (no menu XML). -->
     <item name="action_select_all" type="id" />
 </resources>

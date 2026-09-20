@@ -89,7 +89,13 @@ public final class GovernmentIdFaceRenderer {
                               @NonNull Map<String, String> fields) {
         BankCardDesignAdapter.applyCardOutline(f.cardRoot);
         GovernmentIDModel.FaceScheme scheme = GovernmentIDModel.faceScheme(typeName);
-        f.cardRoot.setBackgroundResource(scheme.backgroundRes);
+        // Avoid redundant background swaps while scrolling: framework caches
+        // drawables but setBackgroundResource still triggers invalidate.
+        Object bgTag = f.cardRoot.getTag(com.akin.wallet.R.id.tag_face_bg);
+        if (!(bgTag instanceof Integer) || ((Integer) bgTag) != scheme.backgroundRes) {
+            f.cardRoot.setBackgroundResource(scheme.backgroundRes);
+            f.cardRoot.setTag(com.akin.wallet.R.id.tag_face_bg, scheme.backgroundRes);
+        }
 
         // Primary number resolves through the spec so the face stays free of
         // per-type key branches.
@@ -149,13 +155,21 @@ public final class GovernmentIdFaceRenderer {
         applyFaceMetrics(f, scheme);
     }
 
-    /** Face micro-metrics: smaller type, tighter rhythm, smaller well. */
+    /** Face micro-metrics: smaller type, tighter rhythm, smaller well.
+     * Layout-affecting work runs once per holder (tag-guarded); per-bind
+     * calls only refresh colors/text to avoid measure/layout during scroll. */
     private static void applyFaceMetrics(@NonNull FaceViews f,
                                             @NonNull GovernmentIDModel.FaceScheme scheme) {
-        microLabel(f, f.holderLabel, scheme.numberLabelColorRes);
-        microLabel(f, f.numberLabel, scheme.numberLabelColorRes);
-        microLabel(f, f.dobLabel, scheme.numberLabelColorRes);
-        microLabel(f, f.expiryLabel, scheme.numberLabelColorRes);
+        // Colors are cheap but layout is not: run paddings/margins/sizes once.
+        boolean metricsDone = Boolean.TRUE.equals(f.cardRoot.getTag(com.akin.wallet.R.id.tag_face_metrics));
+        // Micro-label colors still refresh every bind (scheme-dependent).
+        microLabelColor(f, f.holderLabel, scheme.numberLabelColorRes, metricsDone);
+        microLabelColor(f, f.numberLabel, scheme.numberLabelColorRes, metricsDone);
+        microLabelColor(f, f.dobLabel, scheme.numberLabelColorRes, metricsDone);
+        microLabelColor(f, f.expiryLabel, scheme.numberLabelColorRes, metricsDone);
+        if (metricsDone) {
+            return;
+        }
 
         // Less space above the header so the face shifts up.
         View faceContent = (View) f.title.getParent();
@@ -203,24 +217,35 @@ public final class GovernmentIdFaceRenderer {
                 ((LinearLayout) photoRow).setGravity(android.view.Gravity.TOP);
             }
         }
+        f.cardRoot.setTag(com.akin.wallet.R.id.tag_face_metrics, Boolean.TRUE);
+    }
+
+    /** Per-bind color refresh; one-time sizing/margins handled by caller. */
+    private static void microLabelColor(@NonNull FaceViews f, TextView label,
+                                        int colorRes, boolean layoutDone) {
+        if (label == null) {
+            return;
+        }
+        if (!layoutDone) {
+            label.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 6);
+        }
+        label.setTextColor(colorOf(f, colorRes));
+        if (!layoutDone) {
+            android.view.ViewGroup.LayoutParams lp = label.getLayoutParams();
+            if (lp instanceof android.view.ViewGroup.MarginLayoutParams) {
+                android.view.ViewGroup.MarginLayoutParams mlp =
+                        (android.view.ViewGroup.MarginLayoutParams) lp;
+                if (mlp.topMargin > 0) {
+                    mlp.topMargin = (int) (3 * f.density);
+                    label.setLayoutParams(lp);
+                }
+            }
+        }
     }
 
     /** Compact micro-label: 6sp, tight gap, face-muted ink. */
     private static void microLabel(@NonNull FaceViews f, TextView label, int colorRes) {
-        if (label == null) {
-            return;
-        }
-        label.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 6);
-        label.setTextColor(colorOf(f, colorRes));
-        android.view.ViewGroup.LayoutParams lp = label.getLayoutParams();
-        if (lp instanceof android.view.ViewGroup.MarginLayoutParams) {
-            android.view.ViewGroup.MarginLayoutParams mlp =
-                    (android.view.ViewGroup.MarginLayoutParams) lp;
-            if (mlp.topMargin > 0) {
-                mlp.topMargin = (int) (3 * f.density);
-                label.setLayoutParams(lp);
-            }
-        }
+        microLabelColor(f, label, colorRes, false);
     }
 
     private static void setTopMargin(View view, int topMarginDp, float density) {

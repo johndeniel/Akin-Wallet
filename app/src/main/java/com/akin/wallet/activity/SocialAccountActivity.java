@@ -97,23 +97,41 @@ public class SocialAccountActivity extends BaseVaultActivity {
         setupPlatformSearch(savedInstanceState);
 
         long id = getIntent().getLongExtra(EXTRA_ACCOUNT_ID, -1);
-        if (id == -1) {
-            bindAddForm();
-        } else {
-            // Re-query by id: secrets never ride the Intent, and a row
-            // deleted elsewhere opens nothing instead of a stale copy.
-            SocialAccountModel item = db().getSocialAccountById((int) id);
-            if (item == null) {
-                finish();
-                return;
+        final int gen = nextLoadGeneration();
+        vaultIo(() -> {
+            final SocialAccountModel item;
+            final List<SocialAccountModel> pool;
+            final List<Integer> linkedIds;
+            if (id == -1) {
+                item = null;
+                linkedIds = null;
+            } else {
+                item = db().getSocialAccountById((int) id);
+                linkedIds = item != null ? db().getLinkedAccountIds(item.getId()) : null;
             }
-            bindEditForm(item);
-        }
-        if (savedInstanceState != null) {
-            restoreTransientState(savedInstanceState);
-        }
-        // Link pool is ready only after the bind above ran.
-        setupLinkSearch(savedInstanceState);
+            com.akin.wallet.db.VaultWarmCache.Snapshot snap = cache().snapshot();
+            if (snap != null && snap.activeAccounts != null) {
+                pool = new ArrayList<>(snap.activeAccounts);
+            } else {
+                pool = db().getAllSocialAccounts();
+            }
+            runOnUiThread(() -> {
+                if (!isCurrentGeneration(gen) || isFinishing()) return;
+                if (id != -1 && item == null) {
+                    finish();
+                    return;
+                }
+                if (id == -1) {
+                    bindAddForm(pool);
+                } else {
+                    bindEditForm(item, pool, linkedIds);
+                }
+                if (savedInstanceState != null) {
+                    restoreTransientState(savedInstanceState);
+                }
+                setupLinkSearch(savedInstanceState);
+            });
+        });
     }
 
     @Override
@@ -149,14 +167,16 @@ public class SocialAccountActivity extends BaseVaultActivity {
         }
         int[] ids = savedInstanceState.getIntArray(KEY_LINKED_IDS);
         if (ids != null && ids.length > 0 && linkedAdapter != null) {
-            // In-place: the adapter shares this list reference for save.
+            // O(n) restore via id map (was O(n*m) nested scan).
+            java.util.HashMap<Integer, SocialAccountModel> byId = new java.util.HashMap<>(linkPool.size() * 2);
+            for (SocialAccountModel candidate : linkPool) {
+                byId.put(candidate.getId(), candidate);
+            }
             linkedItems.clear();
             for (int linkId : ids) {
-                for (SocialAccountModel candidate : linkPool) {
-                    if (candidate.getId() == linkId) {
-                        linkedItems.add(candidate);
-                        break;
-                    }
+                SocialAccountModel hit = byId.get(linkId);
+                if (hit != null) {
+                    linkedItems.add(hit);
                 }
             }
             linkedAdapter.onExternalRestore(linkedItems);
@@ -286,19 +306,17 @@ public class SocialAccountActivity extends BaseVaultActivity {
         if (linkSearchView == null || recyclerLinkSearch == null) {
             return;
         }
+        // O(n) exclusion via set (was nested alreadyLinked scan).
+        java.util.HashSet<Integer> linkedSet = new java.util.HashSet<>(linkedItems.size() * 2);
+        for (SocialAccountModel linked : linkedItems) {
+            linkedSet.add(linked.getId());
+        }
         List<SocialAccountModel> available = new ArrayList<>();
         for (SocialAccountModel existing : linkPool) {
             if (existing.getId() == linkSelfId) {
                 continue;
             }
-            boolean alreadyLinked = false;
-            for (SocialAccountModel linked : linkedItems) {
-                if (linked.getId() == existing.getId()) {
-                    alreadyLinked = true;
-                    break;
-                }
-            }
-            if (!alreadyLinked) {
+            if (!linkedSet.contains(existing.getId())) {
                 available.add(existing);
             }
         }
@@ -349,7 +367,7 @@ public class SocialAccountActivity extends BaseVaultActivity {
         linkSearchView.show();
     }
 
-    private void bindAddForm() {
+    private void bindAddForm(List<SocialAccountModel> pool) {
         selectedIcon = SocialPlatformModel.iconFor(DEFAULT_PLATFORM_NAME);
         selectedName = DEFAULT_PLATFORM_NAME;
 
@@ -369,7 +387,7 @@ public class SocialAccountActivity extends BaseVaultActivity {
         findViewById(R.id.btn_toggle_pin).setOnClickListener(v ->
                 Ui.togglePasswordVisibility(inputPin));
 
-        setupAssociateSection(cachedLinkPool(), -1);
+        setupAssociateSection(pool, -1, java.util.Collections.emptyList());
 
         // Add mode keeps a single full-width Save button, same as the bank
         // screen: the delete view is GONE, so its row margin is dropped.
@@ -387,46 +405,43 @@ public class SocialAccountActivity extends BaseVaultActivity {
             if (validateUsername(inputUsername, username) != null) {
                 return;
             }
+            v.setEnabled(false);
 
-            List<Integer> linkedIds = collectLinkedIds();
-            long newId = db().saveSocialAccountWithLinks(
-                    new SocialAccountModel(selectedName, username, password, pin,
-                            selectedIcon, 0, 0),
-                    linkedIds);
-            if (newId < 0) {
-                showSaveFailed();
-                return;
-            }
-
-            cache().invalidate();
-            setResult(RESULT_OK);
-            finish();
-            app().notifyOnReturn(R.string.msg_account_saved);
+            final List<Integer> linkedIds = collectLinkedIds();
+            final SocialAccountModel fresh = new SocialAccountModel(selectedName, username,
+                    password, pin, selectedIcon, 0, 0);
+            vaultIo(() -> {
+                long newId = db().saveSocialAccountWithLinks(fresh, linkedIds);
+                runOnUiThread(() -> {
+                    if (isFinishing()) return;
+                    if (newId < 0) {
+                        v.setEnabled(true);
+                        showSaveFailed();
+                        return;
+                    }
+                    cache().invalidate();
+                    setResult(RESULT_OK);
+                    finish();
+                    app().notifyOnReturn(R.string.msg_account_saved);
+                });
+            });
         });
 
     }
 
 
     /** Shared associate-accounts section for add (selfId -1) and edit modes. */
-    private void setupAssociateSection(List<SocialAccountModel> existingAccounts, int selfId) {
-        linkPool = existingAccounts;
+    private void setupAssociateSection(List<SocialAccountModel> existingAccounts, int selfId,
+                                       java.util.List<Integer> preloadedLinkedIds) {
+        linkPool = existingAccounts != null ? existingAccounts : new ArrayList<>();
         linkSelfId = selfId;
         linkedItems = new ArrayList<>();
         LinearLayout associateSection = findViewById(R.id.associate_section);
         RecyclerView recyclerLinked = findViewById(R.id.recycler_linked);
         linkedCard = findViewById(R.id.linked_card);
 
-        if (selfId != -1) {
-            List<Integer> linkedIds = db().getLinkedAccountIds(selfId);
-            for (SocialAccountModel account : linkPool) {
-                for (int linkedId : linkedIds) {
-                    if (account.getId() == linkedId) {
-                        linkedItems.add(account);
-                        break;
-                    }
-                }
-            }
-        }
+        setupAssociateSectionIds(preloadedLinkedIds != null
+                ? preloadedLinkedIds : java.util.Collections.emptyList());
 
         // The header (and its icon-only Add action) always stays on screen;
         // the rows card shows only when something is linked.
@@ -435,10 +450,24 @@ public class SocialAccountActivity extends BaseVaultActivity {
         linkedAdapter = new AssociatedAccountAdapter(linkedItems, true,
                 (linkedAccount, removed) -> refreshLinkedVisibility());
         recyclerLinked.setLayoutManager(new LinearLayoutManager(this));
+        recyclerLinked.setHasFixedSize(true);
         recyclerLinked.setAdapter(linkedAdapter);
         refreshLinkedVisibility();
 
         findViewById(R.id.btn_add_associate).setOnClickListener(v -> openLinkSearch());
+    }
+
+    /** O(n) link resolution via id set (was O(n*m) nested scan). */
+    private void setupAssociateSectionIds(java.util.List<Integer> linkedIds) {
+        if (linkedIds.isEmpty() || linkPool.isEmpty()) {
+            return;
+        }
+        java.util.HashSet<Integer> wanted = new java.util.HashSet<>(linkedIds);
+        for (SocialAccountModel account : linkPool) {
+            if (wanted.contains(account.getId())) {
+                linkedItems.add(account);
+            }
+        }
     }
 
     /**
@@ -476,7 +505,9 @@ public class SocialAccountActivity extends BaseVaultActivity {
         showError(R.string.err_save_failed);
     }
 
-    private void bindEditForm(@NonNull SocialAccountModel item) {
+    private void bindEditForm(@NonNull SocialAccountModel item,
+                              @NonNull List<SocialAccountModel> pool,
+                              @NonNull java.util.List<Integer> linkedIds) {
         platformIcon = findViewById(R.id.platform_icon);
         platformName = findViewById(R.id.platform_name);
         TextView textSaveLabel = findViewById(R.id.text_save_label);
@@ -502,7 +533,8 @@ public class SocialAccountActivity extends BaseVaultActivity {
         findViewById(R.id.btn_toggle_pin).setOnClickListener(v ->
                 Ui.togglePasswordVisibility(inputPin));
 
-        setupAssociateSection(cachedLinkPool(), item.getId());
+        setupAssociateSection(pool, item.getId(), linkedIds != null
+                ? linkedIds : java.util.Collections.emptyList());
 
         findViewById(R.id.btn_save).setOnClickListener(v -> {
             String username = inputUsername.getText().toString().trim();
@@ -512,23 +544,29 @@ public class SocialAccountActivity extends BaseVaultActivity {
             if (validateUsername(inputUsername, username) != null) {
                 return;
             }
+            v.setEnabled(false);
 
             // In-place update: same row id, so reverse links from other
             // accounts survive; the whole save is one transaction.
-            List<Integer> linkedIds = collectLinkedIds();
-            long savedId = db().saveSocialAccountWithLinks(
-                    new SocialAccountModel(item.getId(), selectedName, username, password, pin,
-                            selectedIcon, item.getCreatedAt(), 0),
-                    linkedIds);
-            if (savedId < 0) {
-                showSaveFailed();
-                return;
-            }
-
-            cache().invalidate();
-            setResult(RESULT_OK);
-            finish();
-            app().notifyOnReturn(R.string.msg_updated);
+            final List<Integer> outIds = collectLinkedIds();
+            final SocialAccountModel updated = new SocialAccountModel(item.getId(),
+                    selectedName, username, password, pin,
+                    selectedIcon, item.getCreatedAt(), 0);
+            vaultIo(() -> {
+                long savedId = db().saveSocialAccountWithLinks(updated, outIds);
+                runOnUiThread(() -> {
+                    if (isFinishing()) return;
+                    if (savedId < 0) {
+                        v.setEnabled(true);
+                        showSaveFailed();
+                        return;
+                    }
+                    cache().invalidate();
+                    setResult(RESULT_OK);
+                    finish();
+                    app().notifyOnReturn(R.string.msg_updated);
+                });
+            });
         });
 
         // Delete in edit mode, same in-row outline-red pattern as the bank
@@ -541,11 +579,17 @@ public class SocialAccountActivity extends BaseVaultActivity {
                 "Are you sure you want to delete this "
                         + item.getPlatform() + " account?",
                 () -> {
-                    db().moveSocialAccountToTrash(item.getId());
-                    cache().invalidate();
-                    setResult(RESULT_OK);
-                    finish();
-                    app().notifyOnReturn(R.string.msg_deleted);
+                    final int rowId = item.getId();
+                    vaultIo(() -> {
+                        db().moveSocialAccountToTrash(rowId);
+                        cache().invalidate();
+                        runOnUiThread(() -> {
+                            if (isFinishing()) return;
+                            setResult(RESULT_OK);
+                            finish();
+                            app().notifyOnReturn(R.string.msg_deleted);
+                        });
+                    });
                 }));
 
     }

@@ -51,12 +51,16 @@ public class LockActivity extends AppCompatActivity {
 
     private static final String KEY_MODE = "lock_mode";
     private static final String KEY_SCREEN = "lock_screen";
-    private static final String KEY_ENTRY = "lock_entry";
-    private static final String KEY_FIRST_PIN = "lock_first_pin";
+    // Secrets never touch savedInstanceState: rotation clears in-progress
+    // digits by design (user retypes). Persisting PINs in a Bundle risks
+    // parceling them to disk via system state.
 
     /** Delayed biometric ask / entry submit, removable on pause/destroy. */
     private final Runnable autoBiometric = this::startBiometric;
     private final Runnable pendingEntry = this::processEntry;
+    /** PBKDF2 (120k) off the UI thread: PIN tap feedback never janks. */
+    private final java.util.concurrent.ExecutorService pinIo =
+            java.util.concurrent.Executors.newSingleThreadExecutor();
 
     private TextView error;
     private TextView tagline;
@@ -126,8 +130,8 @@ public class LockActivity extends AppCompatActivity {
         }
 
         if (savedInstanceState != null) {
-            // Rotation: resume exactly where the user was (prompt itself is
-            // recreated below; the typed digits and setup progress survive).
+            // Rotation: resume screen/mode only — typed digits are dropped
+            // deliberately (never parcel secrets).
             String savedMode = savedInstanceState.getString(KEY_MODE, null);
             if (savedMode != null) {
                 mode = savedMode;
@@ -139,11 +143,7 @@ public class LockActivity extends AppCompatActivity {
                 screen = Screen.PIN;
             }
             entry.setLength(0);
-            String savedEntry = savedInstanceState.getString(KEY_ENTRY, "");
-            if (savedEntry.length() <= AppLockManager.PIN_LENGTH) {
-                entry.append(savedEntry);
-            }
-            firstPin = savedInstanceState.getString(KEY_FIRST_PIN, null);
+            firstPin = null;
             submitting = false;
             restoreScreen();
             renderDots();
@@ -199,8 +199,7 @@ public class LockActivity extends AppCompatActivity {
         super.onSaveInstanceState(outState);
         outState.putString(KEY_MODE, mode);
         outState.putString(KEY_SCREEN, screen.name());
-        outState.putString(KEY_ENTRY, entry.toString());
-        outState.putString(KEY_FIRST_PIN, firstPin);
+        // Intentionally no PIN/entry/firstPin — see KEY notes above.
     }
 
     @Override
@@ -242,6 +241,7 @@ public class LockActivity extends AppCompatActivity {
             dotsRow.removeCallbacks(pendingEntry);
         }
         lockoutHandler.removeCallbacks(lockoutTicker);
+        pinIo.shutdownNow();
         super.onDestroy();
     }
 
@@ -385,49 +385,105 @@ public class LockActivity extends AppCompatActivity {
             submitting = false;
             return;
         }
-        String pin = entry.toString();
+        final String pin = entry.toString();
         entry.setLength(0);
-        switch (screen) {
-            case CREATE:
-                firstPin = pin;
-                showConfirmScreen();
-                break;
-            case CONFIRM:
-                if (pin.equals(firstPin)) {
-                    AppLockManager.setPin(this, pin);
-                    unlockSuccess();
-                } else {
-                    firstPin = null;
-                    showCreateScreen();
-                    showError(getString(R.string.lock_error_mismatch));
-                    shakeDots();
+        final Screen current = screen;
+        final String capturedFirst = firstPin;
+        if (current == Screen.CREATE) {
+            // No crypto: just advance.
+            firstPin = pin;
+            showConfirmScreen();
+            submitting = false;
+            renderDots();
+            return;
+        }
+        if (current == Screen.CONFIRM) {
+            if (pin.equals(capturedFirst)) {
+                submitting = true;
+                pinIo.execute(() -> {
+                    try {
+                        AppLockManager.setPin(LockActivity.this, pin);
+                    } catch (RuntimeException e) {
+                        runOnUiThread(() -> {
+                            if (isFinishing() || paused) return;
+                            firstPin = null;
+                            showCreateScreen();
+                            showError(getString(R.string.lock_error_mismatch));
+                            submitting = false;
+                            renderDots();
+                        });
+                        return;
+                    }
+                    runOnUiThread(() -> {
+                        if (isFinishing() || paused) return;
+                        unlockSuccess();
+                        submitting = false;
+                        renderDots();
+                    });
+                });
+            } else {
+                firstPin = null;
+                showCreateScreen();
+                showError(getString(R.string.lock_error_mismatch));
+                shakeDots();
+                submitting = false;
+                renderDots();
+            }
+            return;
+        }
+        // VERIFY / PIN: PBKDF2 off UI thread to keep dot animation at 60fps.
+        pinIo.execute(() -> {
+            final boolean lockedOut;
+            final boolean ok;
+            try {
+                lockedOut = AppLockManager.isLockedOut(LockActivity.this);
+                ok = !lockedOut && AppLockManager.verifyPin(LockActivity.this, pin);
+            } catch (RuntimeException e) {
+                runOnUiThread(() -> {
+                    if (isFinishing() || paused) return;
+                    showError(getString(R.string.lock_error_fingerprint));
+                    submitting = false;
+                    renderDots();
+                });
+                return;
+            }
+            runOnUiThread(() -> {
+                if (isFinishing() || paused) {
+                    submitting = false;
+                    return;
                 }
-                break;
-            case VERIFY:
-            case PIN:
-            default:
-                if (AppLockManager.isLockedOut(this)) {
+                if (lockedOut) {
                     showLockout();
-                } else if (AppLockManager.verifyPin(this, pin)) {
-                    AppLockManager.resetFailures(this);
-                    if (screen == Screen.VERIFY) {
+                } else if (ok) {
+                    AppLockManager.resetFailures(LockActivity.this);
+                    if (current == Screen.VERIFY) {
                         showCreateScreen();
                     } else {
                         unlockSuccess();
                     }
                 } else {
-                    int left = AppLockManager.recordFailure(this);
+                    int left = AppLockManager.recordFailure(LockActivity.this);
                     if (left < 0) {
-                        showLockout();
+                        if (AppLockManager.shouldWipe(LockActivity.this)) {
+                            // Aggressive posture: brute-force threshold hit.
+                            // Wipe vault + lock state, force fresh setup.
+                            com.akin.wallet.security.DbKeyManager.wipeVault(LockActivity.this);
+                            AppLockManager.resetFailures(LockActivity.this);
+                            firstPin = null;
+                            showCreateScreen();
+                            showError(getString(R.string.lock_error_mismatch));
+                        } else {
+                            showLockout();
+                        }
                     } else {
                         showError(getString(R.string.lock_error_wrong, left));
                         shakeDots();
                     }
                 }
-                break;
-        }
-        submitting = false;
-        renderDots();
+                submitting = false;
+                renderDots();
+            });
+        });
     }
 
     private void unlockSuccess() {

@@ -40,6 +40,10 @@ public final class GovernmentIDModel {
     /** Row id for drafts that have never been persisted. */
     public static final int UNSET_ID = -1;
 
+    private static final java.util.regex.Pattern NON_DIGITS =
+            java.util.regex.Pattern.compile("\\D");
+    private static final java.util.regex.Pattern SEPARATORS =
+            java.util.regex.Pattern.compile("[\\s-]");
     private final int id;
     private final String idType;
     private final Map<String, String> fields;
@@ -81,6 +85,15 @@ public final class GovernmentIDModel {
     @NonNull
     public Map<String, String> getFields() {
         return new LinkedHashMap<>(fields);
+    }
+
+    /**
+     * Read-only view for hot paths (bind/search). No copy — caller must not
+     * mutate. Use {@link #getFields()} when a mutable snapshot is needed.
+     */
+    @NonNull
+    public Map<String, String> getFieldsRef() {
+        return java.util.Collections.unmodifiableMap(fields);
     }
 
     /** Row creation time, epoch millis. 0 when unset. */
@@ -718,7 +731,7 @@ public final class GovernmentIDModel {
      * validation guards new input.
      */
     private static String formatGrouped12(String rawNumber) {
-        String digitsOnly = rawNumber != null ? rawNumber.replaceAll("\\D", "") : "";
+        String digitsOnly = rawNumber != null ? NON_DIGITS.matcher(rawNumber).replaceAll("") : "";
         if (digitsOnly.length() == 12) {
             return digitsOnly.substring(0, 3) + "-" + digitsOnly.substring(3, 6)
                     + "-" + digitsOnly.substring(6, 9) + "-" + digitsOnly.substring(9, 12);
@@ -732,7 +745,7 @@ public final class GovernmentIDModel {
      * presentational only, anything else passes through for validation to flag.
      */
     private static String formatGrouped16(String rawNumber) {
-        String digitsOnly = rawNumber != null ? rawNumber.replaceAll("\\D", "") : "";
+        String digitsOnly = rawNumber != null ? NON_DIGITS.matcher(rawNumber).replaceAll("") : "";
         if (digitsOnly.length() == 16) {
             return digitsOnly.substring(0, 4) + "-" + digitsOnly.substring(4, 8)
                     + "-" + digitsOnly.substring(8, 12) + "-" + digitsOnly.substring(12, 16);
@@ -746,7 +759,7 @@ public final class GovernmentIDModel {
      * is presentational only, anything else passes through for validation.
      */
     private static String formatSssNumber(String rawNumber) {
-        String digitsOnly = rawNumber != null ? rawNumber.replaceAll("\\D", "") : "";
+        String digitsOnly = rawNumber != null ? NON_DIGITS.matcher(rawNumber).replaceAll("") : "";
         if (digitsOnly.length() == 10) {
             return digitsOnly.substring(0, 2) + "-" + digitsOnly.substring(2, 9)
                     + "-" + digitsOnly.charAt(9);
@@ -765,7 +778,7 @@ public final class GovernmentIDModel {
         if (compactNumber.isEmpty()) {
             return EMPTY_FACE_VALUE;
         }
-        String unseparated = compactNumber.replaceAll("[\\s-]", "").toUpperCase();
+        String unseparated = SEPARATORS.matcher(compactNumber).replaceAll("").toUpperCase();
         if (unseparated.length() == 11) {
             return unseparated.substring(0, 3) + "-" + unseparated.substring(3, 5)
                     + "-" + unseparated.substring(5, 11);
@@ -783,7 +796,7 @@ public final class GovernmentIDModel {
         if (trimmedDate.isEmpty()) {
             return EMPTY_FACE_VALUE;
         }
-        String digitsOnly = trimmedDate.replaceAll("\\D", "");
+        String digitsOnly = NON_DIGITS.matcher(trimmedDate).replaceAll("");
         if (digitsOnly.length() == 8) {
             return digitsOnly.substring(0, 4) + "-" + digitsOnly.substring(4, 6)
                     + "-" + digitsOnly.substring(6, 8);

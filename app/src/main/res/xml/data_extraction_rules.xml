@@ -9,9 +9,11 @@
     <cloud-backup>
         <exclude domain="database" path="akin_wallet.db" />
         <exclude domain="sharedpref" path="akin_vault_key.xml" />
+        <exclude domain="sharedpref" path="akin_app_lock.xml" />
     </cloud-backup>
     <device-transfer>
         <exclude domain="database" path="akin_wallet.db" />
         <exclude domain="sharedpref" path="akin_vault_key.xml" />
+        <exclude domain="sharedpref" path="akin_app_lock.xml" />
     </device-transfer>
 </data-extraction-rules>

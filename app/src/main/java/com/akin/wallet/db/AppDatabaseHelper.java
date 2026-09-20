@@ -373,6 +373,11 @@ public final class AppDatabaseHelper extends SQLiteOpenHelper {
             } finally {
                 db.endTransaction();
             }
+            // Reclaim ciphertext pages so purged secrets don't linger on flash.
+            try {
+                db.execSQL("VACUUM");
+            } catch (RuntimeException ignored) {
+            }
         }
     }
 
@@ -556,6 +561,10 @@ public final class AppDatabaseHelper extends SQLiteOpenHelper {
                 db.setTransactionSuccessful();
             } finally {
                 db.endTransaction();
+            }
+            try {
+                db.execSQL("VACUUM");
+            } catch (RuntimeException ignored) {
             }
         }
     }
@@ -751,6 +760,10 @@ public final class AppDatabaseHelper extends SQLiteOpenHelper {
                 db.setTransactionSuccessful();
             } finally {
                 db.endTransaction();
+            }
+            try {
+                db.execSQL("VACUUM");
+            } catch (RuntimeException ignored) {
             }
         }
     }

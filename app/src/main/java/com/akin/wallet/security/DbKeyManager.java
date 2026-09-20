@@ -65,9 +65,24 @@ public final class DbKeyManager {
         if (wrapped.isEmpty()) {
             keyBytes = new byte[RAW_KEY_BYTES];
             new SecureRandom().nextBytes(keyBytes);
-            preferences.edit().putString(KEY_WRAPPED, seal(keyBytes)).apply();
+            // First seal must survive a crash: commit synchronously. A lost
+            // write here orphans the DB created with this key.
+            boolean stored = preferences.edit()
+                    .putString(KEY_WRAPPED, seal(keyBytes)).commit();
+            if (!stored) {
+                Arrays.fill(keyBytes, (byte) 0);
+                throw new IllegalStateException("Vault key seal not persisted");
+            }
         } else {
-            keyBytes = unseal(wrapped);
+            try {
+                keyBytes = unseal(wrapped);
+            } catch (IllegalStateException e) {
+                if (isKeyInvalidated(e)) {
+                    throw new KeyInvalidatedException(
+                            "Device key invalidated — vault must be reset", e);
+                }
+                throw e;
+            }
         }
         cachedPassphrase = toHex(keyBytes).toCharArray();
         // Best effort: drop the raw bytes as soon as the hex copy exists.
@@ -136,5 +151,58 @@ public final class DbKeyManager {
             hex.append(Character.forDigit(keyByte & 0xF, 16));
         }
         return hex.toString();
+    }
+
+    /** True when the Keystore alias was invalidated (reset, enrollment change). */
+    private static boolean isKeyInvalidated(Throwable e) {
+        for (Throwable t = e; t != null; t = t.getCause()) {
+            String name = t.getClass().getName();
+            if (name.contains("KeyPermanentlyInvalidatedException")
+                    || name.contains("UnrecoverableKeyException")) {
+                return true;
+            }
+            String msg = t.getMessage();
+            if (msg != null && (msg.contains("Key permanently invalidated")
+                    || msg.contains("invalidated"))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Thrown when the Keystore alias is gone: caller must wipe + re-setup. */
+    public static final class KeyInvalidatedException extends IllegalStateException {
+        KeyInvalidatedException(String message, Throwable cause) {
+            super(message, cause);
+        }
+    }
+
+    /**
+     * Aggressive-wipe reset for an invalidated key: deletes the sealed blob,
+     * the SQLCipher file, journals and prefs so the next launch creates a
+     * fresh vault instead of a permanently unreadable one. Call only after
+     * explicit user consent — this destroys vault contents by design.
+     */
+    public static void wipeVault(@NonNull Context context) {
+        Context appContext = context.getApplicationContext();
+        cachedPassphrase = null;
+        try {
+            KeyStore keyStore = KeyStore.getInstance("AndroidKeyStore");
+            keyStore.load(null);
+            if (keyStore.containsAlias(KEYSTORE_ALIAS)) {
+                keyStore.deleteEntry(KEYSTORE_ALIAS);
+            }
+        } catch (Exception ignored) {
+        }
+        appContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                .edit().clear().commit();
+        for (String name : new String[]{
+                "akin_wallet.db", "akin_wallet.db-journal", "akin_wallet.db-wal"}) {
+            java.io.File f = appContext.getDatabasePath("akin_wallet.db");
+            java.io.File target = name.equals("akin_wallet.db")
+                    ? f : new java.io.File(f.getParent(), name);
+            //noinspection ResultOfMethodCallIgnored
+            target.delete();
+        }
     }
 }

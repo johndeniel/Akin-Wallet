@@ -70,6 +70,8 @@ public class TrashActivity extends BaseVaultActivity {
         trashAdapter = new TrashAdapter();
         trashAdapter.setOnSelectionChangedListener(this::updateChrome);
         recyclerTrash.setAdapter(trashAdapter);
+        recyclerTrash.setHasFixedSize(true);
+        recyclerTrash.setItemViewCacheSize(6);
 
         emptyTrash = findViewById(R.id.empty_trash);
         bottomActionBar = findViewById(R.id.action_bar);

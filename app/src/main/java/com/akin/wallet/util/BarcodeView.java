@@ -21,6 +21,7 @@ public final class BarcodeView extends View {
 
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private int unitPx;
+    private int lastColor = Integer.MIN_VALUE;
 
     public BarcodeView(Context context) {
         super(context);
@@ -44,6 +45,10 @@ public final class BarcodeView extends View {
     }
 
     public void setBarColor(int color) {
+        if (color == lastColor) {
+            return;
+        }
+        lastColor = color;
         paint.setColor(color);
         invalidate();
     }

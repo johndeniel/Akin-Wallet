@@ -54,10 +54,35 @@ public class BankCardAdapter extends RecyclerView.Adapter<BankCardAdapter.CardVi
     public void updateData(List<BankCardModel> newCards) {
         List<BankCardModel> next =
                 newCards != null ? new ArrayList<>(newCards) : new ArrayList<>();
-        DiffUtil.DiffResult diff = DiffUtil.calculateDiff(new DiffUtil.Callback() {
+        // Small vaults diff on UI; large vaults (>200) diff off UI to avoid
+        // dropped frames. Result always dispatched on the caller (UI) thread
+        // via post when background.
+        if (next.size() + cards.size() > 200) {
+            final List<BankCardModel> old = new ArrayList<>(cards);
+            new Thread(() -> {
+                DiffUtil.DiffResult diff = computeDiff(old, next);
+                android.os.Handler main =
+                        new android.os.Handler(android.os.Looper.getMainLooper());
+                main.post(() -> {
+                    cards.clear();
+                    cards.addAll(next);
+                    diff.dispatchUpdatesTo(this);
+                });
+            }).start();
+            return;
+        }
+        DiffUtil.DiffResult diff = computeDiff(cards, next);
+        cards.clear();
+        cards.addAll(next);
+        diff.dispatchUpdatesTo(this);
+    }
+
+    private static DiffUtil.DiffResult computeDiff(List<BankCardModel> oldList,
+                                                   List<BankCardModel> next) {
+        return DiffUtil.calculateDiff(new DiffUtil.Callback() {
             @Override
             public int getOldListSize() {
-                return cards.size();
+                return oldList.size();
             }
 
             @Override
@@ -67,17 +92,14 @@ public class BankCardAdapter extends RecyclerView.Adapter<BankCardAdapter.CardVi
 
             @Override
             public boolean areItemsTheSame(int oldPos, int newPos) {
-                return cards.get(oldPos).getId() == next.get(newPos).getId();
+                return oldList.get(oldPos).getId() == next.get(newPos).getId();
             }
 
             @Override
             public boolean areContentsTheSame(int oldPos, int newPos) {
-                return cards.get(oldPos).equals(next.get(newPos));
+                return oldList.get(oldPos).equals(next.get(newPos));
             }
         });
-        cards.clear();
-        cards.addAll(next);
-        diff.dispatchUpdatesTo(this);
     }
 
     @NonNull
@@ -105,25 +127,7 @@ public class BankCardAdapter extends RecyclerView.Adapter<BankCardAdapter.CardVi
     @Override
     public void onBindViewHolder(@NonNull CardViewHolder holder, int position) {
         BankCardModel card = cards.get(position);
-        BankCardDesignAdapter.applyCardOutline(holder.cardRoot);
-        int design = card.getDesign();
-        if (design < 0 || design >= BACKGROUNDS.length) {
-            design = 0;
-        }
-        holder.cardRoot.setBackgroundResource(BACKGROUNDS[design]);
-        holder.bank.setText(CardText.safe(card.getBankName(), "YOUR BANK").toUpperCase(java.util.Locale.ROOT));
-        holder.cardholder.setText(CardText.safe(card.getHolderName(), "CARDHOLDER NAME").toUpperCase(java.util.Locale.ROOT));
-        holder.number.setText(holder.itemView.getContext().getString(R.string.mask_card_number,
-                CardText.last4(card.getCardNumber())));
-        holder.expiry.setText(CardText.formatExpiry(card.getExpiry()));
-        BankCardDesignAdapter.applyNetworkLogo(holder.network, card.getCardNetwork());
-        holder.type.setText(CardText.safe(card.getCardType(), "DEBIT").toUpperCase(java.util.Locale.ROOT));
-
-        holder.itemView.setOnClickListener(v -> {
-            if (listener != null) {
-                listener.onCardClick(card);
-            }
-        });
+        holder.bind(card, listener);
     }
 
     @Override
@@ -139,6 +143,7 @@ public class BankCardAdapter extends RecyclerView.Adapter<BankCardAdapter.CardVi
         TextView number;
         TextView cardholder;
         TextView expiry;
+        private int boundDesign = -1;
 
         CardViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -149,6 +154,30 @@ public class BankCardAdapter extends RecyclerView.Adapter<BankCardAdapter.CardVi
             number = itemView.findViewById(R.id.preview_number);
             cardholder = itemView.findViewById(R.id.preview_holder);
             expiry = itemView.findViewById(R.id.preview_expiry);
+            BankCardDesignAdapter.applyCardOutline(cardRoot);
+        }
+
+        void bind(BankCardModel card, OnCardClickListener listener) {
+            int design = card.getDesign();
+            if (design < 0 || design >= BACKGROUNDS.length) {
+                design = 0;
+            }
+            if (design != boundDesign) {
+                cardRoot.setBackgroundResource(BACKGROUNDS[design]);
+                boundDesign = design;
+            }
+            bank.setText(CardText.safe(card.getBankName(), "YOUR BANK").toUpperCase(java.util.Locale.ROOT));
+            cardholder.setText(CardText.safe(card.getHolderName(), "CARDHOLDER NAME").toUpperCase(java.util.Locale.ROOT));
+            number.setText(itemView.getContext().getString(R.string.mask_card_number,
+                    CardText.last4(card.getCardNumber())));
+            expiry.setText(CardText.formatExpiry(card.getExpiry()));
+            BankCardDesignAdapter.applyNetworkLogo(network, card.getCardNetwork());
+            type.setText(CardText.safe(card.getCardType(), "DEBIT").toUpperCase(java.util.Locale.ROOT));
+            itemView.setOnClickListener(v -> {
+                if (listener != null) {
+                    listener.onCardClick(card);
+                }
+            });
         }
     }
 }

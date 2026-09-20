@@ -10,6 +10,9 @@ public final class CardText {
     private CardText() {
     }
 
+    private static final java.util.regex.Pattern NON_DIGITS =
+            java.util.regex.Pattern.compile("\\D");
+
     /** Trimmed value or the fallback when blank (face placeholders). */
     public static String safe(String value, String fallback) {
         return value != null && !value.trim().isEmpty() ? value.trim() : fallback;
@@ -20,7 +23,7 @@ public final class CardText {
         if (number == null) {
             return "••••";
         }
-        String digits = number.replaceAll("\\D", "");
+        String digits = NON_DIGITS.matcher(number).replaceAll("");
         if (digits.isEmpty()) {
             return "••••";
         }
@@ -32,7 +35,7 @@ public final class CardText {
         if (expiry == null) {
             return "MM/YY";
         }
-        String digits = expiry.replaceAll("\\D", "");
+        String digits = NON_DIGITS.matcher(expiry).replaceAll("");
         if (digits.length() == 4) {
             return digits.substring(0, 2) + "/" + digits.substring(2);
         }

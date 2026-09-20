@@ -9,4 +9,7 @@
 <full-backup-content>
     <exclude domain="database" path="akin_wallet.db" />
     <exclude domain="sharedpref" path="akin_vault_key.xml" />
+    <!-- PIN hash/salt + lockout counters: restoring them without the vault
+         leaves a PIN-locked empty install. Force clean setup on restore. -->
+    <exclude domain="sharedpref" path="akin_app_lock.xml" />
 </full-backup-content>

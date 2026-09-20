@@ -138,7 +138,20 @@ public class DashboardActivity extends BaseVaultActivity {
     protected void onDestroy() {
         // Animators hold child views; cancel so a mid-entrance finish cannot leak them.
         cancelMenuEntrance();
+        // Drop pending empty-state measures that capture views (activity).
+        clearPendingMeasure(emptyCards);
+        clearPendingMeasure(emptyIds);
         super.onDestroy();
+    }
+
+    private static void clearPendingMeasure(View empty) {
+        if (empty != null) {
+            Runnable pending = (Runnable) empty.getTag(R.id.tag_measure);
+            if (pending != null) {
+                empty.removeCallbacks(pending);
+                empty.setTag(R.id.tag_measure, null);
+            }
+        }
     }
 
     /**
@@ -189,6 +202,9 @@ public class DashboardActivity extends BaseVaultActivity {
         if (searchView == null) {
             return;
         }
+        // Shared pool: dashboard + search carousels share view types.
+        RecyclerView.RecycledViewPool sharedPool = new RecyclerView.RecycledViewPool();
+        sharedPool.setMaxRecycledViews(0, 8);
 
         searchIdAdapter = new GovermentIdAdapter(this::openIdEditor);
         recyclerSearchIds = findViewById(R.id.recycler_search_ids);
@@ -196,6 +212,9 @@ public class DashboardActivity extends BaseVaultActivity {
                 new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
         recyclerSearchIds.setAdapter(searchIdAdapter);
         recyclerSearchIds.addItemDecoration(sharedGap);
+        recyclerSearchIds.setHasFixedSize(true);
+        recyclerSearchIds.setItemViewCacheSize(4);
+        recyclerSearchIds.setRecycledViewPool(sharedPool);
         searchHeaderIds = findViewById(R.id.search_header_ids);
 
         searchCardAdapter = new BankCardAdapter(this::openBankEditor);
@@ -204,6 +223,9 @@ public class DashboardActivity extends BaseVaultActivity {
                 new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
         recyclerSearchCards.setAdapter(searchCardAdapter);
         recyclerSearchCards.addItemDecoration(sharedGap);
+        recyclerSearchCards.setHasFixedSize(true);
+        recyclerSearchCards.setItemViewCacheSize(4);
+        recyclerSearchCards.setRecycledViewPool(sharedPool);
         searchHeaderCards = findViewById(R.id.search_header_cards);
 
         // Row taps open the account's edit screen, same as the dashboard list.
@@ -211,6 +233,7 @@ public class DashboardActivity extends BaseVaultActivity {
         RecyclerView recyclerSearchSocial = findViewById(R.id.recycler_search_social);
         recyclerSearchSocial.setLayoutManager(new LinearLayoutManager(this));
         recyclerSearchSocial.setAdapter(searchSocialAdapter);
+        recyclerSearchSocial.setHasFixedSize(true);
         cardSearchSocial = findViewById(R.id.card_search_social);
         searchHeaderSocial = findViewById(R.id.search_header_social);
 
@@ -375,12 +398,28 @@ public class DashboardActivity extends BaseVaultActivity {
     }
 
     private static boolean containsText(String value, String query) {
-        return value != null && !value.trim().isEmpty()
-                && value.toLowerCase(Locale.US).contains(query);
+        if (value == null) {
+            return false;
+        }
+        int len = value.length();
+        int start = 0;
+        int end = len;
+        while (start < end && value.charAt(start) <= ' ') start++;
+        while (end > start && value.charAt(end - 1) <= ' ') end--;
+        if (start >= end) {
+            return false;
+        }
+        // One allocation per row (lowercased trimmed slice) — no separate
+        // trim() copy plus lowercase copy.
+        String hay = end - start == len
+                ? value.toLowerCase(Locale.US)
+                : value.substring(start, end).toLowerCase(Locale.US);
+        return hay.contains(query);
     }
 
     private static boolean idFieldsContain(@NonNull GovernmentIDModel id, String query) {
-        Map<String, String> fields = id.getFields();
+        // Read-only view: no LinkedHashMap copy per row per keystroke.
+        Map<String, String> fields = id.getFieldsRef();
         for (String value : fields.values()) {
             if (containsText(value, query)) {
                 return true;
@@ -545,6 +584,8 @@ public class DashboardActivity extends BaseVaultActivity {
                 new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
         recyclerCarousel.setAdapter(cardAdapter);
         recyclerCarousel.addItemDecoration(sharedGap);
+        recyclerCarousel.setHasFixedSize(true);
+        recyclerCarousel.setItemViewCacheSize(4);
         new PagerSnapHelper().attachToRecyclerView(recyclerCarousel);
 
         if (emptyCards != null) {
@@ -621,6 +662,8 @@ public class DashboardActivity extends BaseVaultActivity {
                 new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
         recyclerIdsCarousel.setAdapter(idAdapter);
         recyclerIdsCarousel.addItemDecoration(sharedGap);
+        recyclerIdsCarousel.setHasFixedSize(true);
+        recyclerIdsCarousel.setItemViewCacheSize(4);
         new PagerSnapHelper().attachToRecyclerView(recyclerIdsCarousel);
 
         if (emptyIds != null) {
@@ -660,6 +703,7 @@ public class DashboardActivity extends BaseVaultActivity {
         socialAdapter = new SocialAccountAdapter(this::openSocialEditor);
         recyclerSocialAccounts.setLayoutManager(new LinearLayoutManager(this));
         recyclerSocialAccounts.setAdapter(socialAdapter);
+        recyclerSocialAccounts.setHasFixedSize(true);
 
         if (emptySocialAccounts != null) {
             emptySocialAccounts.setOnClickListener(v -> openSocialCreator());

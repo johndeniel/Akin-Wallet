@@ -84,6 +84,11 @@ public final class Ui {
      */
     @SuppressWarnings("deprecation")
     public static void applySystemBars(Activity activity) {
+        // Production hardening: block Recents thumbnails + screenshots for
+        // every vault screen. Single choke point — all activities call this.
+        activity.getWindow().setFlags(
+                android.view.WindowManager.LayoutParams.FLAG_SECURE,
+                android.view.WindowManager.LayoutParams.FLAG_SECURE);
         activity.getWindow().setStatusBarColor(
                 ContextCompat.getColor(activity, R.color.dashboard_bg_start));
         activity.getWindow().setNavigationBarColor(Color.TRANSPARENT);
