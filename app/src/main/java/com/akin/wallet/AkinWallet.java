@@ -51,8 +51,9 @@ public class AkinWallet extends Application {
     private int pendingMessage;
 
     /**
-     * Last time the whole app went to background, monotonic ms. 0 = never
-     * backgrounded this process. Written from lifecycle callbacks, read by
+     * Last time the whole app went to background, monotonic ms. 0 = in
+     * foreground or never backgrounded this process. Written from lifecycle
+     * callbacks, cleared on foreground + successful unlock, read by
      * {@link #shouldReLock()}.
      */
     private long lastBackgroundedAt;
@@ -78,6 +79,12 @@ public class AkinWallet extends Application {
         registerActivityLifecycleCallbacks(new ActivityLifecycleCallbacks() {
             @Override
             public void onActivityStarted(@NonNull Activity activity) {
+                // Returning from background: grace restarts from the fresh
+                // unlock, not from the stale background timestamp. Without
+                // this every post-unlock navigation re-locks (RC1).
+                if (startedActivities <= 0) {
+                    lastBackgroundedAt = 0;
+                }
                 startedActivities++;
             }
 
@@ -150,6 +157,9 @@ public class AkinWallet extends Application {
     /** Post-auth: marks the session unlocked and preloads masters + trash. */
     public void onUnlocked() {
         AppLockManager.setSessionUnlocked(true);
+        // Fresh unlock restarts the grace window (RC1): the pre-unlock
+        // background timestamp must not re-lock the next screen.
+        lastBackgroundedAt = 0;
         vaultCache.preloadPostAuthAsync();
     }
 
@@ -157,6 +167,14 @@ public class AkinWallet extends Application {
     public void lockAndClear() {
         AppLockManager.setSessionUnlocked(false);
         vaultCache.clearSensitiveOnLock();
+    }
+
+    /**
+     * Restarts the background-grace window without a full preload (PIN-change
+     * return path). Same timestamp reset as {@link #onUnlocked()}.
+     */
+    public void resetGrace() {
+        lastBackgroundedAt = 0;
     }
 
     /**

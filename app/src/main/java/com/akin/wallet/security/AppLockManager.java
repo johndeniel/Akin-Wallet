@@ -2,7 +2,6 @@ package com.akin.wallet.security;
 
 import android.content.Context;
 import android.content.SharedPreferences;
-import android.os.SystemClock;
 import android.util.Base64;
 
 import androidx.annotation.NonNull;
@@ -22,8 +21,8 @@ import javax.crypto.spec.PBEKeySpec;
  * user turns them on in Settings (and the device actually supports them).
  *
  * <p>Brute-force protection: {@link #MAX_ATTEMPTS} wrong PINs trigger a
- * {@link #LOCKOUT_DURATION_MS} cooldown measured on the monotonic clock, so
- * changing the wall clock cannot shorten it. The in-memory session flag dies
+ * {@link #LOCKOUT_DURATION_MS} cooldown measured on the wall clock, so a
+ * device reboot cannot inflate it. The in-memory session flag dies
  * with the process, so a cold start always re-locks.
  */
 public final class AppLockManager {
@@ -154,21 +153,31 @@ public final class AppLockManager {
     }
 
     // ------------------------------------------------------------------
-    // Brute-force protection (monotonic clock: wall-clock immune)
+    // Brute-force protection (wall clock: reboot-safe, see RC3)
     // ------------------------------------------------------------------
 
-    /** Cooldown end as monotonic millis. 0 means no lockout. */
+    /**
+     * Cooldown end as wall-clock millis. 0 means no lockout. Stored as
+     * {@code System.currentTimeMillis()} so a device reboot cannot inflate
+     * the cooldown (monotonic {@code elapsedRealtime} resets on boot while
+     * prefs survive). Migration: values below 1e12 are pre-fix monotonic
+     * timestamps and treated as expired.
+     */
     private static long lockoutUntil(@NonNull Context context) {
-        return prefs(context).getLong(KEY_LOCKOUT_UNTIL, 0);
+        long stored = prefs(context).getLong(KEY_LOCKOUT_UNTIL, 0);
+        if (stored > 0 && stored < 1_000_000_000_000L) {
+            return 0;
+        }
+        return stored;
     }
 
     public static boolean isLockedOut(@NonNull Context context) {
-        return SystemClock.elapsedRealtime() < lockoutUntil(context);
+        return System.currentTimeMillis() < lockoutUntil(context);
     }
 
     /** Seconds left on the cooldown, 0 when not locked out. */
     public static long lockoutRemainingSeconds(@NonNull Context context) {
-        long remainingMs = lockoutUntil(context) - SystemClock.elapsedRealtime();
+        long remainingMs = lockoutUntil(context) - System.currentTimeMillis();
         return remainingMs > 0 ? (remainingMs + 999) / 1000 : 0;
     }
 
@@ -188,7 +197,7 @@ public final class AppLockManager {
             preferences.edit()
                     .remove(KEY_FAILED_ATTEMPTS)
                     .putLong(KEY_LOCKOUT_UNTIL,
-                            SystemClock.elapsedRealtime() + duration)
+                            System.currentTimeMillis() + duration)
                     .putInt(KEY_LOCKOUT_CYCLES, cycles + 1)
                     .apply();
             return -1;

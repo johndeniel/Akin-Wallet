@@ -227,8 +227,16 @@ public class LockActivity extends AppCompatActivity {
         if (dotsRow != null) {
             dotsRow.removeCallbacks(pendingEntry);
         }
+        // RC2: a 4-digit entry whose delayed submit was cancelled (or whose
+        // background verify was dropped) must not stay buffered — resumed
+        // taps would hit `len>=4 -> return` with filled dots, looking like a
+        // rejected PIN. Clear so the user retypes from a clean state.
+        entry.setLength(0);
         submitting = false;
         lockoutHandler.removeCallbacks(lockoutTicker);
+        if (dotsRow != null) {
+            renderDots();
+        }
         super.onPause();
     }
 
@@ -379,9 +387,11 @@ public class LockActivity extends AppCompatActivity {
     }
 
     private void processEntry() {
-        // Dropped when the screen went away mid-delay (back/rotate): the user
-        // simply retypes; nothing half-applied ever runs on a dead screen.
+        // Dropped when the screen went away mid-delay (back/rotate): clear
+        // the buffered digits (RC2) so resume never sits on 4 filled dots
+        // that swallow taps; the user simply retypes.
         if (isFinishing() || paused) {
+            entry.setLength(0);
             submitting = false;
             return;
         }
@@ -405,7 +415,10 @@ public class LockActivity extends AppCompatActivity {
                         AppLockManager.setPin(LockActivity.this, pin);
                     } catch (RuntimeException e) {
                         runOnUiThread(() -> {
-                            if (isFinishing() || paused) return;
+                            if (isFinishing() || paused) {
+                                submitting = false;
+                                return;
+                            }
                             firstPin = null;
                             showCreateScreen();
                             showError(getString(R.string.lock_error_mismatch));
@@ -415,7 +428,10 @@ public class LockActivity extends AppCompatActivity {
                         return;
                     }
                     runOnUiThread(() -> {
-                        if (isFinishing() || paused) return;
+                        if (isFinishing() || paused) {
+                            submitting = false;
+                            return;
+                        }
                         unlockSuccess();
                         submitting = false;
                         renderDots();
@@ -433,14 +449,17 @@ public class LockActivity extends AppCompatActivity {
         }
         // VERIFY / PIN: PBKDF2 off UI thread to keep dot animation at 60fps.
         pinIo.execute(() -> {
-            final boolean lockedOut;
+            final boolean lockedOutAtSample;
             final boolean ok;
             try {
-                lockedOut = AppLockManager.isLockedOut(LockActivity.this);
-                ok = !lockedOut && AppLockManager.verifyPin(LockActivity.this, pin);
+                lockedOutAtSample = AppLockManager.isLockedOut(LockActivity.this);
+                ok = !lockedOutAtSample && AppLockManager.verifyPin(LockActivity.this, pin);
             } catch (RuntimeException e) {
                 runOnUiThread(() -> {
-                    if (isFinishing() || paused) return;
+                    if (isFinishing() || paused) {
+                        submitting = false;
+                        return;
+                    }
                     showError(getString(R.string.lock_error_fingerprint));
                     submitting = false;
                     renderDots();
@@ -452,8 +471,55 @@ public class LockActivity extends AppCompatActivity {
                     submitting = false;
                     return;
                 }
-                if (lockedOut) {
+                // RC4: the 120k-iteration hash can outlive a 30s cooldown, so
+                // re-sample on the UI thread. A stale `lockedOut` must not
+                // force one more lockout screen, nor a failure count, when
+                // the cooldown already expired mid-hash.
+                boolean nowLockedOut = AppLockManager.isLockedOut(LockActivity.this);
+                if (nowLockedOut) {
                     showLockout();
+                } else if (lockedOutAtSample) {
+                    // Expired mid-hash: we skipped verifyPin above, so retry
+                    // once with a fresh sample instead of recording a failure.
+                    submitting = true;
+                    pinIo.execute(() -> {
+                        final boolean retryOk;
+                        try {
+                            retryOk = AppLockManager.verifyPin(LockActivity.this, pin);
+                        } catch (RuntimeException e) {
+                            runOnUiThread(() -> {
+                                if (isFinishing() || paused) {
+                                    submitting = false;
+                                    return;
+                                }
+                                showError(getString(R.string.lock_error_fingerprint));
+                                submitting = false;
+                                renderDots();
+                            });
+                            return;
+                        }
+                        runOnUiThread(() -> {
+                            if (isFinishing() || paused) {
+                                submitting = false;
+                                return;
+                            }
+                            if (AppLockManager.isLockedOut(LockActivity.this)) {
+                                showLockout();
+                            } else if (retryOk) {
+                                AppLockManager.resetFailures(LockActivity.this);
+                                if (current == Screen.VERIFY) {
+                                    showCreateScreen();
+                                } else {
+                                    unlockSuccess();
+                                }
+                            } else {
+                                handleWrongPin();
+                            }
+                            submitting = false;
+                            renderDots();
+                        });
+                    });
+                    return;
                 } else if (ok) {
                     AppLockManager.resetFailures(LockActivity.this);
                     if (current == Screen.VERIFY) {
@@ -462,23 +528,7 @@ public class LockActivity extends AppCompatActivity {
                         unlockSuccess();
                     }
                 } else {
-                    int left = AppLockManager.recordFailure(LockActivity.this);
-                    if (left < 0) {
-                        if (AppLockManager.shouldWipe(LockActivity.this)) {
-                            // Aggressive posture: brute-force threshold hit.
-                            // Wipe vault + lock state, force fresh setup.
-                            com.akin.wallet.security.DbKeyManager.wipeVault(LockActivity.this);
-                            AppLockManager.resetFailures(LockActivity.this);
-                            firstPin = null;
-                            showCreateScreen();
-                            showError(getString(R.string.lock_error_mismatch));
-                        } else {
-                            showLockout();
-                        }
-                    } else {
-                        showError(getString(R.string.lock_error_wrong, left));
-                        shakeDots();
-                    }
+                    handleWrongPin();
                 }
                 submitting = false;
                 renderDots();
@@ -486,12 +536,35 @@ public class LockActivity extends AppCompatActivity {
         });
     }
 
+    /** Wrong-PIN path: lockout escalation / wipe / remaining-attempts error. */
+    private void handleWrongPin() {
+        int left = AppLockManager.recordFailure(this);
+        if (left < 0) {
+            if (AppLockManager.shouldWipe(this)) {
+                // Aggressive posture: brute-force threshold hit.
+                // Wipe vault + lock state, force fresh setup.
+                com.akin.wallet.security.DbKeyManager.wipeVault(this);
+                AppLockManager.resetFailures(this);
+                firstPin = null;
+                showCreateScreen();
+                showError(getString(R.string.lock_error_mismatch));
+            } else {
+                showLockout();
+            }
+        } else {
+            showError(getString(R.string.lock_error_wrong, left));
+            shakeDots();
+        }
+    }
+
     private void unlockSuccess() {
         cancelBiometric();
         if (MODE_CHANGE.equals(mode)) {
             // PIN change returns to Settings, not the vault lists: mark the
-            // session unlocked but skip the row preload.
+            // session unlocked but skip the row preload. Still restarts the
+            // grace window so returning to Settings cannot stack VERIFY (RC1).
             AppLockManager.setSessionUnlocked(true);
+            app().resetGrace();
             app().notifyOnReturn(R.string.lock_pin_updated);
             setResult(RESULT_OK);
             finish();
@@ -556,11 +629,17 @@ public class LockActivity extends AppCompatActivity {
             public void onAuthenticationSucceeded(
                     @NonNull BiometricPrompt.AuthenticationResult result) {
                 promptActive = false;
-                if (!isFinishing() && !paused
-                        && !AppLockManager.isLockedOut(LockActivity.this)) {
-                    AppLockManager.resetFailures(LockActivity.this);
-                    unlockSuccess();
+                if (isFinishing() || paused) {
+                    return;
                 }
+                // RC4: never drop a good fingerprint silently. If a cooldown
+                // started while the prompt was open, show it explicitly.
+                if (AppLockManager.isLockedOut(LockActivity.this)) {
+                    showLockout();
+                    return;
+                }
+                AppLockManager.resetFailures(LockActivity.this);
+                unlockSuccess();
             }
 
             @Override
