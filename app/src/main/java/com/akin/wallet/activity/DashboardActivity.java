@@ -107,6 +107,13 @@ public class DashboardActivity extends BaseVaultActivity {
     /** Viewport-cap epoch for the social list: newer refresh/destroy wins. */
     private int socialCapGeneration;
 
+    /**
+     * Last bound social row count. A shrink drops any fixed cap first so the
+     * card adopts the new row count through normal layout; growth keeps the
+     * current height until the settled clamp below re-checks it.
+     */
+    private int lastSocialCount = -1;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -749,12 +756,33 @@ public class DashboardActivity extends BaseVaultActivity {
         }
     }
 
+    /**
+     * Binds the social rows then adopts-then-caps the height. The Diff dispatch
+     * is deferred while the list is mid-layout or still holding unconsumed
+     * adapter updates (mirrors the search-path guard): dispatching into a
+     * running layout both throws and rolls back. Shrinks reset to
+     * wrap_content first so the card adopts through normal layout; the
+     * settled clamp below re-caps only on real overflow. The deferral
+     * re-posts without a bound: layout passes always end between frames, and
+     * a newer refresh or destroy supersedes the chain.
+     */
     private void refreshSocialAccounts(List<SocialAccountModel> accounts) {
         if (socialAdapter == null || socialAccountList == null) {
             return;
         }
+        if (isFinishing() || isDestroyed()) {
+            return;
+        }
+        if (socialAccountList.isComputingLayout()
+                || socialAccountList.hasPendingAdapterUpdates()) {
+            final List<SocialAccountModel> snapshot =
+                    accounts != null ? new ArrayList<>(accounts) : null;
+            socialAccountList.post(() -> refreshSocialAccounts(snapshot));
+            return;
+        }
         socialAdapter.updateData(accounts);
-        boolean hasAccounts = accounts != null && !accounts.isEmpty();
+        int count = accounts != null ? accounts.size() : 0;
+        boolean hasAccounts = count > 0;
         if (socialAccountCard != null) {
             socialAccountCard.setVisibility(hasAccounts ? View.VISIBLE : View.GONE);
         }
@@ -764,20 +792,55 @@ public class DashboardActivity extends BaseVaultActivity {
         if (socialAccountEmptyState != null) {
             socialAccountEmptyState.setVisibility(!hasAccounts ? View.VISIBLE : View.GONE);
         }
-        if (hasAccounts) {
-            // Adopt-then-cap: the wrap_content card hugs few rows; when rows
-            // exceed the remaining viewport the list is capped to it and
-            // scrolls internally, so the screen itself never scrolls.
-            capSocialListToViewport();
+        if (!hasAccounts) {
+            // Back to zero rows: drop any stale fixed cap so the next
+            // non-empty bind starts from wrap_content instead of the old
+            // viewport height.
+            lastSocialCount = 0;
+            resetSocialListHeight();
+            return;
         }
+        if (lastSocialCount >= 0 && count < lastSocialCount) {
+            // Shrink (delete): drop any stale fixed cap first so the card
+            // adopts the new row count through normal layout, exactly like
+            // the pre-cap dashboard did. The settled clamp below re-caps
+            // if the remaining rows still overflow the viewport.
+            resetSocialListHeight();
+        }
+        lastSocialCount = count;
+        // Adopt-then-cap: the wrap_content card hugs few rows; when rows
+        // exceed the remaining viewport the list is capped to it and
+        // scrolls internally, so the screen itself never scrolls.
+        capSocialListToViewport();
+    }
+
+    /** Drops any fixed viewport cap back to wrap_content with scrolling off. */
+    private void resetSocialListHeight() {
+        if (socialAccountList == null) {
+            return;
+        }
+        android.view.ViewGroup.LayoutParams params = socialAccountList.getLayoutParams();
+        if (params != null
+                && params.height != android.view.ViewGroup.LayoutParams.WRAP_CONTENT) {
+            params.height = android.view.ViewGroup.LayoutParams.WRAP_CONTENT;
+            socialAccountList.setLayoutParams(params);
+        }
+        socialAccountList.setNestedScrollingEnabled(false);
     }
 
     /**
      * Caps the social list to the remaining viewport below the card. Few rows
      * keep wrap_content (card adopts); many rows get a fixed height equal to
-     * the remaining space with nested scrolling on. Each call stamps a
-     * generation: a newer refresh or destroy supersedes pending work, and an
-     * unmeasured pre-layout frame retries exactly once.
+     * the remaining space with nested scrolling on. Each refresh stamps one
+     * generation: a newer refresh or destroy supersedes pending work.
+     *
+     * <p>Read-only clamp: the decision reads settled laid-out geometry
+     * (card bottom vs. viewport bottom) and never force-measures. A manual
+     * probe runs pre-update rows and freezes stale caps; plain reads can
+     * only ever observe settled rows, so a stuck-tall gap is impossible by
+     * construction. Retries re-post the same runnable without a bound;
+     * traversals and animators always end between frames, and the generation
+     * + destroy checks end the chain.
      */
     private void capSocialListToViewport() {
         final View card = socialAccountCard;
@@ -790,24 +853,48 @@ public class DashboardActivity extends BaseVaultActivity {
         if (pending != null) {
             list.removeCallbacks(pending);
         }
-        final boolean[] retried = {false};
         final Runnable[] self = new Runnable[1];
-        self[0] = () -> {
-            if (generation != socialCapGeneration || isFinishing() || isDestroyed()) {
-                return;
-            }
-            View content = (View) card.getParent();
-            if (content == null) {
-                return;
-            }
-            if (content.getHeight() <= 0 || list.getWidth() <= 0) {
-                // Pre-layout race: re-post this same runnable once instead
-                // of capping against zeros and missing until next refresh.
-                // Same generation + same flag, so it cannot chain further.
-                if (!retried[0]) {
-                    retried[0] = true;
-                    list.post(self[0]);
-                }
+        self[0] = () -> runSocialCap(generation, self[0]);
+        list.setTag(R.id.tag_empty_state_measure, self[0]);
+        list.post(self[0]);
+    }
+
+    private void runSocialCap(int generation, Runnable retry) {
+        if (generation != socialCapGeneration || isFinishing() || isDestroyed()) {
+            return;
+        }
+        final View card = socialAccountCard;
+        final RecyclerView list = socialAccountList;
+        if (card == null || list == null) {
+            return;
+        }
+        // Unsettled list: a running layout/animation, queued adapter updates
+        // not yet consumed by a traversal, or a requested layout not yet run.
+        // Deciding mid-transition would freeze the old height, so re-post
+        // the same runnable until the laid-out geometry below is real.
+        if (list.isComputingLayout() || list.isAnimating()
+                || list.hasPendingAdapterUpdates() || list.isLayoutRequested()) {
+            list.post(retry);
+            return;
+        }
+        View content = (View) card.getParent();
+        if (content == null) {
+            return;
+        }
+        if (content.getHeight() <= 0 || list.getWidth() <= 0) {
+            // Pre-layout race: re-post the same runnable instead of deciding
+            // against zeros and missing until the next refresh.
+            list.post(retry);
+            return;
+        }
+        android.view.ViewGroup.LayoutParams params = list.getLayoutParams();
+        boolean capped = params.height != android.view.ViewGroup.LayoutParams.WRAP_CONTENT;
+        int viewportBottom = content.getHeight() - content.getPaddingBottom();
+        if (!capped) {
+            // Natural height on screen: clamp only when the card truly runs
+            // past the viewport bottom.
+            if (card.getBottom() <= viewportBottom) {
+                list.setNestedScrollingEnabled(false);
                 return;
             }
             int remaining = content.getHeight()
@@ -818,22 +905,30 @@ public class DashboardActivity extends BaseVaultActivity {
             if (remaining <= 0) {
                 return;
             }
-            // Measure rows unbounded to learn the natural content height.
-            list.measure(
-                    View.MeasureSpec.makeMeasureSpec(list.getWidth(), View.MeasureSpec.EXACTLY),
-                    View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED));
-            boolean overflows = list.getMeasuredHeight() > remaining;
-            android.view.ViewGroup.LayoutParams params = list.getLayoutParams();
-            int targetHeight = overflows ? remaining
-                    : android.view.ViewGroup.LayoutParams.WRAP_CONTENT;
-            if (params.height != targetHeight) {
-                params.height = targetHeight;
-                list.setLayoutParams(params);
-            }
-            list.setNestedScrollingEnabled(overflows);
-        };
-        list.setTag(R.id.tag_empty_state_measure, self[0]);
-        list.post(self[0]);
+            params.height = remaining;
+            list.setLayoutParams(params);
+            list.setNestedScrollingEnabled(true);
+            return;
+        }
+        // Still capped from an earlier overflow: rows only grew or held here
+        // (a shrink resets to wrap_content before this check), so keep the
+        // cap, refreshed for the current viewport. A changed viewport means
+        // the old cap is meaningless: re-adopt from wrap_content and let the
+        // re-posted check below re-derive the decision from real geometry.
+        int remaining = content.getHeight()
+                - card.getTop()
+                - content.getPaddingBottom()
+                - card.getPaddingTop()
+                - card.getPaddingBottom();
+        if (remaining <= 0) {
+            return;
+        }
+        if (remaining != params.height) {
+            resetSocialListHeight();
+            list.post(retry);
+            return;
+        }
+        list.setNestedScrollingEnabled(true);
     }
 
     /**
