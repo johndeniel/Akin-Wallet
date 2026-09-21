@@ -53,10 +53,10 @@ public class DashboardActivity extends BaseVaultActivity {
     private RecyclerView socialAccountList;
     private View socialAccountEmptyState;
 
-    /** One stateless 12dp gap shared by every carousel (never per-item state). */
+    /** Shared carousel gap. */
     private RecyclerView.ItemDecoration sharedGap;
 
-    /** Credit-card ratio shared with the carousel faces (width : height). */
+    /** Card ratio. */
     private static final float CARD_ASPECT_RATIO = 1.586f;
     private FloatingActionButton quickAddButton;
     private View quickAddMenu;
@@ -72,6 +72,7 @@ public class DashboardActivity extends BaseVaultActivity {
     private String currentQuery = "";
     private static final String KEY_SEARCH_QUERY = "dashboard_search_query";
     private static final String KEY_SEARCH_OPEN = "dashboard_search_open";
+    private static final String KEY_FAB_MENU_OPEN = "dashboard_fab_menu_open";
     private SearchView searchView;
     private boolean searchShowing = false;
     private BankCardAdapter searchCardAdapter;
@@ -119,7 +120,7 @@ public class DashboardActivity extends BaseVaultActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_dashboard);
         applyChrome();
-        sharedGap = gapDecoration();
+        sharedGap = Ui.carouselGapDecoration(this);
 
         setupHeader();
         setupCardCarousel();
@@ -141,6 +142,12 @@ public class DashboardActivity extends BaseVaultActivity {
                 }
                 setFabVisible(false);
                 searchView.post(() -> searchView.show());
+            } else if (savedInstanceState.getBoolean(KEY_FAB_MENU_OPEN, false)) {
+                quickAddMenu.post(() -> {
+                    if (!isFabMenuOpen) {
+                        toggleAddMenu();
+                    }
+                });
             }
         }
         // No refresh here: onResume always follows onCreate and owns loading.
@@ -157,6 +164,7 @@ public class DashboardActivity extends BaseVaultActivity {
         super.onSaveInstanceState(outState);
         outState.putString(KEY_SEARCH_QUERY, currentQuery);
         outState.putBoolean(KEY_SEARCH_OPEN, searchShowing);
+        outState.putBoolean(KEY_FAB_MENU_OPEN, isFabMenuOpen);
     }
 
     @Override
@@ -276,6 +284,10 @@ public class DashboardActivity extends BaseVaultActivity {
         emptySearchTitle = findViewById(R.id.dashboard_search_empty_title);
         emptySearchSub = findViewById(R.id.dashboard_search_empty_subtitle);
 
+        // Vault terms must not enter IME dictionary/history.
+        searchView.getEditText().setInputType(android.text.InputType.TYPE_CLASS_TEXT
+                | android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
+                | android.text.InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD);
         searchView.getEditText().addTextChangedListener(new Ui.SimpleTextWatcher() {
             @Override
             public void onTextChanged(CharSequence text, int start, int before, int count) {
@@ -300,28 +312,6 @@ public class DashboardActivity extends BaseVaultActivity {
                 setFabVisible(true);
             }
         });
-    }
-
-    /** 12dp inter-card gap shared by the dashboard and search carousels. */
-    private RecyclerView.ItemDecoration gapDecoration() {
-        return new RecyclerView.ItemDecoration() {
-            // Offset is a constant: computed once, not per child per layout.
-            private int cachedGap = -1;
-
-            @Override
-            public void getItemOffsets(@NonNull Rect outRect, @NonNull View child,
-                                       @NonNull RecyclerView parent,
-                                       @NonNull RecyclerView.State state) {
-                int position = parent.getChildAdapterPosition(child);
-                if (position != RecyclerView.NO_POSITION
-                        && position < state.getItemCount() - 1) {
-                    if (cachedGap < 0) {
-                        cachedGap = Ui.dp(parent.getContext(), 12);
-                    }
-                    outRect.right = cachedGap;
-                }
-            }
-        };
     }
 
     /** FAB hides while the SearchView covers the screen. */
@@ -676,7 +666,7 @@ public class DashboardActivity extends BaseVaultActivity {
             if (viewport <= 0) {
                 return;
             }
-            int pageHeight = (int) ((viewport * BankCardAdapter.PAGE_WIDTH_RATIO - Ui.dp(empty.getContext(), 8))
+            int pageHeight = (int) ((viewport * Ui.CAROUSEL_PAGE_RATIO - Ui.dp(empty.getContext(), 8))
                     / CARD_ASPECT_RATIO);
             if (pageHeight > 0 && empty.getLayoutParams().height != pageHeight) {
                 empty.getLayoutParams().height = pageHeight;
@@ -828,20 +818,7 @@ public class DashboardActivity extends BaseVaultActivity {
         socialAccountList.setNestedScrollingEnabled(false);
     }
 
-    /**
-     * Caps the social list to the remaining viewport below the card. Few rows
-     * keep wrap_content (card adopts); many rows get a fixed height equal to
-     * the remaining space with nested scrolling on. Each refresh stamps one
-     * generation: a newer refresh or destroy supersedes pending work.
-     *
-     * <p>Read-only clamp: the decision reads settled laid-out geometry
-     * (card bottom vs. viewport bottom) and never force-measures. A manual
-     * probe runs pre-update rows and freezes stale caps; plain reads can
-     * only ever observe settled rows, so a stuck-tall gap is impossible by
-     * construction. Retries re-post the same runnable without a bound;
-     * traversals and animators always end between frames, and the generation
-     * + destroy checks end the chain.
-     */
+    /** Caps social list to viewport; headers stay pinned. */
     private void capSocialListToViewport() {
         final View card = socialAccountCard;
         final RecyclerView list = socialAccountList;

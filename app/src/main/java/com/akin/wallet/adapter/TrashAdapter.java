@@ -361,6 +361,8 @@ public class TrashAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
         MaterialCardView card = tile.card;
         boolean selected = selectedKeys.contains(entry.key());
         tile.badge.setVisibility(selected ? View.VISIBLE : View.GONE);
+        androidx.core.view.ViewCompat.setStateDescription(card, selected
+                ? card.getContext().getString(R.string.state_selected) : null);
         float density = card.getResources().getDisplayMetrics().density;
         if (selected) {
             card.setStrokeColor(card.getContext().getColor(R.color.brand_blue));

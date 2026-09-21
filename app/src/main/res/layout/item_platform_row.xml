@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Unified platform row: icon well + title/subtitle + trailing action. -->
+<!-- Platform picker row. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     style="@style/Widget.Akin.PlatformRow"
     android:background="?attr/selectableItemBackground">
@@ -43,8 +43,10 @@
 
     <ImageView
         android:id="@+id/platform_row_action"
-        android:layout_width="@dimen/row_trailing_icon_size"
-        android:layout_height="@dimen/row_trailing_icon_size"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:padding="14dp"
+        android:scaleType="fitCenter"
         android:contentDescription="@string/cd_link_account"
         android:src="@drawable/ic_link" />
 

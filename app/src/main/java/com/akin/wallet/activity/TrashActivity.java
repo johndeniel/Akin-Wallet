@@ -40,9 +40,12 @@ public class TrashActivity extends BaseVaultActivity {
     private MaterialButton deleteForeverButton;
 
     private static final String KEY_SELECTION = "trash_selection";
+    private static final String KEY_BULK_CONFIRM = "trash_bulk_confirm";
 
     /** Selection restored once after the first post-rotation load. */
     private ArrayList<String> pendingSelection;
+    /** Bulk-delete confirm re-shown after rotation if open when destroyed. */
+    private boolean pendingBulkConfirm;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -86,6 +89,7 @@ public class TrashActivity extends BaseVaultActivity {
 
         if (savedInstanceState != null) {
             pendingSelection = savedInstanceState.getStringArrayList(KEY_SELECTION);
+            pendingBulkConfirm = savedInstanceState.getBoolean(KEY_BULK_CONFIRM, false);
         }
         bindCachedSnapshot();
 
@@ -102,20 +106,24 @@ public class TrashActivity extends BaseVaultActivity {
         });
     }
 
-    /** Two-per-row tiles; headers span the full row. */
+    /** Tiles pair two-per-row on phones; three on tablets/wide (sw>=600dp).
+     * Headers always span the full row. Span count is read live so foldables
+     * + multi-window adapt without a layout variant. */
     private GridLayoutManager createGridLayoutManager() {
-        GridLayoutManager grid = new GridLayoutManager(this, 2);
+        final int spanCount = getResources().getConfiguration().smallestScreenWidthDp >= 600 ? 3 : 2;
+        GridLayoutManager grid = new GridLayoutManager(this, spanCount);
         // Uniform tiles pair up; headers take the full row. Bounds-guarded:
         // layout can probe positions mid-animation that no longer exist.
         grid.setSpanSizeLookup(new GridLayoutManager.SpanSizeLookup() {
             @Override
             public int getSpanSize(int position) {
+                int full = grid.getSpanCount();
                 if (trashAdapter == null
                         || position < 0 || position >= trashAdapter.getItemCount()) {
-                    return 2;
+                    return full;
                 }
                 return trashAdapter.getItemViewType(position)
-                        == TrashAdapter.TYPE_TILE ? 1 : 2;
+                        == TrashAdapter.TYPE_TILE ? 1 : full;
             }
         });
         return grid;
@@ -127,6 +135,7 @@ public class TrashActivity extends BaseVaultActivity {
         if (trashAdapter != null) {
             outState.putStringArrayList(KEY_SELECTION, trashAdapter.saveSelection());
         }
+        outState.putBoolean(KEY_BULK_CONFIRM, pendingBulkConfirm);
     }
 
     @Override
@@ -224,6 +233,10 @@ public class TrashActivity extends BaseVaultActivity {
         trashEmptyState.setVisibility(allEmpty ? View.VISIBLE : View.GONE);
         trashGrid.setVisibility(allEmpty ? View.GONE : View.VISIBLE);
         updateChrome(trashAdapter.getSelectedCount(), trashAdapter.getSelectableCount());
+        if (pendingBulkConfirm && trashAdapter.getSelectedCount() > 0) {
+            trashGrid.post(this::confirmBulkDelete);
+        }
+        pendingBulkConfirm = false;
     }
 
     /**
@@ -304,10 +317,12 @@ public class TrashActivity extends BaseVaultActivity {
         List<Integer> socials = new ArrayList<>();
         splitSelection(selected, ids, cards, socials);
         final int count = selected.size();
-        confirmDeleteToTrash(
+        pendingBulkConfirm = true;
+        androidx.appcompat.app.AlertDialog dialog = confirmDeleteToTrash(
                 getString(R.string.trash_delete_forever),
                 getString(R.string.trash_delete_many, count),
                 () -> vaultIo(() -> {
+                    pendingBulkConfirm = false;
                     db().deleteIdCards(ids);
                     db().deleteBankCards(cards);
                     db().deleteSocialAccounts(socials);
@@ -320,5 +335,6 @@ public class TrashActivity extends BaseVaultActivity {
                         showMessage(getString(R.string.trash_deleted_count, count));
                     });
                 }));
+        dialog.setOnDismissListener(d -> pendingBulkConfirm = false);
     }
 }

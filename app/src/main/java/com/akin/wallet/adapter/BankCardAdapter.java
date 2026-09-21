@@ -11,6 +11,7 @@ import androidx.recyclerview.widget.DiffUtil;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.akin.wallet.R;
+import com.akin.wallet.util.Ui;
 import com.akin.wallet.model.BankCardModel;
 import com.akin.wallet.util.CardText;
 
@@ -26,7 +27,6 @@ public class BankCardAdapter extends RecyclerView.Adapter<BankCardAdapter.CardVi
 
     /** Shared carousel page width (fraction of viewport). IDs use the same
         constant so both carousels stay pixel-identical in size. */
-    public static final float PAGE_WIDTH_RATIO = 0.68f;
 
     /**
      * Card face ramps, shared with the bank picker. Order doubles as the
@@ -121,7 +121,7 @@ public class BankCardAdapter extends RecyclerView.Adapter<BankCardAdapter.CardVi
                     - parent.getPaddingStart() - parent.getPaddingEnd();
         }
         if (lp != null && parentWidth > 0) {
-            lp.width = (int) (parentWidth * PAGE_WIDTH_RATIO);
+            lp.width = (int) (parentWidth * Ui.CAROUSEL_PAGE_RATIO);
             view.setLayoutParams(lp);
         }
         return new CardViewHolder(view);

@@ -1,18 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Trash tile: centered icon + title + masked hint, two-per-row. -->
+<!-- Trash tile. wrap+minHeight for large font. -->
 <com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/trash_tile_card"
     style="@style/Widget.Akin.DashboardCard"
     android:layout_width="match_parent"
-    android:layout_height="@dimen/trash_tile_height"
+    android:layout_height="wrap_content"
+    android:minHeight="@dimen/trash_tile_height"
     android:layout_margin="@dimen/trash_tile_margin"
     android:clickable="true"
     android:focusable="true">
 
     <FrameLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="wrap_content"
+        android:minHeight="@dimen/trash_tile_height">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -31,6 +33,7 @@
                 android:layout_height="@dimen/trash_tile_icon_size"
                 android:background="@color/white"
                 android:scaleType="fitCenter"
+                android:importantForAccessibility="no"
                 app:contentPadding="@dimen/spacing_8dp"
                 app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Akin.Rounded12" />
 
@@ -65,13 +68,14 @@
             android:layout_gravity="top|end"
             android:layout_margin="@dimen/spacing_8dp"
             android:background="@drawable/bg_check_badge"
+            android:importantForAccessibility="no"
             android:visibility="gone">
 
             <ImageView
                 android:layout_width="@dimen/spacing_14dp"
                 android:layout_height="@dimen/spacing_14dp"
                 android:layout_gravity="center"
-                android:contentDescription="@string/trash_restore"
+                android:importantForAccessibility="no"
                 android:src="@drawable/ic_check" />
 
         </FrameLayout>

@@ -10,6 +10,7 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.akin.wallet.R;
+import com.akin.wallet.util.Ui;
 
 /**
  * Bank Card design picker for the Bank Card screen: the five authentic
@@ -75,7 +76,7 @@ public class BankCardDesignAdapter extends RecyclerView.Adapter<BankCardDesignAd
                     - parent.getPaddingStart() - parent.getPaddingEnd();
         }
         if (lp != null && parentWidth > 0) {
-            lp.width = (int) (parentWidth * BankCardAdapter.PAGE_WIDTH_RATIO);
+            lp.width = (int) (parentWidth * Ui.CAROUSEL_PAGE_RATIO);
             view.setLayoutParams(lp);
         }
         return new CardViewHolder(view);

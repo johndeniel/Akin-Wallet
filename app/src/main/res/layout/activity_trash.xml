@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Trash. Fixed layout, never scrollable. Grid scrolls internally. -->
+<!-- Trash. Fixed, grid scrolls internally. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
@@ -57,18 +57,18 @@
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/trash_delete_forever_button"
-            style="@style/Widget.Material3.Button.OutlinedButton"
+            style="@style/Widget.Material3.Button.TonalButton"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:layout_marginStart="@dimen/form_action_gap"
             android:minHeight="48dp"
             android:text="@string/trash_delete_forever"
-            android:textColor="@color/danger"
+            android:textColor="@color/white"
+            app:backgroundTint="@color/danger"
             app:icon="@drawable/ic_delete"
             app:iconSize="18dp"
-            app:iconTint="@color/danger"
-            app:strokeColor="@color/danger" />
+            app:iconTint="@color/white" />
 
     </LinearLayout>
 
@@ -108,6 +108,8 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="@dimen/spacing_16dp"
                 android:gravity="center"
+                android:maxLines="2"
+                android:ellipsize="end"
                 android:text="@string/trash_empty_title"
                 android:textAppearance="@style/TextAppearance.Akin.CardTitle" />
 
@@ -116,6 +118,8 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="@dimen/spacing_4dp"
                 android:gravity="center"
+                android:maxLines="2"
+                android:ellipsize="end"
                 android:text="@string/trash_empty_sub"
                 android:textAppearance="@style/TextAppearance.Akin.BodyMuted" />
 

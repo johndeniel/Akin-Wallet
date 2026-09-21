@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Bank card form. Scrollable for keyboard. -->
+<!-- Bank card form. -->
 <androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
@@ -70,6 +70,8 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:singleLine="true"
+                        android:maxLines="1"
+                        android:ellipsize="end"
                         android:text="@string/default_card_type"
                         android:textAppearance="@style/TextAppearance.Akin.FieldValue" />
 
@@ -104,6 +106,8 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:singleLine="true"
+                        android:maxLines="1"
+                        android:ellipsize="end"
                         android:text="@string/default_card_network"
                         android:textAppearance="@style/TextAppearance.Akin.FieldValue" />
 
@@ -128,7 +132,8 @@
             android:id="@+id/bank_card_bank_name_field"
             style="@style/Widget.Akin.FormInput"
             android:hint="@string/hint_bank_name"
-            android:inputType="textCapWords" />
+            android:maxLength="50"
+            android:inputType="textCapWords|textNoSuggestions" />
 
         <TextView
             style="@style/Widget.Akin.FormLabel"
@@ -139,7 +144,8 @@
             android:id="@+id/bank_card_holder_name_field"
             style="@style/Widget.Akin.FormInput"
             android:hint="@string/hint_person_name"
-            android:inputType="textCapWords" />
+            android:maxLength="50"
+            android:inputType="textCapWords|textNoSuggestions" />
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -163,6 +169,7 @@
                     style="@style/Widget.Akin.FormInput"
                     android:hint="@string/hint_card_number"
                     android:inputType="number"
+                    android:digits="0123456789 "
                     android:maxLength="23" />
 
             </LinearLayout>
@@ -183,6 +190,7 @@
                     style="@style/Widget.Akin.FormInput"
                     android:hint="@string/hint_expiry"
                     android:inputType="number"
+                    android:digits="0123456789/"
                     android:maxLength="5" />
 
             </LinearLayout>
@@ -229,7 +237,9 @@
                         android:layout_height="@dimen/row_trailing_icon_size"
                         android:layout_marginStart="@dimen/spacing_8dp"
                         android:alpha="0.6"
-                        android:contentDescription="@string/cd_toggle_visibility"
+                        android:minWidth="48dp"
+                        android:minHeight="48dp"
+                        android:contentDescription="@string/cd_show_cvv"
                         android:src="@drawable/ic_eye" />
 
                 </LinearLayout>
@@ -270,7 +280,9 @@
                         android:layout_height="@dimen/row_trailing_icon_size"
                         android:layout_marginStart="@dimen/spacing_8dp"
                         android:alpha="0.6"
-                        android:contentDescription="@string/cd_toggle_visibility"
+                        android:minWidth="48dp"
+                        android:minHeight="48dp"
+                        android:contentDescription="@string/cd_show_pin"
                         android:src="@drawable/ic_eye" />
 
                 </LinearLayout>

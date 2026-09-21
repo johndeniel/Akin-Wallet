@@ -247,14 +247,21 @@ public final class GovernmentIDModel {
 
         public static IdField text(String key, String label, String hint,
                                    boolean required, boolean sensitive, int maxLength) {
+            // Never masked: full detail visible on the activity. NO_SUGGESTIONS
+            // keeps vault data out of the keyboard dictionary.
+            int type = InputType.TYPE_CLASS_TEXT
+                    | InputType.TYPE_TEXT_FLAG_CAP_WORDS
+                    | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS;
             return new IdField(key, label, hint, required, sensitive, null,
-                    InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_WORDS, maxLength);
+                    type, maxLength);
         }
 
         public static IdField number(String key, String label, String hint,
                                      boolean required, boolean sensitive, int maxLength) {
+            // Never masked: full digits visible on the activity.
+            int type = InputType.TYPE_CLASS_NUMBER;
             return new IdField(key, label, hint, required, sensitive, null,
-                    InputType.TYPE_CLASS_NUMBER, maxLength);
+                    type, maxLength);
         }
 
         /**
@@ -297,13 +304,7 @@ public final class GovernmentIDModel {
 
     // ---- Type builders (one per document; keeps the static block flat) ----
 
-    // National ID layout: PSN, then paired rows (name + sex, birth +
-    // issue, blood type + marital status, birthplace + address). The
-    // date/date and picker/picker rows pair by generic rule; name + sex
-    // and birthplace + address pair by explicit flag since two full-width
-    // text-led rows can't be inferred. Every field required. The PSN is
-    // exactly 16 digits capped at 16 chars and regrouped 4-4-4-4 on the
-    // face; both dates are exactly 8 digits (YYYYMMDD) capped at 8 chars.
+    // National ID fields.
     private static IdType buildNationalIdType() {
         return new IdType(TYPE_NATIONAL_ID, "psn", List.of(
                 IdField.number("psn", "PSN (PhilSys Number)", "1234567890123456", true, true, 16),
@@ -318,14 +319,7 @@ public final class GovernmentIDModel {
         ));
     }
 
-    // Driver license layout: license number + agency code share the top
-    // row, then name, address + nationality, and paired rows (sex + blood
-    // type, birth + expiry, weight + height, eye color + serial number,
-    // DL code + conditions). Every field required. The license number caps
-    // at 11 chars and regroups N01-23-456789 (3-2-6) on the face; the
-    // serial number is numeric-only; both dates are exactly 8 digits
-    // (YYYYMMDD) capped at 8 chars and dashed as YYYY-MM-DD on the face;
-    // text-led pairs use the explicit flag.
+    // Driver license fields.
     private static IdType buildDrivingLicenseType() {
         return new IdType(TYPE_DRIVING_LICENSE, "license_no", List.of(
                 IdField.text("license_no", "License No.", "N0123456789", true, true, 11).pairedWithNext(),
@@ -346,10 +340,7 @@ public final class GovernmentIDModel {
         ));
     }
 
-    // Passport layout: number + issuing authority share the top row, name,
-    // then paired rows (nationality + sex, birth + issue, birthplace +
-    // expiry). Every field required. All three dates are exactly 8 digits
-    // (YYYYMMDD) capped at 8 chars and dashed as YYYY-MM-DD on the face.
+    // Passport fields.
     private static IdType buildPassportType() {
         return new IdType(TYPE_PASSPORT, "passport_no", List.of(
                 IdField.text("passport_no", "Passport No.", "P1234567A", true, true, 9).pairedWithNext(),
@@ -364,10 +355,7 @@ public final class GovernmentIDModel {
         ));
     }
 
-    // SSS layout: number, name, then the paired birth + sex row, address
-    // stacked. Every field required. The SS number is exactly 10 digits
-    // capped at 10 chars on a numeric keyboard; birth is exactly 8 digits
-    // (YYYYMMDD) capped at 8 chars and dashed as YYYY-MM-DD on the face.
+    // SSS fields.
     private static IdType buildSssType() {
         return new IdType(TYPE_SSS, "ss_number", List.of(
                 IdField.number("ss_number", "SS Number", "3412345678", true, true, 10),
@@ -378,11 +366,7 @@ public final class GovernmentIDModel {
         ));
     }
 
-    // PhilHealth field contract: every field required; the short
-    // identifiers share the top row (PhilHealth No. + Membership), then
-    // full name with address directly below it, then the birth + sex row.
-    // The number is exactly 12 digits capped at 12 chars and regrouped
-    // 111-111-111-111 on the face; birth is exactly 8 digits (YYYYMMDD).
+    // PhilHealth fields.
     private static IdType buildPhilHealthType() {
         return new IdType(TYPE_PHIL_HEALTH, "philHealthNumber", List.of(
                 IdField.number("philHealthNumber", "PhilHealth No.", "123456789012", true, true, 12),
@@ -394,10 +378,7 @@ public final class GovernmentIDModel {
         ));
     }
 
-    // TIN field contract: every field required, 12-digit numeric TIN capped
-    // at 12 chars, dates as exactly 8 digits (YYYYMMDD) capped at 8 chars.
-    // The face regroups the bare digits as 111-111-111-111 and dashes
-    // plain-digit dates for display.
+    // TIN fields.
     private static IdType buildTinType() {
         return new IdType(TYPE_TIN, "tinNumber", List.of(
                 IdField.number("tinNumber", "TIN", "123456789012", true, true, 12),
@@ -607,8 +588,8 @@ public final class GovernmentIDModel {
         if (matchesType(typeName, TYPE_TIN)) {
             return new FaceScheme(
                     R.drawable.bg_tin,
-                    R.color.tin_ink, R.color.tin_muted, R.color.tin_rule,
-                    R.color.tin_ink, R.color.tin_muted,
+                    R.color.tin_ink, R.color.tin_ink, R.color.tin_rule,
+                    R.color.tin_ink, R.color.tin_ink,
                     R.color.tin_ink,
                     R.color.photo_bg_tin, R.color.tin_rule, R.color.tin_ink);
         }
@@ -816,7 +797,7 @@ public final class GovernmentIDModel {
      * First non-blank candidate, in preference order. Used where a value lives
      * under different keys per type (e.g. dateOfBirth vs birth_date).
      */
-    private static String firstNonEmpty(String... candidates) {
+    public static String firstNonEmpty(String... candidates) {
         if (candidates != null) {
             for (String candidate : candidates) {
                 if (hasText(candidate)) {

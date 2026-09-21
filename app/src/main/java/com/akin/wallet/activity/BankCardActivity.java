@@ -2,7 +2,6 @@ package com.akin.wallet.activity;
 
 import android.content.Context;
 import android.content.Intent;
-import android.graphics.Rect;
 import android.os.Bundle;
 import android.text.Editable;
 import android.view.View;
@@ -57,11 +56,20 @@ public class BankCardActivity extends BaseVaultActivity {
     private static final java.util.regex.Pattern HOLDER_NAME =
             java.util.regex.Pattern.compile("\\p{L}[\\p{L} .'-]*");
 
-    // Rotation keys. EditTexts restore their own text; the pickers do not, so
-    // the selected indices are saved explicitly.
+    // Rotation keys. Pickers + typed text are saved explicitly: the async
+    // rebind runs after view-state restore and would otherwise clobber the
+    // user's in-progress edits with stored values (GovID draft pattern).
     private static final String KEY_SELECTED_TYPE = "selected_type";
     private static final String KEY_SELECTED_NETWORK = "selected_network";
     private static final String KEY_SELECTED_DESIGN = "selected_design";
+    private static final String KEY_BANK_NAME = "bank_name";
+    private static final String KEY_HOLDER_NAME = "holder_name";
+    private static final String KEY_CARD_NUMBER = "card_number";
+    private static final String KEY_EXPIRY = "expiry";
+    private static final String KEY_CVV = "cvv";
+    private static final String KEY_CARD_PIN = "card_pin";
+    // Choice-dialog survival: which picker was open + its checked index.
+    private static final String KEY_DIALOG_KIND = "dialog_kind";
 
     // Form state. Plain ints (not single-element arrays): bindForm runs once per
     // creation, and lambdas capture the activity, so no effectively-final hack.
@@ -70,6 +78,17 @@ public class BankCardActivity extends BaseVaultActivity {
     private int selectedType;
     private int selectedNetwork;
     private int selectedDesign;
+    /** True on rotation: saved draft wins over vault values in prefill. */
+    private boolean hasSavedDraft;
+    private String savedBankName;
+    private String savedHolderName;
+    private String savedCardNumber;
+    private String savedExpiry;
+    private String savedCvv;
+    private String savedCardPin;
+    private static final String DIALOG_CARD_TYPE = "Card Type";
+    private static final String DIALOG_NETWORK = "Card Network";
+    private String pendingDialogKind;
 
     // Cached views. Looked up once to keep bindForm readable and avoid repeated
     // traversal on every keystroke/preview refresh.
@@ -112,6 +131,16 @@ public class BankCardActivity extends BaseVaultActivity {
             selectedNetwork = sanitizeIndex(
                     savedInstanceState.getInt(KEY_SELECTED_NETWORK, 0), CARD_NETWORKS.length);
             selectedDesign = Math.max(0, savedInstanceState.getInt(KEY_SELECTED_DESIGN, 0));
+            // Typed draft wins over vault values (async rebind would clobber).
+            hasSavedDraft = savedInstanceState.containsKey(KEY_BANK_NAME)
+                    || savedInstanceState.containsKey(KEY_CARD_NUMBER);
+            savedBankName = savedInstanceState.getString(KEY_BANK_NAME, null);
+            savedHolderName = savedInstanceState.getString(KEY_HOLDER_NAME, null);
+            savedCardNumber = savedInstanceState.getString(KEY_CARD_NUMBER, null);
+            savedExpiry = savedInstanceState.getString(KEY_EXPIRY, null);
+            savedCvv = savedInstanceState.getString(KEY_CVV, null);
+            savedCardPin = savedInstanceState.getString(KEY_CARD_PIN, null);
+            pendingDialogKind = savedInstanceState.getString(KEY_DIALOG_KIND, null);
         }
 
         int pendingId = getIntent().getIntExtra(EXTRA_ID, -1);
@@ -170,47 +199,52 @@ public class BankCardActivity extends BaseVaultActivity {
         outState.putInt(KEY_SELECTED_TYPE, selectedType);
         outState.putInt(KEY_SELECTED_NETWORK, selectedNetwork);
         outState.putInt(KEY_SELECTED_DESIGN, selectedDesign);
+        // Typed values: views may not exist yet on early rotation, guard nulls.
+        // Stored raw (with formatting); formatters re-apply on restore.
+        if (bankNameField != null) {
+            outState.putString(KEY_BANK_NAME, bankNameField.getText().toString());
+        } else if (savedBankName != null) {
+            outState.putString(KEY_BANK_NAME, savedBankName);
+        }
+        if (holderNameField != null) {
+            outState.putString(KEY_HOLDER_NAME, holderNameField.getText().toString());
+        } else if (savedHolderName != null) {
+            outState.putString(KEY_HOLDER_NAME, savedHolderName);
+        }
+        if (cardNumberField != null) {
+            outState.putString(KEY_CARD_NUMBER, cardNumberField.getText().toString());
+        } else if (savedCardNumber != null) {
+            outState.putString(KEY_CARD_NUMBER, savedCardNumber);
+        }
+        if (expiryField != null) {
+            outState.putString(KEY_EXPIRY, expiryField.getText().toString());
+        } else if (savedExpiry != null) {
+            outState.putString(KEY_EXPIRY, savedExpiry);
+        }
+        if (cvvField != null) {
+            outState.putString(KEY_CVV, cvvField.getText().toString());
+        } else if (savedCvv != null) {
+            outState.putString(KEY_CVV, savedCvv);
+        }
+        if (cardPinField != null) {
+            outState.putString(KEY_CARD_PIN, cardPinField.getText().toString());
+        } else if (savedCardPin != null) {
+            outState.putString(KEY_CARD_PIN, savedCardPin);
+        }
+        if (pendingDialogKind != null) {
+            outState.putString(KEY_DIALOG_KIND, pendingDialogKind);
+        }
     }
 
-    /**
-     * Rebuilds the editing item from the vault by id. Returns null for add
-     * mode (no id extra), which drives every isEdit branch downstream. A row
-     * deleted elsewhere resolves to null id-side and finishes in onCreate.
-     *
-     * @param restored true when pickers were already restored from rotation and
-     *                 must not be overwritten by stored defaults
-     */
-    @Nullable
-    private BankCardModel resolveEditingItem(boolean restored) {
-        int id = getIntent().getIntExtra(EXTRA_ID, -1);
-        if (id == -1) {
-            return null;
-        }
-        BankCardModel item = db().getBankCardById(id);
-        if (item == null) {
-            finish();
-            return null;
-        }
-        if (!restored) {
-            // Fresh launch: seed pickers from the stored card; rotation keeps
-            // the user's in-progress picks instead.
-            selectedType = sanitizeIndex(Ui.indexOfIgnoreCase(CARD_TYPES, item.getCardType()),
-                    CARD_TYPES.length);
-            selectedNetwork = sanitizeIndex(Ui.indexOfIgnoreCase(CARD_NETWORKS, item.getCardNetwork()),
-                    CARD_NETWORKS.length);
+    /** Rotation path: pickers + draft already restored, just bind the fetched row. */
+    private void bindFormWithId(@NonNull BankCardModel item) {
+        // Rotation keeps the user's in-progress design pick; fresh launch seeds
+        // from storage. Never overwrite a restored pick with the stored value.
+        if (!hasSavedDraft) {
             selectedDesign = item.getDesign();
         }
-        return item;
-    }
-
-    /** Rotation path: pickers already restored, just bind the fetched row. */
-    private void bindFormWithId(@NonNull BankCardModel item) {
-        clampDesignFor(item.getDesign());
+        clampDesign();
         bindForm(item);
-    }
-
-    private void clampDesignFor(int design) {
-        selectedDesign = design;
     }
 
     /** Entry point: wires every section in dependency order. */
@@ -236,7 +270,6 @@ public class BankCardActivity extends BaseVaultActivity {
         setupDeleteAction();
     }
 
-    /** Single findViewById pass; all later code uses these fields. */
     private void cacheViews() {
         cardTypeLabel = findViewById(R.id.bank_card_type_label);
         cardNetworkLabel = findViewById(R.id.bank_card_network_label);
@@ -263,26 +296,11 @@ public class BankCardActivity extends BaseVaultActivity {
         designCarousel.setHasFixedSize(true);
         designCarousel.setItemViewCacheSize(4);
 
-        // Same 12dp inter-card gap as the dashboard carousel (computed once;
-        // getItemOffsets runs per child per layout pass).
-        final int carouselGapPx = Ui.dp(this, 12);
-        designCarousel.addItemDecoration(new RecyclerView.ItemDecoration() {
-            @Override
-            public void getItemOffsets(@NonNull Rect outRect, @NonNull View child,
-                                       @NonNull RecyclerView parent,
-                                       @NonNull RecyclerView.State state) {
-                int position = parent.getChildAdapterPosition(child);
-                if (position != RecyclerView.NO_POSITION
-                        && position < state.getItemCount() - 1) {
-                    outRect.right = carouselGapPx;
-                }
-            }
-        });
+        designCarousel.addItemDecoration(Ui.carouselGapDecoration(this));
         designSnapHelper = new PagerSnapHelper();
         designSnapHelper.attachToRecyclerView(designCarousel);
 
-        createDots(dotsContainer, designAdapter.getDesignCount());
-        updateDots(dotsContainer, selectedDesign);
+        Ui.buildDots(this, dotsContainer, designAdapter.getDesignCount(), selectedDesign);
 
         // PagerSnapHelper reports the centered page; that page is the design.
         // Ignored until the initial scroll settles so layout noise at
@@ -299,14 +317,14 @@ public class BankCardActivity extends BaseVaultActivity {
                     int pos = designLayoutManager.getPosition(snapView);
                     if (pos != RecyclerView.NO_POSITION && pos != selectedDesign) {
                         selectedDesign = pos;
-                        updateDots(dotsContainer, pos);
+                        Ui.updateDots(dotsContainer, pos);
                     }
                 }
             }
         });
     }
 
-    /** Fills every field from the stored card; clamps a stale design index. */
+    /** Fills every field: rotation draft wins, else stored card. Clamps stale design. */
     private void prefillEditMode(@NonNull BankCardModel existing) {
         primaryActionLabel.setText(R.string.action_update);
         cardTypeLabel.setText(CARD_TYPES[selectedType]);
@@ -315,21 +333,39 @@ public class BankCardActivity extends BaseVaultActivity {
         if (selectedDesign < 0 || selectedDesign >= designAdapter.getDesignCount()) {
             selectedDesign = 0;
         }
-        bankNameField.setText(existing.getBankName());
-        holderNameField.setText(existing.getHolderName());
-        // Stored values are raw digits; the formatting watchers add
-        // grouping (card spaces) and the expiry slash on setText.
-        cardNumberField.setText(existing.getCardNumber());
-        expiryField.setText(existing.getExpiry());
-        cvvField.setText(existing.getCvv());
-        cardPinField.setText(existing.getPin());
+        if (hasSavedDraft) {
+            // User typed before rotation: never clobber with vault values.
+            // Null means "no saved edit" -> fall back to stored for that field.
+            if (savedBankName != null) bankNameField.setText(savedBankName);
+            else bankNameField.setText(existing.getBankName());
+            if (savedHolderName != null) holderNameField.setText(savedHolderName);
+            else holderNameField.setText(existing.getHolderName());
+            if (savedCardNumber != null) cardNumberField.setText(savedCardNumber);
+            else cardNumberField.setText(existing.getCardNumber());
+            if (savedExpiry != null) expiryField.setText(savedExpiry);
+            else expiryField.setText(existing.getExpiry());
+            if (savedCvv != null) cvvField.setText(savedCvv);
+            else cvvField.setText(existing.getCvv());
+            if (savedCardPin != null) cardPinField.setText(savedCardPin);
+            else cardPinField.setText(existing.getPin());
+        } else {
+            bankNameField.setText(existing.getBankName());
+            holderNameField.setText(existing.getHolderName());
+            // Stored values are raw digits; the formatting watchers add
+            // grouping (card spaces) and the expiry slash on setText.
+            cardNumberField.setText(existing.getCardNumber());
+            expiryField.setText(existing.getExpiry());
+            cvvField.setText(existing.getCvv());
+            cardPinField.setText(existing.getPin());
+        }
 
         final int scrollTo = selectedDesign;
         designCarousel.post(() -> {
             designCarousel.scrollToPosition(scrollTo);
-            updateDots(dotsContainer, scrollTo);
+            Ui.updateDots(dotsContainer, scrollTo);
             designCarousel.post(() -> carouselSettled = true);
         });
+        restorePendingDialog();
     }
 
     /**
@@ -339,10 +375,20 @@ public class BankCardActivity extends BaseVaultActivity {
     private void applyAddModeLayout() {
         primaryActionLabel.setText(R.string.action_save);
         Ui.makeSaveButtonFullWidth(primaryAction);
+        // Rotation draft: EditTexts auto-restore in add mode (no prefill to
+        // clobber them), but an open picker still needs re-showing.
+        if (hasSavedDraft) {
+            if (savedBankName != null) bankNameField.setText(savedBankName);
+            if (savedHolderName != null) holderNameField.setText(savedHolderName);
+            if (savedCardNumber != null) cardNumberField.setText(savedCardNumber);
+            if (savedExpiry != null) expiryField.setText(savedExpiry);
+            if (savedCvv != null) cvvField.setText(savedCvv);
+            if (savedCardPin != null) cardPinField.setText(savedCardPin);
+        }
         designCarousel.post(() -> carouselSettled = true);
+        restorePendingDialog();
     }
 
-    /** Live card-face preview; also clears stale errors as the user types. */
     private void setupPreviewBinding() {
         Ui.SimpleTextWatcher previewWatcher = new Ui.SimpleTextWatcher() {
             @Override public void onTextChanged(CharSequence text, int start, int before, int count) {
@@ -364,7 +410,6 @@ public class BankCardActivity extends BaseVaultActivity {
         refreshPreview();
     }
 
-    /** Pushes trimmed field values into the carousel's placeholder face. */
     private void refreshPreview() {
         String digits = extractDigits(cardNumberField.getText().toString());
         String last4 = digits.length() > 4
@@ -383,7 +428,6 @@ public class BankCardActivity extends BaseVaultActivity {
                 CARD_NETWORKS[selectedNetwork]);
     }
 
-    /** Groups card digits in 4s and expiry as MM/YY while preserving cursor. */
     private void setupInputFormatting() {
         cardNumberField.addTextChangedListener(new Ui.SimpleTextWatcher() {
             @Override public void afterTextChanged(Editable text) {
@@ -436,14 +480,14 @@ public class BankCardActivity extends BaseVaultActivity {
 
     private void setupPickers() {
         findViewById(R.id.bank_card_type_selector).setOnClickListener(v ->
-                showChoiceDialog("Card Type", CARD_TYPES, selectedType, selectedPosition -> {
+                showChoiceDialog(DIALOG_CARD_TYPE, CARD_TYPES, selectedType, selectedPosition -> {
                     selectedType = selectedPosition;
                     cardTypeLabel.setText(CARD_TYPES[selectedPosition]);
                     refreshPreview();
                 }));
 
         findViewById(R.id.bank_card_network_selector).setOnClickListener(v ->
-                showChoiceDialog("Card Network", CARD_NETWORKS, selectedNetwork, selectedPosition -> {
+                showChoiceDialog(DIALOG_NETWORK, CARD_NETWORKS, selectedNetwork, selectedPosition -> {
                     selectedNetwork = selectedPosition;
                     cardNetworkLabel.setText(CARD_NETWORKS[selectedPosition]);
                     refreshPreview();
@@ -566,9 +610,14 @@ public class BankCardActivity extends BaseVaultActivity {
         View pinOffender = validatePin(
                 extractDigits(cardPinField.getText().toString()));
 
-        View firstInvalid = firstOffender(
-                bankOffender, holderOffender, numberOffender,
-                expiryOffender, cvvOffender, pinOffender);
+        View firstInvalid = null;
+        for (View offender : new View[]{bankOffender, holderOffender, numberOffender,
+                expiryOffender, cvvOffender, pinOffender}) {
+            if (offender != null) {
+                firstInvalid = offender;
+                break;
+            }
+        }
         if (firstInvalid != null) {
             firstInvalid.requestFocus();
             return false;
@@ -576,17 +625,6 @@ public class BankCardActivity extends BaseVaultActivity {
         return true;
     }
 
-    /** First non-null offender, preserving form order. */
-    private static View firstOffender(View... offenders) {
-        for (View offender : offenders) {
-            if (offender != null) {
-                return offender;
-            }
-        }
-        return null;
-    }
-
-    /** Returns the field when invalid (error already set), null when valid. */
     private View validateBankName(String bank) {
         if (bank.isEmpty()) {
             bankNameField.setError("Bank name is required");
@@ -601,7 +639,6 @@ public class BankCardActivity extends BaseVaultActivity {
         return null;
     }
 
-    /** Returns the field when invalid (error already set), null when valid. */
     private View validateHolderName(String holder) {
         if (holder.isEmpty()) {
             holderNameField.setError("Cardholder name is required");
@@ -620,7 +657,6 @@ public class BankCardActivity extends BaseVaultActivity {
         return null;
     }
 
-    /** Returns the field when invalid (error already set), null when valid. */
     private View validateCardNumber(String cardDigits) {
         if (cardDigits.length() < CARD_NUMBER_MIN_LEN || cardDigits.length() > CARD_NUMBER_MAX_LEN) {
             cardNumberField.setError(
@@ -630,7 +666,6 @@ public class BankCardActivity extends BaseVaultActivity {
         return null;
     }
 
-    /** Returns the field when invalid (error already set), null when valid. */
     private View validateExpiry(String expDigits) {
         if (expDigits.length() != EXPIRY_DIGITS_LEN) {
             expiryField.setError("Expiry must be exactly 4 digits (MMYY)");
@@ -639,7 +674,6 @@ public class BankCardActivity extends BaseVaultActivity {
         return null;
     }
 
-    /** Returns the field when invalid (error already set), null when valid. */
     private View validateCvv(String cvvDigits) {
         if (cvvDigits.length() != CVV_LEN) {
             cvvField.setError("CVV must be exactly " + CVV_LEN + " digits");
@@ -648,7 +682,6 @@ public class BankCardActivity extends BaseVaultActivity {
         return null;
     }
 
-    /** Returns the field when invalid (error already set), null when valid. */
     private View validatePin(String pinDigits) {
         if (pinDigits.length() < PIN_MIN_LEN || pinDigits.length() > PIN_MAX_LEN) {
             cardPinField.setError("PIN must be " + PIN_MIN_LEN + "-" + PIN_MAX_LEN + " digits");
@@ -657,7 +690,6 @@ public class BankCardActivity extends BaseVaultActivity {
         return null;
     }
 
-    /** Clears a stale setError as soon as the user edits the field again. */
     private static void clearErrorOnChange(EditText input) {
         input.addTextChangedListener(new Ui.SimpleTextWatcher() {
             @Override public void onTextChanged(CharSequence text, int start, int before, int count) {
@@ -676,7 +708,6 @@ public class BankCardActivity extends BaseVaultActivity {
         return raw == null ? "" : NON_DIGITS.matcher(raw).replaceAll("");
     }
 
-    /** Groups raw digits for display: "12345678" -> "1234 5678". */
     private static String groupInFours(String digits) {
         StringBuilder groupedDigits = new StringBuilder(digits.length() + digits.length() / 4);
         for (int digitIndex = 0; digitIndex < digits.length(); digitIndex++) {
@@ -688,7 +719,6 @@ public class BankCardActivity extends BaseVaultActivity {
         return groupedDigits.toString();
     }
 
-    /** Formats raw expiry digits for display: "1" -> "1", "122" -> "12/2". */
     private static String formatExpiryInput(String digits) {
         return digits.length() > 2
                 ? digits.substring(0, 2) + "/" + digits.substring(2)
@@ -703,33 +733,43 @@ public class BankCardActivity extends BaseVaultActivity {
         return index < 0 || index >= size ? 0 : index;
     }
 
-    private void showChoiceDialog(String title, String[] options, int checkedPosition, OnChoiceListener listener) {
-        trackDialog(Ui.singleChoice(this, title, options, checkedPosition, listener::onChoice));
+    private void showChoiceDialog(String title, String[] options, int checkedPosition, Ui.OnChoice listener) {
+        pendingDialogKind = title; // DIALOG_* kind
+        androidx.appcompat.app.AlertDialog dialog = Ui.singleChoice(this, title, options, checkedPosition, pos -> {
+            pendingDialogKind = null;
+            listener.onChoice(pos);
+        });
+        // Cancel also clears the pending kind so rotation doesn't resurrect it.
+        dialog.setOnDismissListener(d -> {
+            if (pendingDialogKind != null && pendingDialogKind.equals(title)) {
+                pendingDialogKind = null;
+            }
+        });
+        trackDialog(dialog);
     }
 
-    /** Builds dots once; use updateDots() on scroll to avoid view churn. */
-    private void createDots(LinearLayout container, int count) {
-        container.removeAllViews();
-        int size = Ui.dp(this, 8);
-        int margin = Ui.dp(this, 4);
-        for (int i = 0; i < count; i++) {
-            View dot = new View(this);
-            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(size, size);
-            params.setMargins(margin, 0, margin, 0);
-            dot.setLayoutParams(params);
-            dot.setBackgroundResource(R.drawable.bg_dot);
-            container.addView(dot);
+    /** Re-shows the picker that was open across rotation (typed draft already kept). */
+    private void restorePendingDialog() {
+        if (pendingDialogKind == null) {
+            return;
+        }
+        String kind = pendingDialogKind;
+        pendingDialogKind = null;
+        if (DIALOG_CARD_TYPE.equals(kind)) {
+            findViewById(R.id.bank_card_type_selector).post(() ->
+                    showChoiceDialog(DIALOG_CARD_TYPE, CARD_TYPES, selectedType, pos -> {
+                        selectedType = pos;
+                        cardTypeLabel.setText(CARD_TYPES[pos]);
+                        refreshPreview();
+                    }));
+        } else if (DIALOG_NETWORK.equals(kind)) {
+            findViewById(R.id.bank_card_network_selector).post(() ->
+                    showChoiceDialog(DIALOG_NETWORK, CARD_NETWORKS, selectedNetwork, pos -> {
+                        selectedNetwork = pos;
+                        cardNetworkLabel.setText(CARD_NETWORKS[pos]);
+                        refreshPreview();
+                    }));
         }
     }
 
-    /** Flips dot alpha in place; cheaper than rebuilding on every scroll tick. */
-    private static void updateDots(LinearLayout container, int selected) {
-        for (int i = 0; i < container.getChildCount(); i++) {
-            container.getChildAt(i).setAlpha(i == selected ? 1f : 0.3f);
-        }
-    }
-
-    private interface OnChoiceListener {
-        void onChoice(int selectedPosition);
-    }
 }

@@ -319,10 +319,16 @@ public class LockActivity extends AppCompatActivity {
         pinIndicatorRow.setVisibility(View.VISIBLE);
     }
 
-    /** Keypad biometric key left of 0 — INVISIBLE (not GONE) to keep 0 centered. */
+    /** Keypad biometric key left of 0 — INVISIBLE (not GONE) to keep 0 centered.
+     * Invisible also drops focus + TalkBack so readers never trap on a hidden key. */
     private void setBioKeyVisible(boolean visible) {
         if (biometricKey != null) {
             biometricKey.setVisibility(visible ? View.VISIBLE : View.INVISIBLE);
+            biometricKey.setFocusable(visible);
+            biometricKey.setClickable(visible);
+            biometricKey.setImportantForAccessibility(visible
+                    ? View.IMPORTANT_FOR_ACCESSIBILITY_YES
+                    : View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS);
         }
     }
 
@@ -345,10 +351,10 @@ public class LockActivity extends AppCompatActivity {
         int[] digitKeyIds = {R.id.lock_keypad_digit_1, R.id.lock_keypad_digit_2, R.id.lock_keypad_digit_3, R.id.lock_keypad_digit_4, R.id.lock_keypad_digit_5,
                 R.id.lock_keypad_digit_6, R.id.lock_keypad_digit_7, R.id.lock_keypad_digit_8, R.id.lock_keypad_digit_9, R.id.lock_keypad_digit_0};
         for (int i = 0; i < digitKeyIds.length; i++) {
-            // i = 0..8 -> '1'..'9', i = 9 -> '0'.
             final char digit = i == 9 ? '0' : (char) ('1' + i);
             View key = findViewById(digitKeyIds[i]);
             if (key != null) {
+                key.setContentDescription(String.valueOf(digit));
                 key.setOnClickListener(v -> onDigit(digit));
             }
         }

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Shared form actions: primary save/update + edit-only destructive delete. -->
+<!-- Form actions. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
@@ -21,7 +21,7 @@
         <ImageView
             android:layout_width="@dimen/form_action_icon_size"
             android:layout_height="@dimen/form_action_icon_size"
-            android:contentDescription="@string/action_save"
+            android:importantForAccessibility="no"
             android:src="@drawable/ic_edit" />
 
         <TextView
@@ -50,7 +50,7 @@
         <ImageView
             android:layout_width="@dimen/form_action_icon_size"
             android:layout_height="@dimen/form_action_icon_size"
-            android:contentDescription="@string/action_delete"
+            android:importantForAccessibility="no"
             android:src="@drawable/ic_delete" />
 
         <TextView

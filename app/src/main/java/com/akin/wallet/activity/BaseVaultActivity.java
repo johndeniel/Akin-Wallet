@@ -89,6 +89,7 @@ public abstract class BaseVaultActivity extends AppCompatActivity {
         Ui.applySystemBars(this);
         MaterialToolbar toolbar = findToolbar();
         if (toolbar != null) {
+            toolbar.setNavigationContentDescription(getString(R.string.cd_back));
             toolbar.setNavigationOnClickListener(v -> onNavigateBack());
         }
     }
@@ -159,22 +160,31 @@ public abstract class BaseVaultActivity extends AppCompatActivity {
 
     /**
      * "Delete <thing>?" confirm, tracked for auto-dismiss. Runs {@code onDelete} on Delete.
+     * Returns the dialog so callers can retain intent across rotation.
      */
-    protected void confirmDeleteToTrash(String title, String message, Runnable onDelete) {
-        trackDialog(Ui.confirmDelete(this, title, message, onDelete));
+    protected AlertDialog confirmDeleteToTrash(String title, String message, Runnable onDelete) {
+        AlertDialog dialog = Ui.confirmDelete(this, title, message, onDelete);
+        trackDialog(dialog);
+        return dialog;
     }
 
     protected void showMessage(@StringRes int messageRes) {
         View content = findViewById(android.R.id.content);
         if (content != null && !isFinishing() && !isDestroyed()) {
-            Snackbar.make(content, messageRes, Snackbar.LENGTH_SHORT).show();
+            com.google.android.material.snackbar.Snackbar bar =
+                    Snackbar.make(content, messageRes, Snackbar.LENGTH_SHORT);
+            bar.getView().setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
+            bar.show();
         }
     }
 
     protected void showMessage(String message) {
         View content = findViewById(android.R.id.content);
         if (content != null && !isFinishing() && !isDestroyed()) {
-            Snackbar.make(content, message, Snackbar.LENGTH_SHORT).show();
+            com.google.android.material.snackbar.Snackbar bar =
+                    Snackbar.make(content, message, Snackbar.LENGTH_SHORT);
+            bar.getView().setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
+            bar.show();
         }
     }
 

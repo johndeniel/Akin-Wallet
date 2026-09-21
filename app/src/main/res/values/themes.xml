@@ -86,12 +86,10 @@
         <item name="cornerSize">50%</item>
     </style>
 
-    <!-- M3 small top app bar shared by every form screen (64dp, nav icon +
-         title). Only android:id / app:title vary per layout; the dashboard
-         toolbar reuses it and adds its subtitle. -->
+    <!-- M3 small top app bar. -->
     <style name="Widget.Akin.Toolbar" parent="Widget.Material3.Toolbar">
         <item name="android:layout_height">@dimen/toolbar_height</item>
-        <item name="android:layout_marginStart">-12dp</item>
+        <item name="android:layout_marginStart">0dp</item>
         <item name="android:background">@android:color/transparent</item>
         <item name="contentInsetStart">0dp</item>
         <item name="contentInsetStartWithNavigation">0dp</item>
@@ -117,7 +115,7 @@
         <item name="android:layout_width">wrap_content</item>
         <item name="android:layout_height">wrap_content</item>
         <item name="android:layout_marginTop">2dp</item>
-        <item name="android:textSize">8sp</item>
+        <item name="android:textSize">9sp</item>
         <item name="android:letterSpacing">0.14</item>
         <item name="android:singleLine">true</item>
     </style>

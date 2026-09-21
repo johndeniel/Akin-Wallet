@@ -133,10 +133,6 @@ public final class SocialPlatformModel {
         if (mappedIconRes != null) {
             return mappedIconRes;
         }
-        return resolveStoredIconFallback(storedIconRes);
-    }
-
-    private static int resolveStoredIconFallback(int storedIconRes) {
         return storedIconRes != 0 ? storedIconRes : R.drawable.ic_social;
     }
 

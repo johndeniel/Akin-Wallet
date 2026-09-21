@@ -2,6 +2,8 @@
 <resources>
     <!-- View-tag key for the pending empty-state measure runnable. -->
     <item name="tag_empty_state_measure" type="id" />
+    <!-- View-tag key for applyAdaptiveInsets initial padding. -->
+    <item name="tag_window_insets_initial" type="id" />
     <!-- View-tag key for the last applied network logo (icon + height). -->
     <item name="tag_network_logo" type="id" />
     <!-- View-tag keys for ID face: applied background + one-time metrics. -->

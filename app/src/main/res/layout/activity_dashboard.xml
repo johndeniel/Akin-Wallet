@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Dashboard. Fixed content, never scrollable. Inner social list scrolls internally. -->
+<!-- Dashboard. Fixed content, never scrollable. Inner social list caps to viewport. -->
 <androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
@@ -77,8 +77,11 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:maxLines="1"
+                android:ellipsize="end"
                 android:text="@string/trash_section_ids"
-                android:textAppearance="@style/TextAppearance.Akin.SectionTitle" />
+                android:textAppearance="@style/TextAppearance.Akin.SectionTitle"
+                android:accessibilityHeading="true" />
 
         </LinearLayout>
 
@@ -97,10 +100,9 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/spacing_16dp"
-            android:clickable="true"
-            android:focusable="true"
-            android:visibility="gone"
-            app:rippleColor="?attr/colorControlHighlight">
+            android:clickable="false"
+            android:focusable="false"
+            android:visibility="gone">
 
             <LinearLayout
                 style="@style/Widget.Akin.EmptyStateContent"
@@ -112,7 +114,9 @@
                     android:layout_height="wrap_content"
                     android:gravity="center"
                     android:text="@string/empty_ids_title"
-                    android:textAppearance="@style/TextAppearance.Akin.CardTitle" />
+                    android:textAppearance="@style/TextAppearance.Akin.CardTitle" 
+                    android:maxLines="2"
+                    android:ellipsize="end" />
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -120,7 +124,9 @@
                     android:layout_marginTop="@dimen/spacing_4dp"
                     android:gravity="center"
                     android:text="@string/empty_ids_sub"
-                    android:textAppearance="@style/TextAppearance.Akin.BodyMuted" />
+                    android:textAppearance="@style/TextAppearance.Akin.BodyMuted" 
+                    android:maxLines="2"
+                    android:ellipsize="end" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/dashboard_government_id_empty_action"
@@ -128,6 +134,8 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="@dimen/spacing_12dp"
+                    android:minWidth="48dp"
+                    android:minHeight="48dp"
                     android:text="@string/dialog_id_title"
                     android:textColor="@color/text_primary"
                     app:backgroundTint="@color/dashboard_well"
@@ -150,8 +158,11 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:maxLines="1"
+                android:ellipsize="end"
                 android:text="@string/trash_section_cards"
-                android:textAppearance="@style/TextAppearance.Akin.SectionTitle" />
+                android:textAppearance="@style/TextAppearance.Akin.SectionTitle"
+                android:accessibilityHeading="true" />
 
         </LinearLayout>
 
@@ -170,10 +181,9 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/spacing_16dp"
-            android:clickable="true"
-            android:focusable="true"
-            android:visibility="gone"
-            app:rippleColor="?attr/colorControlHighlight">
+            android:clickable="false"
+            android:focusable="false"
+            android:visibility="gone">
 
             <LinearLayout
                 style="@style/Widget.Akin.EmptyStateContent"
@@ -185,7 +195,9 @@
                     android:layout_height="wrap_content"
                     android:gravity="center"
                     android:text="@string/empty_cards_title"
-                    android:textAppearance="@style/TextAppearance.Akin.CardTitle" />
+                    android:textAppearance="@style/TextAppearance.Akin.CardTitle" 
+                    android:maxLines="2"
+                    android:ellipsize="end" />
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -193,7 +205,9 @@
                     android:layout_marginTop="@dimen/spacing_4dp"
                     android:gravity="center"
                     android:text="@string/empty_cards_sub"
-                    android:textAppearance="@style/TextAppearance.Akin.BodyMuted" />
+                    android:textAppearance="@style/TextAppearance.Akin.BodyMuted" 
+                    android:maxLines="2"
+                    android:ellipsize="end" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/dashboard_bank_card_empty_action"
@@ -201,6 +215,8 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="@dimen/spacing_12dp"
+                    android:minWidth="48dp"
+                    android:minHeight="48dp"
                     android:text="@string/dialog_bank_title"
                     android:textColor="@color/text_primary"
                     app:backgroundTint="@color/dashboard_well"
@@ -223,8 +239,11 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:maxLines="1"
+                android:ellipsize="end"
                 android:text="@string/trash_section_social"
-                android:textAppearance="@style/TextAppearance.Akin.SectionTitle" />
+                android:textAppearance="@style/TextAppearance.Akin.SectionTitle"
+                android:accessibilityHeading="true" />
 
         </LinearLayout>
 
@@ -255,10 +274,9 @@
             android:layout_height="0dp"
             android:layout_marginTop="@dimen/spacing_10dp"
             android:layout_weight="1"
-            android:clickable="true"
-            android:focusable="true"
-            android:visibility="gone"
-            app:rippleColor="?attr/colorControlHighlight">
+            android:clickable="false"
+            android:focusable="false"
+            android:visibility="gone">
 
             <LinearLayout
                 style="@style/Widget.Akin.EmptyStateContent"
@@ -270,7 +288,9 @@
                     android:layout_height="wrap_content"
                     android:gravity="center"
                     android:text="@string/empty_social_title"
-                    android:textAppearance="@style/TextAppearance.Akin.CardTitle" />
+                    android:textAppearance="@style/TextAppearance.Akin.CardTitle" 
+                    android:maxLines="2"
+                    android:ellipsize="end" />
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -278,7 +298,9 @@
                     android:layout_marginTop="@dimen/spacing_4dp"
                     android:gravity="center"
                     android:text="@string/empty_social_sub"
-                    android:textAppearance="@style/TextAppearance.Akin.BodyMuted" />
+                    android:textAppearance="@style/TextAppearance.Akin.BodyMuted" 
+                    android:maxLines="2"
+                    android:ellipsize="end" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/dashboard_social_account_empty_action"
@@ -286,6 +308,8 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="@dimen/spacing_12dp"
+                    android:minWidth="48dp"
+                    android:minHeight="48dp"
                     android:text="@string/dialog_social_title"
                     android:textColor="@color/text_primary"
                     app:backgroundTint="@color/dashboard_well"
@@ -306,6 +330,7 @@
         android:background="@color/text_shadow"
         android:clickable="true"
         android:focusable="true"
+        android:contentDescription="@string/cd_close_menu"
         android:visibility="gone" />
 
     <LinearLayout
@@ -345,7 +370,7 @@
         android:layout_gravity="bottom|end"
         android:layout_marginEnd="@dimen/fab_margin"
         android:layout_marginBottom="@dimen/fab_margin"
-        android:contentDescription="@string/fab_add"
+        android:contentDescription="@string/fab_add_menu"
         android:src="@drawable/ic_add"
         app:backgroundTint="?attr/colorPrimary"
         app:elevation="8dp"
@@ -382,8 +407,11 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:maxLines="1"
+                    android:ellipsize="end"
                     android:text="@string/trash_section_ids"
-                    android:textAppearance="@style/TextAppearance.Akin.SectionTitle" />
+                    android:textAppearance="@style/TextAppearance.Akin.SectionTitle"
+                android:accessibilityHeading="true" />
 
             </LinearLayout>
 
@@ -409,8 +437,11 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:maxLines="1"
+                    android:ellipsize="end"
                     android:text="@string/trash_section_cards"
-                    android:textAppearance="@style/TextAppearance.Akin.SectionTitle" />
+                    android:textAppearance="@style/TextAppearance.Akin.SectionTitle"
+                android:accessibilityHeading="true" />
 
             </LinearLayout>
 
@@ -436,8 +467,11 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:maxLines="1"
+                    android:ellipsize="end"
                     android:text="@string/trash_section_social"
-                    android:textAppearance="@style/TextAppearance.Akin.SectionTitle" />
+                    android:textAppearance="@style/TextAppearance.Akin.SectionTitle"
+                android:accessibilityHeading="true" />
 
             </LinearLayout>
 
@@ -481,7 +515,9 @@
                         android:layout_height="wrap_content"
                         android:gravity="center"
                         android:text="@string/search_empty_title"
-                        android:textAppearance="@style/TextAppearance.Akin.CardTitle" />
+                        android:textAppearance="@style/TextAppearance.Akin.CardTitle" 
+                    android:maxLines="2"
+                    android:ellipsize="end" />
 
                     <TextView
                         android:id="@+id/dashboard_search_empty_subtitle"
@@ -490,7 +526,9 @@
                         android:layout_marginTop="@dimen/spacing_4dp"
                         android:gravity="center"
                         android:text="@string/search_empty_sub"
-                        android:textAppearance="@style/TextAppearance.Akin.BodyMuted" />
+                        android:textAppearance="@style/TextAppearance.Akin.BodyMuted" 
+                    android:maxLines="2"
+                    android:ellipsize="end" />
 
                 </LinearLayout>
 

@@ -9,6 +9,7 @@ import androidx.recyclerview.widget.DiffUtil;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.akin.wallet.R;
+import com.akin.wallet.util.Ui;
 import com.akin.wallet.model.GovernmentIDModel;
 import com.akin.wallet.util.GovernmentIdFaceRenderer;
 
@@ -99,7 +100,7 @@ public class GovernmentIdAdapter extends RecyclerView.Adapter<GovernmentIdAdapte
                     - parent.getPaddingStart() - parent.getPaddingEnd();
         }
         if (lp != null && parentWidth > 0) {
-            lp.width = (int) (parentWidth * BankCardAdapter.PAGE_WIDTH_RATIO);
+            lp.width = (int) (parentWidth * Ui.CAROUSEL_PAGE_RATIO);
             view.setLayoutParams(lp);
         }
         return new IdCardViewHolder(view);

@@ -209,26 +209,9 @@ public final class VaultWarmCache {
      * snapshot intact so consumers fall back to direct queries.
      */
     public void preloadPostAuthAsync() {
-        preloadPostAuthAsync(null);
-    }
-
-    /**
-     * Same as {@link #preloadPostAuthAsync()} with an optional UI-thread
-     * callback. The callback is for future use; current callers use the
-     * overlapped handoff and bind from {@link #snapshot()} in
-     * {@code onCreate}, so null is the common case.
-     */
-    public void preloadPostAuthAsync(@Nullable Runnable onDone) {
         if (!preloadInFlight.compareAndSet(false, true)) {
-            if (onDone != null) {
-                // Collapse: run on caller thread today (callers pass null);
-                // never execute UI work on the vault IO thread.
-                onDone.run();
-            }
             return;
         }
-        final android.os.Handler main =
-                new android.os.Handler(android.os.Looper.getMainLooper());
         vaultIo.execute(() -> {
             try {
                 AppDatabaseHelper db = helper();
@@ -243,9 +226,6 @@ public final class VaultWarmCache {
                 Log.w(TAG, "post-auth preload failed", e);
             } finally {
                 preloadInFlight.set(false);
-                if (onDone != null) {
-                    main.post(onDone);
-                }
             }
         });
     }
@@ -295,11 +275,8 @@ public final class VaultWarmCache {
         snapshot = null;
     }
 
-    /**
-     * Drops row data when the session re-locks (background past grace).
-     * The platform catalog survives; it holds no user data.
-     */
+    /** Drops row data on re-lock; catalog survives (no user data). */
     public synchronized void clearSensitiveOnLock() {
-        snapshot = null;
+        invalidate();
     }
 }

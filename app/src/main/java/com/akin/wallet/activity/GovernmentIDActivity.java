@@ -2,7 +2,6 @@ package com.akin.wallet.activity;
 
 import android.content.Context;
 import android.content.Intent;
-import android.graphics.Rect;
 import android.os.Bundle;
 import android.text.InputFilter;
 import android.text.InputType;
@@ -17,6 +16,7 @@ import android.widget.TextView;
 
 
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.annotation.Nullable;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.PagerSnapHelper;
@@ -55,6 +55,7 @@ public class GovernmentIDActivity extends BaseVaultActivity {
     // draft + selected type are saved explicitly; bindForm seeds from them.
     private static final String KEY_DRAFT = "draft_values";
     private static final String KEY_SELECTED_TYPE = "selected_type";
+    private static final String KEY_DIALOG_FIELD = "dialog_field";
     private static final java.util.regex.Pattern NON_DIGITS =
             java.util.regex.Pattern.compile("\\D");
     private static final java.util.regex.Pattern NON_ALNUM =
@@ -66,6 +67,7 @@ public class GovernmentIDActivity extends BaseVaultActivity {
     private Map<String, String> savedDraft;
     private int savedSelectedType;
     private boolean hasSavedState;
+    private String pendingDialogField;
     // Live references for onSaveInstanceState (bindForm owns the locals).
     private Map<String, String> currentDraft;
     private int[] currentSelected;
@@ -82,6 +84,7 @@ public class GovernmentIDActivity extends BaseVaultActivity {
             hasSavedState = true;
             savedSelectedType = savedInstanceState.getInt(KEY_SELECTED_TYPE, 0);
             savedDraft = restoreDraft(savedInstanceState);
+            pendingDialogField = savedInstanceState.getString(KEY_DIALOG_FIELD, null);
         }
         if (id == -1) {
             bindForm(null);
@@ -111,6 +114,9 @@ public class GovernmentIDActivity extends BaseVaultActivity {
         }
         if (currentSelected != null) {
             outState.putInt(KEY_SELECTED_TYPE, currentSelected[0]);
+        }
+        if (pendingDialogField != null) {
+            outState.putString(KEY_DIALOG_FIELD, pendingDialogField);
         }
     }
 
@@ -225,25 +231,11 @@ public class GovernmentIDActivity extends BaseVaultActivity {
         recyclerDesign.setAdapter(designAdapter);
         recyclerDesign.setHasFixedSize(true);
         recyclerDesign.setItemViewCacheSize(4);
-        // Same 12dp inter-card gap as the dashboard carousel so the form
-        // picker spaces pages exactly like Home.
-        final int govGapPx = Ui.dp(this, 12);
-        recyclerDesign.addItemDecoration(new RecyclerView.ItemDecoration() {
-            @Override
-            public void getItemOffsets(@NonNull Rect outRect, @NonNull View child,
-                                       @NonNull RecyclerView parent,
-                                       @NonNull RecyclerView.State state) {
-                int position = parent.getChildAdapterPosition(child);
-                if (position != RecyclerView.NO_POSITION
-                        && position < state.getItemCount() - 1) {
-                    outRect.right = govGapPx;
-                }
-            }
-        });
+        recyclerDesign.addItemDecoration(Ui.carouselGapDecoration(this));
         PagerSnapHelper snapHelper = new PagerSnapHelper();
         snapHelper.attachToRecyclerView(recyclerDesign);
 
-        setupDots(dotsContainer, designAdapter.getTypeCount(), selectedType[0]);
+        Ui.buildDots(this, dotsContainer, designAdapter.getTypeCount(), selectedType[0]);
 
         // Guard: ignore carousel callbacks until the initial scroll to the
         // edited type has settled. Otherwise, the initial layout at position 0
@@ -360,8 +352,7 @@ public class GovernmentIDActivity extends BaseVaultActivity {
                         });
                     }));
         }
-
-
+        reopenPendingDropdown(formContainer, draftValues, dropdownValues, refreshPreview);
     }
 
     private String currentTypeName(int selected, boolean known, @Nullable String existingType) {
@@ -504,6 +495,8 @@ public class GovernmentIDActivity extends BaseVaultActivity {
         label.setText(field.required ? field.label + " *" : field.label);
         label.setTextColor(getResources().getColor(R.color.dashboard_muted, null));
         label.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+        label.setMaxLines(1);
+        label.setEllipsize(android.text.TextUtils.TruncateAt.END);
         wrap.addView(label);
 
         EditText input = new EditText(GovernmentIDActivity.this);
@@ -517,6 +510,7 @@ public class GovernmentIDActivity extends BaseVaultActivity {
         input.setTextColor(getResources().getColor(R.color.text_primary, null));
         input.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
         input.setSingleLine(true);
+        input.setEllipsize(android.text.TextUtils.TruncateAt.END);
         input.setInputType(field.inputType);
         if (field.maxLength > 0) {
             input.setFilters(new InputFilter[]{new InputFilter.LengthFilter(field.maxLength)});
@@ -554,6 +548,8 @@ public class GovernmentIDActivity extends BaseVaultActivity {
         label.setText(field.required ? field.label + " *" : field.label);
         label.setTextColor(getResources().getColor(R.color.dashboard_muted, null));
         label.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+        label.setMaxLines(1);
+        label.setEllipsize(android.text.TextUtils.TruncateAt.END);
         wrap.addView(label);
 
         LinearLayout row = new LinearLayout(GovernmentIDActivity.this);
@@ -575,6 +571,9 @@ public class GovernmentIDActivity extends BaseVaultActivity {
                 0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
         valueView.setLayoutParams(valueParams);
         valueView.setSingleLine(true);
+        valueView.setMaxLines(1);
+        valueView.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        valueView.setTag(field.key);
         valueView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
         valueView.setTextColor(getResources().getColor(R.color.text_primary, null));
         // Focusable so a failed save can show the same setError popup a text
@@ -606,15 +605,23 @@ public class GovernmentIDActivity extends BaseVaultActivity {
 
         row.setOnClickListener(v -> {
             int checkedPosition = Ui.indexOfIgnoreCase(field.options, draft.get(field.key));
-            trackDialog(Ui.singleChoice(GovernmentIDActivity.this,
+            pendingDialogField = field.key;
+            AlertDialog dialog = Ui.singleChoice(GovernmentIDActivity.this,
                     field.label, field.options, checkedPosition, selectedPosition -> {
+                        pendingDialogField = null;
                         String picked = field.options[selectedPosition];
                         draft.put(field.key, picked);
                         valueView.setText(picked);
                         valueView.setAlpha(1f);
                         hideFieldError(dropdownValues, field.key);
                         onChanged.run();
-                    }));
+                    });
+            dialog.setOnDismissListener(d -> {
+                if (field.key.equals(pendingDialogField)) {
+                    pendingDialogField = null;
+                }
+            });
+            trackDialog(dialog);
         });
 
         wrap.addView(row);
@@ -623,6 +630,53 @@ public class GovernmentIDActivity extends BaseVaultActivity {
         // value text itself, never a label below the field.
         dropdownValues.put(field.key, valueView);
         return wrap;
+    }
+
+    private void reopenPendingDropdown(LinearLayout formContainer, Map<String, String> draft,
+            Map<String, TextView> dropdownValues, Runnable onChanged) {
+        if (pendingDialogField == null || formContainer == null) {
+            return;
+        }
+        String key = pendingDialogField;
+        pendingDialogField = null;
+        View tagged = formContainer.findViewWithTag(key);
+        if (!(tagged instanceof TextView)) {
+            return;
+        }
+        TextView valueView = (TextView) tagged;
+        GovernmentIDModel.IdField target = null;
+        for (GovernmentIDModel.IdType type : GovernmentIDModel.getAllTypes()) {
+            for (GovernmentIDModel.IdField f : type.fields) {
+                if (key.equals(f.key) && f.isDropdown()) {
+                    target = f;
+                    break;
+                }
+            }
+        }
+        if (target == null) {
+            return;
+        }
+        final GovernmentIDModel.IdField field = target;
+        formContainer.post(() -> {
+            int checked = Ui.indexOfIgnoreCase(field.options, draft.get(field.key));
+            pendingDialogField = field.key;
+            AlertDialog dialog = Ui.singleChoice(this,
+                    field.label, field.options, checked, pos -> {
+                        pendingDialogField = null;
+                        String picked = field.options[pos];
+                        draft.put(field.key, picked);
+                        valueView.setText(picked);
+                        valueView.setAlpha(1f);
+                        hideFieldError(dropdownValues, field.key);
+                        onChanged.run();
+                    });
+            dialog.setOnDismissListener(d -> {
+                if (field.key.equals(pendingDialogField)) {
+                    pendingDialogField = null;
+                }
+            });
+            trackDialog(dialog);
+        });
     }
 
     private boolean validate(GovernmentIDModel.IdType spec, Map<String, String> values,
@@ -894,23 +948,8 @@ public class GovernmentIDActivity extends BaseVaultActivity {
         rebuildForm(formContainer, currentSpec(pos, true, null),
                 draft, textInputs, dropdownValues, refreshPreview);
         if (dotsContainer != null && designAdapter != null) {
-            setupDots(dotsContainer, designAdapter.getTypeCount(), pos);
+            Ui.buildDots(this, dotsContainer, designAdapter.getTypeCount(), pos);
         }
         refreshPreview.run();
-    }
-
-    private void setupDots(LinearLayout container, int count, int selected) {
-        container.removeAllViews();
-        int size = Ui.dp(this, 8);
-        int margin = Ui.dp(this, 4);
-        for (int i = 0; i < count; i++) {
-            View dot = new View(GovernmentIDActivity.this);
-            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(size, size);
-            params.setMargins(margin, 0, margin, 0);
-            dot.setLayoutParams(params);
-            dot.setBackgroundResource(R.drawable.bg_dot);
-            dot.setAlpha(i == selected ? 1f : 0.3f);
-            container.addView(dot);
-        }
     }
 }

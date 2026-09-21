@@ -127,6 +127,8 @@ public class SocialAccountAdapter extends RecyclerView.Adapter<SocialAccountAdap
                 listener.onAccountClick(account);
             }
         });
+        holder.itemView.setContentDescription(
+                holder.title.getText() + ", " + holder.sub.getText());
         if (holder.divider != null) {
             holder.divider.setVisibility(
                     position == getItemCount() - 1 ? View.GONE : View.VISIBLE);

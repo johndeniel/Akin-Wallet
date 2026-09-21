@@ -103,7 +103,7 @@ public final class GovernmentIdFaceRenderer {
         f.title.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 12);
         f.subtitle.setText(GovernmentIDModel.previewSubtitle(typeName));
         f.subtitle.setTextColor(colorOf(f, scheme.subtitleColorRes));
-        f.subtitle.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 7);
+        f.subtitle.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 8);
         f.rule.setBackgroundColor(colorOf(f, scheme.ruleColorRes));
         f.holderLabel.setTextColor(colorOf(f, scheme.numberLabelColorRes));
         f.holder.setText(GovernmentIDModel.displayName(fields));
@@ -122,7 +122,7 @@ public final class GovernmentIdFaceRenderer {
         // Birth key varies by type ("dateOfBirth" on TIN/PhilHealth,
         // "birth_date" elsewhere); first non-blank wins, always YYYY-MM-DD.
         String birth = GovernmentIDModel.displayDate(
-                firstNonEmpty(fields.get("dateOfBirth"), fields.get("birth_date")));
+                GovernmentIDModel.firstNonEmpty(fields.get("dateOfBirth"), fields.get("birth_date")));
         if (f.dob != null) {
             f.dob.setText(birth != null && !birth.trim().isEmpty() ? birth.trim() : "—");
             f.dob.setTextColor(colorOf(f, scheme.numberColorRes));
@@ -231,7 +231,7 @@ public final class GovernmentIdFaceRenderer {
             return;
         }
         if (!layoutDone) {
-            label.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 6);
+            label.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 8);
         }
         label.setTextColor(colorOf(f, colorRes));
         if (!layoutDone) {
@@ -245,11 +245,6 @@ public final class GovernmentIdFaceRenderer {
                 }
             }
         }
-    }
-
-    /** Compact micro-label: 6sp, tight gap, face-muted ink. */
-    private static void microLabel(@NonNull FaceViews f, TextView label, int colorRes) {
-        microLabelColor(f, label, colorRes, false);
     }
 
     private static void setTopMargin(View view, int topMarginDp, float density) {
@@ -266,20 +261,5 @@ public final class GovernmentIdFaceRenderer {
 
     private static int colorOf(@NonNull FaceViews f, int res) {
         return f.res.getColor(res, null);
-    }
-
-    /**
-     * First non-blank candidate in preference order. Used where a value lives
-     * under different keys per type, without per-type branches.
-     */
-    private static String firstNonEmpty(String... candidates) {
-        if (candidates != null) {
-            for (String c : candidates) {
-                if (c != null && !c.trim().isEmpty()) {
-                    return c;
-                }
-            }
-        }
-        return "";
     }
 }

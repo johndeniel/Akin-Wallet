@@ -25,13 +25,12 @@
     <color name="danger">#FFEE4444</color>
     <color name="danger_bright">#FFFF5252</color>
 
-    <!-- Input hints -->
-    <color name="hint_text">#55FFFFFF</color>
+    <!-- Input hints. -->
+    <color name="hint_text">#99FFFFFF</color>
 
-    <!-- Text on light card faces (white with alpha steps) -->
-    <color name="text_faint_light">#8CFFFFFF</color>
+    <!-- Text on card faces. -->
+    <color name="text_faint_light">#E6FFFFFF</color>
     <color name="text_subtle_light">#B3FFFFFF</color>
-    <color name="text_bright_light">#E6FFFFFF</color>
     <color name="text_shadow">#80000000</color>
 
     <!-- Gloss & edge overlays drawn over card gradients -->
@@ -88,14 +87,14 @@
     <color name="passport_bg_center">#FF932C44</color>
     <color name="passport_bg_end">#FF2A0C15</color>
     <color name="passport_ink">#FFF7EBD7</color>
-    <color name="passport_muted">#FFC9ACA0</color>
+    <color name="passport_muted">#FFE8D5CC</color>
     <color name="passport_rule">#FFD9B8AC</color>
 
     <!-- SSS face (corporate blue document, white ink) -->
     <color name="sss_bg_start">#FF1463B4</color>
     <color name="sss_bg_center">#FF1B5FC4</color>
     <color name="sss_bg_end">#FF071E49</color>
-    <color name="sss_muted">#FFB4C8E8</color>
+    <color name="sss_muted">#FFD6E4F7</color>
 
     <!-- PhilHealth face (soft sage document, green ink) -->
     <color name="phil_health_bg_start">#FFEFF7F1</color>
@@ -107,14 +106,13 @@
     <color name="tin_bg_center">#FFF0DCAC</color>
     <color name="tin_bg_end">#FFD9B87E</color>
     <color name="tin_ink">#FF4A2F1B</color>
-    <color name="tin_muted">#FF6B5433</color>
     <color name="tin_rule">#FF6E5636</color>
     <color name="phil_health_ink">#FF005C36</color>
-    <color name="phil_health_muted">#FF4E7263</color>
+    <color name="phil_health_muted">#FF2F5446</color>
     <color name="phil_health_rule">#FF006B3F</color>
     <color name="dl_bar">#FF5B4FA3</color>
     <color name="dl_ink">#FF2B2545</color>
-    <color name="dl_muted">#FF5F5878</color>
+    <color name="dl_muted">#FF3E3854</color>
     <color name="dl_accent">#FF4A3F7A</color>
 
     <!-- Dashboard (MyKey reference) — deep-navy theme. Background is
@@ -123,7 +121,7 @@
     <color name="dashboard_bg_end">#FF0A1E3A</color>
     <color name="dashboard_surface">#FF0E1C33</color>
     <color name="dashboard_surface_border">#FF1D3154</color>
-    <color name="dashboard_muted">#FF8A9BB5</color>
+    <color name="dashboard_muted">#FFA3B4CE</color>
     <color name="dashboard_active">#FF2EA6FF</color>
 
     <!-- Header avatar / settings wells -->

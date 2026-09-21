@@ -15,8 +15,6 @@
     <!-- Dashboard header -->
     <string name="header_tagline">Offline  •  Private  •  Secure</string>
 
-    <!-- Dashboard quick-add FAB -->
-    <string name="fab_add">Add</string>
 
     <!-- Shared form feedback (was copy-pasted literally per form) -->
     <string name="msg_updated">Updated Successfully</string>
@@ -102,7 +100,6 @@
     <string name="dialog_social_title">Social Account</string>
     <!-- Government ID -->
     <string name="dialog_id_title">Government ID</string>
-    <!-- Picker toolbar title -->
 
     <!-- Dashboard empty states -->
     <string name="empty_ids_title">No government IDs</string>
@@ -163,10 +160,7 @@
     <string name="preview_expiry_value">MM/YY</string>
     <!-- Government ID -->
     <string name="preview_government_id">GOVERNMENT ID</string>
-    <!-- Holder label + value share text today; kept separate so future
-         faces can relabel without touching code. -->
     <string name="preview_person_name">FULL NAME</string>
-    <string name="preview_person_label">FULL NAME</string>
     <string name="preview_number_label">ID NUMBER</string>
     <!-- Generic detail-row default -->
 
@@ -175,14 +169,18 @@
     <string name="cd_search">Search</string>
     <string name="cd_add_account">Add account</string>
     <string name="cd_link_account">Link</string>
-    <string name="cd_toggle_visibility">Toggle visibility</string>
+    <string name="cd_show_cvv">Show CVV</string>
+    <string name="cd_show_pin">Show PIN</string>
+    <string name="cd_show_password">Show password</string>
+    <string name="state_selected">Selected</string>
     <string name="cd_select_platform">Select platform</string>
     <string name="cd_select_field">Select %1$s</string>
     <string name="cd_select_card_type">Select card type</string>
     <string name="cd_select_card_network">Select card network</string>
     <string name="cd_card_network">Card network</string>
     <string name="cd_card_chip">Card chip</string>
-    <string name="cd_id_photo">ID photo placeholder</string>
     <string name="cd_back">Back</string>
-    <string name="cd_platform">Platform</string>
+    <string name="cd_backspace">Backspace</string>
+    <string name="fab_add_menu">Add item</string>
+    <string name="cd_close_menu">Close menu</string>
 </resources>

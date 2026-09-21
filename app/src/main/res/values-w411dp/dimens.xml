@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 6-inch w411dp: spend width, hold height. -->
+    <dimen name="screen_gutter_horizontal">24dp</dimen>
+    <dimen name="form_gutter_horizontal">28dp</dimen>
+    <dimen name="carousel_end_padding">44dp</dimen>
+    <dimen name="trash_tile_height">204dp</dimen>
+    <dimen name="lock_screen_padding_horizontal">40dp</dimen>
+    <dimen name="card_content_padding">20dp</dimen>
+    <dimen name="platform_row_icon_size">44dp</dimen>
+    <dimen name="trash_tile_icon_size">56dp</dimen>
+    <dimen name="row_title_icon_gap">16dp</dimen>
+</resources>

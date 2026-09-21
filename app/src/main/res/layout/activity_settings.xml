@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Settings. Fixed layout, never scrollable. Compact tokens fit 4-inch screens. -->
+<!-- Settings. Fixed, compact tokens. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
@@ -10,7 +10,10 @@
     android:clipChildren="false"
     android:clipToPadding="false"
     android:orientation="vertical"
-    android:padding="@dimen/form_gutter_horizontal">
+    android:paddingStart="@dimen/screen_gutter_horizontal"
+    android:paddingEnd="@dimen/screen_gutter_horizontal"
+    android:paddingTop="@dimen/screen_padding_top"
+    android:paddingBottom="@dimen/screen_padding_bottom">
 
     <com.google.android.material.appbar.MaterialToolbar
         android:id="@+id/settings_toolbar"
@@ -21,9 +24,12 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/spacing_20dp"
+        android:layout_marginTop="@dimen/section_gap_top"
+        android:maxLines="1"
+        android:ellipsize="end"
         android:text="@string/settings_section_security"
-        android:textAppearance="@style/TextAppearance.Akin.SectionLabel" />
+        android:textAppearance="@style/TextAppearance.Akin.SectionLabel"
+        android:accessibilityHeading="true" />
 
     <com.google.android.material.card.MaterialCardView
         android:layout_width="match_parent"
@@ -48,7 +54,7 @@
                         android:layout_width="@dimen/row_icon_well_size"
                         android:layout_height="@dimen/row_icon_well_size"
                         android:background="@color/white"
-                        android:contentDescription="@string/settings_biometric"
+                        android:importantForAccessibility="no"
                         android:scaleType="fitCenter"
                         android:src="@drawable/fingerprint"
                         app:contentPadding="@dimen/row_icon_content_padding"
@@ -65,7 +71,9 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="@string/settings_biometric"
-                            android:textAppearance="@style/TextAppearance.Akin.CardTitle" />
+                            android:textAppearance="@style/TextAppearance.Akin.CardTitle"
+                            android:maxLines="1"
+                            android:ellipsize="end" />
 
                         <TextView
                             android:id="@+id/settings_biometric_status"
@@ -73,7 +81,9 @@
                             android:layout_height="wrap_content"
                             android:layout_marginTop="@dimen/spacing_2dp"
                             android:text="@string/settings_biometric_off"
-                            android:textAppearance="@style/TextAppearance.Akin.BodyMuted" />
+                            android:textAppearance="@style/TextAppearance.Akin.BodyMuted"
+                            android:maxLines="1"
+                            android:ellipsize="end" />
 
                     </LinearLayout>
 
@@ -82,6 +92,8 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="@dimen/spacing_8dp"
+                        android:minWidth="48dp"
+                        android:minHeight="48dp"
                         android:contentDescription="@string/settings_biometric" />
 
                 </LinearLayout>
@@ -119,14 +131,18 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="@string/settings_change_pin"
-                            android:textAppearance="@style/TextAppearance.Akin.CardTitle" />
+                            android:textAppearance="@style/TextAppearance.Akin.CardTitle"
+                            android:maxLines="1"
+                            android:ellipsize="end" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="@dimen/spacing_2dp"
                             android:text="@string/settings_change_pin_sub"
-                            android:textAppearance="@style/TextAppearance.Akin.BodyMuted" />
+                            android:textAppearance="@style/TextAppearance.Akin.BodyMuted"
+                            android:maxLines="1"
+                            android:ellipsize="end" />
 
                     </LinearLayout>
 
@@ -135,7 +151,7 @@
                         android:layout_height="@dimen/row_trailing_icon_size"
                         android:layout_marginStart="@dimen/spacing_8dp"
                         android:src="@drawable/ic_chevron_right"
-                        android:contentDescription="@string/settings_change_pin" />
+                        android:importantForAccessibility="no" />
 
                 </LinearLayout>
 
@@ -148,9 +164,12 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/spacing_20dp"
+        android:layout_marginTop="@dimen/section_gap_top"
+        android:maxLines="1"
+        android:ellipsize="end"
         android:text="@string/settings_section_wallet"
-        android:textAppearance="@style/TextAppearance.Akin.SectionLabel" />
+        android:textAppearance="@style/TextAppearance.Akin.SectionLabel"
+        android:accessibilityHeading="true" />
 
     <com.google.android.material.card.MaterialCardView
         android:layout_width="match_parent"
@@ -191,7 +210,9 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="@string/settings_trash"
-                            android:textAppearance="@style/TextAppearance.Akin.CardTitle" />
+                            android:textAppearance="@style/TextAppearance.Akin.CardTitle"
+                            android:maxLines="1"
+                            android:ellipsize="end" />
 
                     </LinearLayout>
 
@@ -200,7 +221,7 @@
                         android:layout_height="@dimen/row_trailing_icon_size"
                         android:layout_marginStart="@dimen/spacing_8dp"
                         android:src="@drawable/ic_chevron_right"
-                        android:contentDescription="@string/settings_trash" />
+                        android:importantForAccessibility="no" />
 
                 </LinearLayout>
 
@@ -213,9 +234,12 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/spacing_20dp"
+        android:layout_marginTop="@dimen/section_gap_top"
+        android:maxLines="1"
+        android:ellipsize="end"
         android:text="@string/settings_section_legal"
-        android:textAppearance="@style/TextAppearance.Akin.SectionLabel" />
+        android:textAppearance="@style/TextAppearance.Akin.SectionLabel"
+        android:accessibilityHeading="true" />
 
     <com.google.android.material.card.MaterialCardView
         android:layout_width="match_parent"
@@ -256,7 +280,9 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="@string/settings_privacy"
-                            android:textAppearance="@style/TextAppearance.Akin.CardTitle" />
+                            android:textAppearance="@style/TextAppearance.Akin.CardTitle"
+                            android:maxLines="1"
+                            android:ellipsize="end" />
 
                     </LinearLayout>
 
@@ -265,7 +291,7 @@
                         android:layout_height="@dimen/row_trailing_icon_size"
                         android:layout_marginStart="@dimen/spacing_8dp"
                         android:src="@drawable/ic_chevron_right"
-                        android:contentDescription="@string/settings_privacy" />
+                        android:importantForAccessibility="no" />
 
                 </LinearLayout>
 
@@ -302,7 +328,9 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="@string/settings_terms"
-                            android:textAppearance="@style/TextAppearance.Akin.CardTitle" />
+                            android:textAppearance="@style/TextAppearance.Akin.CardTitle"
+                            android:maxLines="1"
+                            android:ellipsize="end" />
 
                     </LinearLayout>
 
@@ -311,7 +339,7 @@
                         android:layout_height="@dimen/row_trailing_icon_size"
                         android:layout_marginStart="@dimen/spacing_8dp"
                         android:src="@drawable/ic_chevron_right"
-                        android:contentDescription="@string/settings_terms" />
+                        android:importantForAccessibility="no" />
 
                 </LinearLayout>
 
@@ -348,7 +376,9 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="@string/settings_about"
-                            android:textAppearance="@style/TextAppearance.Akin.CardTitle" />
+                            android:textAppearance="@style/TextAppearance.Akin.CardTitle"
+                            android:maxLines="1"
+                            android:ellipsize="end" />
 
                     </LinearLayout>
 
@@ -357,7 +387,7 @@
                         android:layout_height="@dimen/row_trailing_icon_size"
                         android:layout_marginStart="@dimen/spacing_8dp"
                         android:src="@drawable/ic_chevron_right"
-                        android:contentDescription="@string/settings_about" />
+                        android:importantForAccessibility="no" />
 
                 </LinearLayout>
 
@@ -377,8 +407,10 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center_horizontal"
-        android:layout_marginTop="@dimen/spacing_24dp"
+        android:layout_marginTop="@dimen/section_gap_top"
         android:gravity="center"
+        android:maxLines="1"
+        android:ellipsize="end"
         android:textAppearance="@style/TextAppearance.Akin.BodyMuted" />
 
 </LinearLayout>
