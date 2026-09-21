@@ -101,6 +101,15 @@
     <!-- Shared government-ID face header. Sizes, tracking and rhythm live
          here so all 6 faces stay identical; each face sets only its text,
          ink colors and rule color. -->
+    <style name="IdFaceEyebrow">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textSize">8sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:letterSpacing">0.28</item>
+        <item name="android:singleLine">true</item>
+    </style>
+
     <style name="IdFaceTitle">
         <item name="android:layout_width">wrap_content</item>
         <item name="android:layout_height">wrap_content</item>
@@ -115,7 +124,7 @@
         <item name="android:layout_width">wrap_content</item>
         <item name="android:layout_height">wrap_content</item>
         <item name="android:layout_marginTop">2dp</item>
-        <item name="android:textSize">9sp</item>
+        <item name="android:textSize">8sp</item>
         <item name="android:letterSpacing">0.14</item>
         <item name="android:singleLine">true</item>
     </style>

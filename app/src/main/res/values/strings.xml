@@ -159,6 +159,7 @@
     <string name="preview_expiry_label">VALID THRU</string>
     <string name="preview_expiry_value">MM/YY</string>
     <!-- Government ID -->
+    <string name="preview_republic">REPUBLIC OF THE PHILIPPINES</string>
     <string name="preview_government_id">GOVERNMENT ID</string>
     <string name="preview_person_name">FULL NAME</string>
     <string name="preview_number_label">ID NUMBER</string>

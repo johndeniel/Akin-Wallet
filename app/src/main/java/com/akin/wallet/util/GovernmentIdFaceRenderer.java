@@ -103,7 +103,7 @@ public final class GovernmentIdFaceRenderer {
         f.title.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 12);
         f.subtitle.setText(GovernmentIDModel.previewSubtitle(typeName));
         f.subtitle.setTextColor(colorOf(f, scheme.subtitleColorRes));
-        f.subtitle.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 8);
+        f.subtitle.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 7);
         f.rule.setBackgroundColor(colorOf(f, scheme.ruleColorRes));
         f.holderLabel.setTextColor(colorOf(f, scheme.numberLabelColorRes));
         f.holder.setText(GovernmentIDModel.displayName(fields));
@@ -231,7 +231,7 @@ public final class GovernmentIdFaceRenderer {
             return;
         }
         if (!layoutDone) {
-            label.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 8);
+            label.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 6);
         }
         label.setTextColor(colorOf(f, colorRes));
         if (!layoutDone) {

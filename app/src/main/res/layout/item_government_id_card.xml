@@ -32,6 +32,15 @@
                 android:paddingBottom="12dp">
 
                 <TextView
+                    android:id="@+id/government_id_eyebrow"
+                    style="@style/IdFaceEyebrow"
+                    android:text="@string/preview_republic"
+                    android:textColor="@color/national_muted"
+                    android:visibility="gone"
+                    android:maxLines="1"
+                    android:ellipsize="end" />
+
+                <TextView
                     android:id="@+id/government_id_title"
                     style="@style/IdFaceTitle"
                     android:text="@string/preview_government_id"
@@ -111,7 +120,7 @@
                             android:layout_height="wrap_content"
                             android:text="@string/preview_person_name"
                             android:textColor="@color/national_muted"
-                            android:textSize="8sp"
+                            android:textSize="7sp"
                             android:textStyle="bold"
                             android:letterSpacing="0.26"
                             android:singleLine="true"
@@ -152,7 +161,7 @@
                                     android:layout_height="wrap_content"
                                     android:text="@string/label_date_of_birth"
                                     android:textColor="@color/national_muted"
-                                    android:textSize="8sp"
+                                    android:textSize="7sp"
                                     android:textStyle="bold"
                                     android:letterSpacing="0.26"
                                     android:singleLine="true"
@@ -186,7 +195,7 @@
                                     android:layout_height="wrap_content"
                                     android:text="@string/label_expiry_date"
                                     android:textColor="@color/national_muted"
-                                    android:textSize="8sp"
+                                    android:textSize="7sp"
                                     android:textStyle="bold"
                                     android:letterSpacing="0.26"
                                     android:singleLine="true"
@@ -216,7 +225,7 @@
                             android:layout_marginTop="6dp"
                             android:text="@string/preview_number_label"
                             android:textColor="@color/national_muted"
-                            android:textSize="8sp"
+                            android:textSize="7sp"
                             android:textStyle="bold"
                             android:letterSpacing="0.26"
                             android:singleLine="true"
