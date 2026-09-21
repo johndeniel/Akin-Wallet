@@ -1,12 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- ============================================================
-     Akin Wallet — Dashboard (Home), hosted directly by DashboardActivity.
-     M3 TopAppBar (wordmark + tagline) with search + settings IconButtons;
-     the search icon opens the full-screen M3 SearchView which filters the
-     vault; Government ID + Bank Card carousels, Social Account M3 card
-     list and the circular quick-add FAB live underneath.
-     CoordinatorLayout root hosts the SearchView transition.
-     ============================================================ -->
+<!-- Dashboard. Fixed content, never scrollable. Inner social list scrolls internally. -->
 <androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
@@ -16,28 +9,22 @@
     android:fitsSystemWindows="false"
     tools:context=".activity.DashboardActivity">
 
-        <!-- Fixed dashboard content (not scrollable); FAB floats over it, no reserved gap.
-             The screen header (wordmark + tagline + bell) lives here in-content;
-             the host theme is NoActionBar so there is exactly one header. -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:orientation="vertical"
-            android:paddingStart="20dp"
-            android:paddingEnd="20dp"
-            android:paddingTop="16dp"
-            android:paddingBottom="16dp">
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:paddingStart="@dimen/screen_gutter_horizontal"
+        android:paddingEnd="@dimen/screen_gutter_horizontal"
+        android:paddingTop="@dimen/screen_padding_top"
+        android:paddingBottom="@dimen/screen_padding_bottom">
 
-        <!-- M3 small top app bar: wordmark + trust tagline via Toolbar
-             title/subtitle (same insets as Settings so headers match) with
-             trailing M3 tonal IconButtons for search + settings. -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:paddingTop="4dp"
-            android:paddingBottom="4dp">
+            android:paddingTop="@dimen/spacing_4dp"
+            android:paddingBottom="@dimen/spacing_4dp">
 
             <com.google.android.material.appbar.MaterialToolbar
                 android:id="@+id/dashboard_toolbar"
@@ -50,16 +37,9 @@
                 app:title="@string/app_name" />
 
             <com.google.android.material.button.MaterialButton
-                android:id="@+id/dashboard_header_search_button"
-                style="@style/Widget.Material3.Button.IconButton.Filled.Tonal"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
-                android:layout_marginStart="12dp"
+                android:id="@+id/dashboard_search_button"
+                style="@style/Widget.Akin.HeaderIconButton"
                 android:contentDescription="@string/cd_search"
-                android:insetLeft="0dp"
-                android:insetTop="0dp"
-                android:insetRight="0dp"
-                android:insetBottom="0dp"
                 app:backgroundTint="@color/dashboard_well"
                 app:icon="@drawable/ic_search_white"
                 app:iconGravity="textStart"
@@ -71,16 +51,9 @@
                 app:strokeWidth="1dp" />
 
             <com.google.android.material.button.MaterialButton
-                android:id="@+id/dashboard_header_settings_button"
-                style="@style/Widget.Material3.Button.IconButton.Filled.Tonal"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
-                android:layout_marginStart="12dp"
+                android:id="@+id/dashboard_settings_button"
+                style="@style/Widget.Akin.HeaderIconButton"
                 android:contentDescription="@string/cd_settings"
-                android:insetLeft="0dp"
-                android:insetTop="0dp"
-                android:insetRight="0dp"
-                android:insetBottom="0dp"
                 app:backgroundTint="@color/dashboard_well"
                 app:icon="@drawable/ic_settings"
                 app:iconGravity="textStart"
@@ -93,12 +66,11 @@
 
         </LinearLayout>
 
-        <!-- Government ID section header (no tab: View All removed) -->
         <LinearLayout
-            android:id="@+id/dashboard_header_ids"
+            android:id="@+id/dashboard_government_id_section_header"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="2dp"
+            android:layout_marginTop="@dimen/spacing_2dp"
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
@@ -110,38 +82,30 @@
 
         </LinearLayout>
 
-        <!-- Government ID carousel (live: renders IDs created in Government ID) -->
         <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/dashboard_ids_carousel"
+            android:id="@+id/dashboard_government_id_carousel"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="@dimen/section_header_gap"
             android:clipToPadding="false"
             android:orientation="horizontal"
-            android:paddingEnd="36dp" />
+            android:paddingEnd="@dimen/carousel_end_padding" />
 
-        <!-- Empty state: M3 filled card with title + supporting text + tonal
-             action (whole card also opens the creator, keeping old behavior). -->
         <com.google.android.material.card.MaterialCardView
-            android:id="@+id/dashboard_ids_empty_state"
+            android:id="@+id/dashboard_government_id_empty_state"
             style="@style/Widget.Akin.DashboardCard"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
+            android:layout_marginTop="@dimen/spacing_16dp"
             android:clickable="true"
             android:focusable="true"
             android:visibility="gone"
             app:rippleColor="?attr/colorControlHighlight">
 
             <LinearLayout
+                style="@style/Widget.Akin.EmptyStateContent"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:gravity="center"
-                android:orientation="vertical"
-                android:paddingStart="16dp"
-                android:paddingEnd="16dp"
-                android:paddingTop="16dp"
-                android:paddingBottom="16dp">
+                android:layout_height="wrap_content">
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -153,17 +117,17 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
+                    android:layout_marginTop="@dimen/spacing_4dp"
                     android:gravity="center"
                     android:text="@string/empty_ids_sub"
                     android:textAppearance="@style/TextAppearance.Akin.BodyMuted" />
 
                 <com.google.android.material.button.MaterialButton
-                    android:id="@+id/dashboard_ids_empty_action"
+                    android:id="@+id/dashboard_government_id_empty_action"
                     style="@style/Widget.Material3.Button.TonalButton"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
+                    android:layout_marginTop="@dimen/spacing_12dp"
                     android:text="@string/dialog_id_title"
                     android:textColor="@color/text_primary"
                     app:backgroundTint="@color/dashboard_well"
@@ -175,12 +139,11 @@
 
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- Bank Card section header (no tab: View All removed) -->
         <LinearLayout
-            android:id="@+id/dashboard_header_cards"
+            android:id="@+id/dashboard_bank_card_section_header"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="28dp"
+            android:layout_marginTop="@dimen/section_gap_top"
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
@@ -192,37 +155,30 @@
 
         </LinearLayout>
 
-        <!-- Bank card carousel (live: renders cards created in Bank Card) -->
         <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/dashboard_cards_carousel"
+            android:id="@+id/dashboard_bank_card_carousel"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="@dimen/section_header_gap"
             android:clipToPadding="false"
             android:orientation="horizontal"
-            android:paddingEnd="36dp" />
+            android:paddingEnd="@dimen/carousel_end_padding" />
 
-        <!-- Empty state: M3 filled card with title + supporting text + tonal action. -->
         <com.google.android.material.card.MaterialCardView
-            android:id="@+id/dashboard_cards_empty_state"
+            android:id="@+id/dashboard_bank_card_empty_state"
             style="@style/Widget.Akin.DashboardCard"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
+            android:layout_marginTop="@dimen/spacing_16dp"
             android:clickable="true"
             android:focusable="true"
             android:visibility="gone"
             app:rippleColor="?attr/colorControlHighlight">
 
             <LinearLayout
+                style="@style/Widget.Akin.EmptyStateContent"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:gravity="center"
-                android:orientation="vertical"
-                android:paddingStart="16dp"
-                android:paddingEnd="16dp"
-                android:paddingTop="16dp"
-                android:paddingBottom="16dp">
+                android:layout_height="wrap_content">
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -234,17 +190,17 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
+                    android:layout_marginTop="@dimen/spacing_4dp"
                     android:gravity="center"
                     android:text="@string/empty_cards_sub"
                     android:textAppearance="@style/TextAppearance.Akin.BodyMuted" />
 
                 <com.google.android.material.button.MaterialButton
-                    android:id="@+id/dashboard_cards_empty_action"
+                    android:id="@+id/dashboard_bank_card_empty_action"
                     style="@style/Widget.Material3.Button.TonalButton"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
+                    android:layout_marginTop="@dimen/spacing_12dp"
                     android:text="@string/dialog_bank_title"
                     android:textColor="@color/text_primary"
                     app:backgroundTint="@color/dashboard_well"
@@ -256,12 +212,11 @@
 
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- Social Account section header (rows open the editor directly) -->
         <LinearLayout
-            android:id="@+id/dashboard_header_social"
+            android:id="@+id/dashboard_social_account_section_header"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="28dp"
+            android:layout_marginTop="@dimen/section_gap_top"
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
@@ -273,20 +228,19 @@
 
         </LinearLayout>
 
-        <!-- Social Account M3 card: filled vault surface hosting the account rows. -->
         <com.google.android.material.card.MaterialCardView
-            android:id="@+id/dashboard_social_card"
+            android:id="@+id/dashboard_social_account_card"
             style="@style/Widget.Akin.DashboardCard"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:paddingStart="6dp"
-            android:paddingEnd="6dp"
-            android:paddingTop="4dp"
-            android:paddingBottom="4dp">
+            android:layout_marginTop="@dimen/section_header_gap"
+            android:paddingStart="@dimen/spacing_6dp"
+            android:paddingEnd="@dimen/spacing_6dp"
+            android:paddingTop="@dimen/spacing_4dp"
+            android:paddingBottom="@dimen/spacing_4dp">
 
             <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/dashboard_social_list"
+                android:id="@+id/dashboard_social_account_list"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:clipToPadding="false"
@@ -294,14 +248,12 @@
 
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- Empty state: M3 filled card, weight 1 stretches it to fill the rest
-             of the screen. Tonal action + whole-card tap both open the creator. -->
         <com.google.android.material.card.MaterialCardView
-            android:id="@+id/dashboard_social_empty_state"
+            android:id="@+id/dashboard_social_account_empty_state"
             style="@style/Widget.Akin.DashboardCard"
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:layout_marginTop="10dp"
+            android:layout_marginTop="@dimen/spacing_10dp"
             android:layout_weight="1"
             android:clickable="true"
             android:focusable="true"
@@ -309,14 +261,9 @@
             app:rippleColor="?attr/colorControlHighlight">
 
             <LinearLayout
+                style="@style/Widget.Akin.EmptyStateContent"
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:gravity="center"
-                android:orientation="vertical"
-                android:paddingStart="16dp"
-                android:paddingEnd="16dp"
-                android:paddingTop="16dp"
-                android:paddingBottom="16dp">
+                android:layout_height="match_parent">
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -328,17 +275,17 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
+                    android:layout_marginTop="@dimen/spacing_4dp"
                     android:gravity="center"
                     android:text="@string/empty_social_sub"
                     android:textAppearance="@style/TextAppearance.Akin.BodyMuted" />
 
                 <com.google.android.material.button.MaterialButton
-                    android:id="@+id/dashboard_social_empty_action"
+                    android:id="@+id/dashboard_social_account_empty_action"
                     style="@style/Widget.Material3.Button.TonalButton"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
+                    android:layout_marginTop="@dimen/spacing_12dp"
                     android:text="@string/dialog_social_title"
                     android:textColor="@color/text_primary"
                     app:backgroundTint="@color/dashboard_well"
@@ -350,11 +297,10 @@
 
         </com.google.android.material.card.MaterialCardView>
 
-        </LinearLayout>
+    </LinearLayout>
 
-    <!-- Scrim: dims content while the quick-add menu is open; tap closes the menu -->
     <View
-        android:id="@+id/dashboard_fab_scrim"
+        android:id="@+id/dashboard_quick_add_scrim"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:background="@color/text_shadow"
@@ -362,68 +308,43 @@
         android:focusable="true"
         android:visibility="gone" />
 
-    <!-- M3 FAB menu: tonal pills (theme container, light label, blue icon),
-         equal widths, trailing-edge aligned, 4dp FAB-to-menu gap. -->
     <LinearLayout
-        android:id="@+id/dashboard_fab_menu"
+        android:id="@+id/dashboard_quick_add_menu"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|end"
-        android:layout_marginEnd="16dp"
-        android:layout_marginBottom="76dp"
+        android:layout_marginEnd="@dimen/fab_margin"
+        android:layout_marginBottom="@dimen/fab_menu_gap_bottom"
         android:orientation="vertical"
         android:visibility="gone">
 
         <com.google.android.material.button.MaterialButton
-            android:id="@+id/dashboard_fab_option_id"
-            style="@style/Widget.Material3.Button.TonalButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="end"
-            android:layout_marginBottom="8dp"
-            android:text="@string/dialog_id_title"
-            android:textColor="@color/text_primary"
-            app:backgroundTint="@color/dashboard_surface"
-            app:strokeColor="@color/dashboard_surface_border"
-            app:strokeWidth="1dp" />
+            android:id="@+id/dashboard_quick_add_option_government_id"
+            style="@style/Widget.Akin.QuickAddOption"
+            android:text="@string/dialog_id_title" />
 
         <com.google.android.material.button.MaterialButton
-            android:id="@+id/dashboard_fab_option_card"
-            style="@style/Widget.Material3.Button.TonalButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="end"
-            android:layout_marginBottom="8dp"
-            android:text="@string/dialog_bank_title"
-            android:textColor="@color/text_primary"
-            app:backgroundTint="@color/dashboard_surface"
-            app:strokeColor="@color/dashboard_surface_border"
-            app:strokeWidth="1dp" />
+            android:id="@+id/dashboard_quick_add_option_bank_card"
+            style="@style/Widget.Akin.QuickAddOption"
+            android:text="@string/dialog_bank_title" />
 
+        <!-- Last option drops the style's inter-item gap; re-add it if the
+             menu ever gains a fourth item below this one. -->
         <com.google.android.material.button.MaterialButton
-            android:id="@+id/dashboard_fab_option_account"
-            style="@style/Widget.Material3.Button.TonalButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="end"
-            android:text="@string/dialog_social_title"
-            android:textColor="@color/text_primary"
-            app:backgroundTint="@color/dashboard_surface"
-            app:strokeColor="@color/dashboard_surface_border"
-            app:strokeWidth="1dp" />
+            android:id="@+id/dashboard_quick_add_option_social_account"
+            style="@style/Widget.Akin.QuickAddOption"
+            android:layout_marginBottom="0dp"
+            android:text="@string/dialog_social_title" />
 
     </LinearLayout>
 
-    <!-- FAB menu close button: true circle via shape overlay (cornerSize is
-         ignored by FAB), no compat padding so the 56dp visual sits exactly
-         on the 16dp margins and clears the menu above it. -->
     <com.google.android.material.floatingactionbutton.FloatingActionButton
-        android:id="@+id/dashboard_fab_add"
+        android:id="@+id/dashboard_quick_add_button"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|end"
-        android:layout_marginEnd="16dp"
-        android:layout_marginBottom="16dp"
+        android:layout_marginEnd="@dimen/fab_margin"
+        android:layout_marginBottom="@dimen/fab_margin"
         android:contentDescription="@string/fab_add"
         android:src="@drawable/ic_add"
         app:backgroundTint="?attr/colorPrimary"
@@ -433,11 +354,6 @@
         app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Circle"
         app:tint="@color/white" />
 
-    <!-- M3 SearchView: full-screen search experience. Its toolbar (back +
-         field + clear) is built in; the containers below host the filtered
-         vault, rebound with the same adapters as the dashboard. Fixed
-         (not scrollable) with paddings/margins mirroring the dashboard
-         content above so both screens line up exactly. -->
     <com.google.android.material.search.SearchView
         android:id="@+id/dashboard_search_view"
         android:layout_width="match_parent"
@@ -445,147 +361,142 @@
         android:theme="@style/ThemeOverlay.Material3.Dark"
         app:backgroundTint="@color/dashboard_bg_start">
 
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:paddingStart="@dimen/screen_gutter_horizontal"
+            android:paddingEnd="@dimen/screen_gutter_horizontal"
+            android:paddingTop="@dimen/screen_padding_top"
+            android:paddingBottom="@dimen/screen_padding_bottom">
+
             <LinearLayout
+                android:id="@+id/dashboard_search_government_id_header"
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:orientation="vertical"
-                android:paddingStart="20dp"
-                android:paddingEnd="20dp"
-                android:paddingTop="16dp"
-                android:paddingBottom="16dp">
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/spacing_2dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:visibility="gone">
 
-                <LinearLayout
-                    android:id="@+id/dashboard_search_header_ids"
-                    android:layout_width="match_parent"
+                <TextView
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal"
-                    android:visibility="gone">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/trash_section_ids"
-                        android:textAppearance="@style/TextAppearance.Akin.SectionTitle" />
-
-                </LinearLayout>
-
-                <androidx.recyclerview.widget.RecyclerView
-                    android:id="@+id/dashboard_search_ids_list"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:clipToPadding="false"
-                    android:orientation="horizontal"
-                    android:paddingEnd="36dp"
-                    android:visibility="gone" />
-
-                <LinearLayout
-                    android:id="@+id/dashboard_search_header_cards"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="28dp"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal"
-                    android:visibility="gone">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/trash_section_cards"
-                        android:textAppearance="@style/TextAppearance.Akin.SectionTitle" />
-
-                </LinearLayout>
-
-                <androidx.recyclerview.widget.RecyclerView
-                    android:id="@+id/dashboard_search_cards_list"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:clipToPadding="false"
-                    android:orientation="horizontal"
-                    android:paddingEnd="36dp"
-                    android:visibility="gone" />
-
-                <LinearLayout
-                    android:id="@+id/dashboard_search_header_social"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="28dp"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal"
-                    android:visibility="gone">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/trash_section_social"
-                        android:textAppearance="@style/TextAppearance.Akin.SectionTitle" />
-
-                </LinearLayout>
-
-                <com.google.android.material.card.MaterialCardView
-                    android:id="@+id/dashboard_search_social_card"
-                    style="@style/Widget.Akin.DashboardCard"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:paddingStart="6dp"
-                    android:paddingEnd="6dp"
-                    android:paddingTop="4dp"
-                    android:paddingBottom="4dp"
-                    android:visibility="gone">
-
-                    <androidx.recyclerview.widget.RecyclerView
-                        android:id="@+id/dashboard_search_social_list"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:clipToPadding="false"
-                        android:nestedScrollingEnabled="false" />
-
-                </com.google.android.material.card.MaterialCardView>
-
-                <com.google.android.material.card.MaterialCardView
-                    android:id="@+id/dashboard_search_empty_state"
-                    style="@style/Widget.Akin.DashboardCard"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp"
-                    android:visibility="gone">
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:gravity="center"
-                        android:orientation="vertical"
-                        android:paddingStart="16dp"
-                        android:paddingEnd="16dp"
-                        android:paddingTop="20dp"
-                        android:paddingBottom="20dp">
-
-                        <TextView
-                            android:id="@+id/dashboard_search_empty_title"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:gravity="center"
-                            android:text="@string/search_empty_title"
-                            android:textAppearance="@style/TextAppearance.Akin.CardTitle" />
-
-                        <TextView
-                            android:id="@+id/dashboard_search_empty_subtitle"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="4dp"
-                            android:gravity="center"
-                            android:text="@string/search_empty_sub"
-                            android:textAppearance="@style/TextAppearance.Akin.BodyMuted" />
-
-                    </LinearLayout>
-
-                </com.google.android.material.card.MaterialCardView>
+                    android:text="@string/trash_section_ids"
+                    android:textAppearance="@style/TextAppearance.Akin.SectionTitle" />
 
             </LinearLayout>
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/dashboard_search_government_id_list"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/section_header_gap"
+                android:clipToPadding="false"
+                android:orientation="horizontal"
+                android:paddingEnd="@dimen/carousel_end_padding"
+                android:visibility="gone" />
+
+            <LinearLayout
+                android:id="@+id/dashboard_search_bank_card_header"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/section_gap_top"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/trash_section_cards"
+                    android:textAppearance="@style/TextAppearance.Akin.SectionTitle" />
+
+            </LinearLayout>
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/dashboard_search_bank_card_list"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/section_header_gap"
+                android:clipToPadding="false"
+                android:orientation="horizontal"
+                android:paddingEnd="@dimen/carousel_end_padding"
+                android:visibility="gone" />
+
+            <LinearLayout
+                android:id="@+id/dashboard_search_social_account_header"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/section_gap_top"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/trash_section_social"
+                    android:textAppearance="@style/TextAppearance.Akin.SectionTitle" />
+
+            </LinearLayout>
+
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/dashboard_search_social_account_card"
+                style="@style/Widget.Akin.DashboardCard"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/section_header_gap"
+                android:paddingStart="@dimen/spacing_6dp"
+                android:paddingEnd="@dimen/spacing_6dp"
+                android:paddingTop="@dimen/spacing_4dp"
+                android:paddingBottom="@dimen/spacing_4dp"
+                android:visibility="gone">
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/dashboard_search_social_account_list"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:clipToPadding="false"
+                    android:nestedScrollingEnabled="false" />
+
+            </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/dashboard_search_empty_state"
+                style="@style/Widget.Akin.DashboardCard"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/spacing_16dp"
+                android:visibility="gone">
+
+                <LinearLayout
+                    style="@style/Widget.Akin.EmptyStateContent"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+
+                    <TextView
+                        android:id="@+id/dashboard_search_empty_title"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:text="@string/search_empty_title"
+                        android:textAppearance="@style/TextAppearance.Akin.CardTitle" />
+
+                    <TextView
+                        android:id="@+id/dashboard_search_empty_subtitle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/spacing_4dp"
+                        android:gravity="center"
+                        android:text="@string/search_empty_sub"
+                        android:textAppearance="@style/TextAppearance.Akin.BodyMuted" />
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+        </LinearLayout>
 
     </com.google.android.material.search.SearchView>
 

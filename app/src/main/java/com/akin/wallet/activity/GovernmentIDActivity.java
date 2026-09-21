@@ -92,7 +92,7 @@ public class GovernmentIDActivity extends BaseVaultActivity {
             vaultIo(() -> {
                 final GovernmentIDModel stored = db().getIdCardById(rowId);
                 runOnUiThread(() -> {
-                    if (!isCurrentGeneration(gen) || isFinishing()) return;
+                    if (!isCurrentGeneration(gen) || isFinishing() || isDestroyed()) return;
                     if (stored == null) {
                         finish();
                         return;
@@ -139,10 +139,10 @@ public class GovernmentIDActivity extends BaseVaultActivity {
 
 
         LinearLayout formContainer = findViewById(R.id.government_id_form_container);
-        // Action row mirrors the bank card screen: form_save_button is the outline
-        // container, form_save_label carries the Save/Update caption.
-        View btnSave = findViewById(R.id.form_save_button);
-        TextView textSaveLabel = findViewById(R.id.form_save_label);
+        // Action row mirrors the bank card screen: form_primary_action is the outline
+        // container, form_primary_action_label carries the Save/Update caption.
+        View btnSave = findViewById(R.id.form_primary_action);
+        TextView textSaveLabel = findViewById(R.id.form_primary_action_label);
 
         // Draft holds EVERY typed value (even for hidden types) so switching
         // ID type back and forth never loses input; save filters to active spec.
@@ -192,7 +192,7 @@ public class GovernmentIDActivity extends BaseVaultActivity {
 
         final GovernmentIdDesignAdapter[] adapterRef = new GovernmentIdDesignAdapter[1];
         final RecyclerView[] carouselRef = new RecyclerView[1];
-        final LinearLayout dotsContainer = findViewById(R.id.government_id_design_dots);
+        final LinearLayout dotsContainer = findViewById(R.id.government_id_design_indicator);
         dotsContainer.setVisibility(View.VISIBLE);
 
         Runnable refreshPreview = () -> {
@@ -217,7 +217,7 @@ public class GovernmentIDActivity extends BaseVaultActivity {
             }
         });
         adapterRef[0] = designAdapter;
-        RecyclerView recyclerDesign = findViewById(R.id.government_id_design_list);
+        RecyclerView recyclerDesign = findViewById(R.id.government_id_design_carousel);
         carouselRef[0] = recyclerDesign;
         LinearLayoutManager layoutManager =
                 new LinearLayoutManager(GovernmentIDActivity.this, LinearLayoutManager.HORIZONTAL, false);
@@ -314,7 +314,7 @@ public class GovernmentIDActivity extends BaseVaultActivity {
                     db().updateIdCard(updated);
                     cache().invalidate();
                     runOnUiThread(() -> {
-                        if (isFinishing()) return;
+                        if (isFinishing() || isDestroyed()) return;
                         app().notifyOnReturn(R.string.msg_updated);
                         setResult(RESULT_OK);
                         finish();
@@ -326,7 +326,7 @@ public class GovernmentIDActivity extends BaseVaultActivity {
                     db().insertIdCard(newCard);
                     cache().invalidate();
                     runOnUiThread(() -> {
-                        if (isFinishing()) return;
+                        if (isFinishing() || isDestroyed()) return;
                         app().notifyOnReturn(R.string.msg_id_saved);
                         setResult(RESULT_OK);
                         finish();
@@ -339,7 +339,7 @@ public class GovernmentIDActivity extends BaseVaultActivity {
         // only — same placement and outline-red style as the bank card screen.
         // Soft-delete behind the scenes: the dialog reads as a normal delete
         // while the row moves to Trash (Settings). Copy and toasts stay ID-specific.
-        View btnDelete = findViewById(R.id.form_delete_button);
+        View btnDelete = findViewById(R.id.form_destructive_action);
         if (isEdit) {
             btnDelete.setVisibility(View.VISIBLE);
             btnDelete.setOnClickListener(v -> confirmDeleteToTrash(
@@ -352,7 +352,7 @@ public class GovernmentIDActivity extends BaseVaultActivity {
                             db().moveIdCardToTrash(rowId);
                             cache().invalidate();
                             runOnUiThread(() -> {
-                                if (isFinishing()) return;
+                                if (isFinishing() || isDestroyed()) return;
                                 setResult(RESULT_OK);
                                 finish();
                                 app().notifyOnReturn(R.string.msg_deleted);

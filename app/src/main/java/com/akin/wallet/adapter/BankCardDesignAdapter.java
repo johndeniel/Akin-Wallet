@@ -135,7 +135,7 @@ public class BankCardDesignAdapter extends RecyclerView.Adapter<BankCardDesignAd
         }
         // setLayoutParams triggers a full measure/layout pass: only pay it
         // when the logo or its height actually changed.
-        Object tag = logoView.getTag(com.akin.wallet.R.id.tag_network);
+        Object tag = logoView.getTag(com.akin.wallet.R.id.tag_network_logo);
         int key = icon * 100 + heightDp;
         if (Integer.valueOf(key).equals(tag)) {
             return;
@@ -145,7 +145,7 @@ public class BankCardDesignAdapter extends RecyclerView.Adapter<BankCardDesignAd
         android.view.ViewGroup.LayoutParams params = logoView.getLayoutParams();
         params.height = Math.round(heightDp * density);
         logoView.setLayoutParams(params);
-        logoView.setTag(com.akin.wallet.R.id.tag_network, key);
+        logoView.setTag(com.akin.wallet.R.id.tag_network_logo, key);
     }
 
     public static class CardViewHolder extends RecyclerView.ViewHolder {
@@ -160,12 +160,12 @@ public class BankCardDesignAdapter extends RecyclerView.Adapter<BankCardDesignAd
         CardViewHolder(@NonNull View itemView) {
             super(itemView);
             cardRoot = itemView.findViewById(R.id.bank_card_root);
-            bank = itemView.findViewById(R.id.bank_preview_bank);
-            network = itemView.findViewById(R.id.bank_preview_network);
-            type = itemView.findViewById(R.id.bank_preview_type);
-            number = itemView.findViewById(R.id.bank_preview_number);
-            cardholder = itemView.findViewById(R.id.bank_preview_holder);
-            expiry = itemView.findViewById(R.id.bank_preview_expiry);
+            bank = itemView.findViewById(R.id.bank_card_preview_bank_name);
+            network = itemView.findViewById(R.id.bank_card_preview_network);
+            type = itemView.findViewById(R.id.bank_card_preview_type);
+            number = itemView.findViewById(R.id.bank_card_preview_number);
+            cardholder = itemView.findViewById(R.id.bank_card_preview_holder_name);
+            expiry = itemView.findViewById(R.id.bank_card_preview_expiry);
         }
     }
 }

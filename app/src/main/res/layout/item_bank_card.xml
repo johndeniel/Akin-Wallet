@@ -1,8 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Professional bank-card face. Outer ConstraintLayout lets the inner card
-     keep a true credit-card ratio (1.586:1) on every screen: height is always
-     derived from width, so the face is never flat/lengthy in the list nor
-     cramped in the horizontal picker. Same file is used in list + picker. -->
+<!-- Bank card face. True 1.586:1 ratio derived from width. -->
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
@@ -43,7 +40,7 @@
                     android:paddingEnd="12dp">
 
                     <TextView
-                        android:id="@+id/bank_preview_bank"
+                        android:id="@+id/bank_card_preview_bank_name"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:text="@string/preview_bank_name"
@@ -60,7 +57,7 @@
                         android:ellipsize="end" />
 
                     <TextView
-                        android:id="@+id/bank_preview_type"
+                        android:id="@+id/bank_card_preview_type"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/preview_card_type"
@@ -75,7 +72,7 @@
                 </LinearLayout>
 
                 <ImageView
-                    android:id="@+id/bank_preview_network"
+                    android:id="@+id/bank_card_preview_network"
                     android:layout_width="38dp"
                     android:layout_height="20dp"
                     android:layout_gravity="top"
@@ -97,7 +94,7 @@
                 android:contentDescription="@string/cd_card_chip" />
 
             <androidx.appcompat.widget.AppCompatTextView
-                android:id="@+id/bank_preview_number"
+                android:id="@+id/bank_card_preview_number"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
@@ -142,7 +139,7 @@
                         android:letterSpacing="0.2" />
 
                     <TextView
-                        android:id="@+id/bank_preview_holder"
+                        android:id="@+id/bank_card_preview_holder_name"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
@@ -177,7 +174,7 @@
                         android:letterSpacing="0.2" />
 
                     <TextView
-                        android:id="@+id/bank_preview_expiry"
+                        android:id="@+id/bank_card_preview_expiry"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"

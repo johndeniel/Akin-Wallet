@@ -1,14 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- ============================================================
-     Akin Wallet — Settings. M3 filled cards
-     (Widget.Akin.DashboardCard) with ShapeableImageView icon wells,
-     MaterialDivider hairlines and M3 text appearances for section
-     labels, row titles and supporting text.
-     Ripple matches item_social_account: each row is a
-     full-bleed vertical container (clickable + foreground ripple,
-     no padding) holding a padded content row; its divider lives
-     INSIDE the ripple container with 12dp/8dp insets.
-     ============================================================ -->
+<!-- Settings. Fixed layout, never scrollable. Compact tokens fit 4-inch screens. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
@@ -19,11 +10,8 @@
     android:clipChildren="false"
     android:clipToPadding="false"
     android:orientation="vertical"
-    android:padding="24dp">
+    android:padding="@dimen/form_gutter_horizontal">
 
-    <!-- M3 small top app bar: 64dp, nav icon + two-line headline. The -12dp
-         margin pulls the 48dp nav target to the padding edge; insets are
-         zeroed so the title sits a fixed 12dp past the arrow. -->
     <com.google.android.material.appbar.MaterialToolbar
         android:id="@+id/settings_toolbar"
         style="@style/Widget.Akin.Toolbar"
@@ -33,14 +21,14 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="20dp"
+        android:layout_marginTop="@dimen/spacing_20dp"
         android:text="@string/settings_section_security"
         android:textAppearance="@style/TextAppearance.Akin.SectionLabel" />
 
     <com.google.android.material.card.MaterialCardView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="@dimen/section_header_gap"
         style="@style/Widget.Akin.DashboardCard">
 
         <LinearLayout
@@ -48,36 +36,28 @@
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
-            <!-- Biometric unlock toggle (not clickable — switch only). -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical">
 
                 <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal"
-                    android:paddingStart="12dp"
-                    android:paddingEnd="8dp"
-                    android:paddingTop="10dp"
-                    android:paddingBottom="10dp">
+                    style="@style/Widget.Akin.SettingsRowContent">
 
                     <com.google.android.material.imageview.ShapeableImageView
-                        android:layout_width="42dp"
-                        android:layout_height="42dp"
+                        android:layout_width="@dimen/row_icon_well_size"
+                        android:layout_height="@dimen/row_icon_well_size"
                         android:background="@color/white"
                         android:contentDescription="@string/settings_biometric"
                         android:scaleType="fitCenter"
                         android:src="@drawable/fingerprint"
-                        app:contentPadding="8dp"
+                        app:contentPadding="@dimen/row_icon_content_padding"
                         app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Akin.Rounded12" />
 
                     <LinearLayout
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="12dp"
+                        android:layout_marginStart="@dimen/row_title_icon_gap"
                         android:layout_weight="1"
                         android:orientation="vertical">
 
@@ -91,7 +71,7 @@
                             android:id="@+id/settings_biometric_status"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="2dp"
+                            android:layout_marginTop="@dimen/spacing_2dp"
                             android:text="@string/settings_biometric_off"
                             android:textAppearance="@style/TextAppearance.Akin.BodyMuted" />
 
@@ -101,55 +81,37 @@
                         android:id="@+id/settings_biometric_switch"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="8dp"
+                        android:layout_marginStart="@dimen/spacing_8dp"
                         android:contentDescription="@string/settings_biometric" />
 
                 </LinearLayout>
 
-                <com.google.android.material.divider.MaterialDivider
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    app:dividerColor="@color/dashboard_surface_border"
-                    app:dividerInsetEnd="8dp"
-                    app:dividerInsetStart="12dp"
-                    app:dividerThickness="1dp" />
+                <View
+                    style="@style/Widget.Akin.HairlineDivider" />
 
             </LinearLayout>
 
-            <!-- Change app PIN. -->
             <LinearLayout
-                android:id="@+id/settings_row_change_pin"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:clickable="true"
-                android:focusable="true"
-                android:foreground="?attr/selectableItemBackground"
-                android:orientation="vertical">
+                android:id="@+id/settings_change_pin_row"
+                style="@style/Widget.Akin.SettingsRow">
 
                 <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal"
-                    android:paddingStart="12dp"
-                    android:paddingEnd="8dp"
-                    android:paddingTop="10dp"
-                    android:paddingBottom="10dp">
+                    style="@style/Widget.Akin.SettingsRowContent">
 
                     <com.google.android.material.imageview.ShapeableImageView
-                        android:layout_width="42dp"
-                        android:layout_height="42dp"
+                        android:layout_width="@dimen/row_icon_well_size"
+                        android:layout_height="@dimen/row_icon_well_size"
                         android:background="@color/white"
                         android:contentDescription="@string/settings_change_pin"
                         android:scaleType="fitCenter"
                         android:src="@drawable/ic_lock"
-                        app:contentPadding="8dp"
+                        app:contentPadding="@dimen/row_icon_content_padding"
                         app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Akin.Rounded12" />
 
                     <LinearLayout
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="12dp"
+                        android:layout_marginStart="@dimen/row_title_icon_gap"
                         android:layout_weight="1"
                         android:orientation="vertical">
 
@@ -162,16 +124,16 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="2dp"
+                            android:layout_marginTop="@dimen/spacing_2dp"
                             android:text="@string/settings_change_pin_sub"
                             android:textAppearance="@style/TextAppearance.Akin.BodyMuted" />
 
                     </LinearLayout>
 
                     <ImageView
-                        android:layout_width="20dp"
-                        android:layout_height="20dp"
-                        android:layout_marginStart="8dp"
+                        android:layout_width="@dimen/row_trailing_icon_size"
+                        android:layout_height="@dimen/row_trailing_icon_size"
+                        android:layout_marginStart="@dimen/spacing_8dp"
                         android:src="@drawable/ic_chevron_right"
                         android:contentDescription="@string/settings_change_pin" />
 
@@ -183,19 +145,17 @@
 
     </com.google.android.material.card.MaterialCardView>
 
-    <!-- Trash: soft-deleted IDs, bank cards and social accounts. Opens the
-         Trash screen where items can be restored or deleted forever. -->
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="20dp"
+        android:layout_marginTop="@dimen/spacing_20dp"
         android:text="@string/settings_section_wallet"
         android:textAppearance="@style/TextAppearance.Akin.SectionLabel" />
 
     <com.google.android.material.card.MaterialCardView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="@dimen/section_header_gap"
         style="@style/Widget.Akin.DashboardCard">
 
         <LinearLayout
@@ -204,38 +164,26 @@
             android:orientation="vertical">
 
             <LinearLayout
-                android:id="@+id/settings_row_trash"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:clickable="true"
-                android:focusable="true"
-                android:foreground="?attr/selectableItemBackground"
-                android:orientation="vertical">
+                android:id="@+id/settings_trash_row"
+                style="@style/Widget.Akin.SettingsRow">
 
                 <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal"
-                    android:paddingStart="12dp"
-                    android:paddingEnd="8dp"
-                    android:paddingTop="10dp"
-                    android:paddingBottom="10dp">
+                    style="@style/Widget.Akin.SettingsRowContent">
 
                     <com.google.android.material.imageview.ShapeableImageView
-                        android:layout_width="42dp"
-                        android:layout_height="42dp"
+                        android:layout_width="@dimen/row_icon_well_size"
+                        android:layout_height="@dimen/row_icon_well_size"
                         android:background="@color/white"
                         android:contentDescription="@string/settings_trash"
                         android:scaleType="fitCenter"
                         android:src="@drawable/ic_trash"
-                        app:contentPadding="8dp"
+                        app:contentPadding="@dimen/row_icon_content_padding"
                         app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Akin.Rounded12" />
 
                     <LinearLayout
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="12dp"
+                        android:layout_marginStart="@dimen/row_title_icon_gap"
                         android:layout_weight="1"
                         android:orientation="vertical">
 
@@ -248,9 +196,9 @@
                     </LinearLayout>
 
                     <ImageView
-                        android:layout_width="20dp"
-                        android:layout_height="20dp"
-                        android:layout_marginStart="8dp"
+                        android:layout_width="@dimen/row_trailing_icon_size"
+                        android:layout_height="@dimen/row_trailing_icon_size"
+                        android:layout_marginStart="@dimen/spacing_8dp"
                         android:src="@drawable/ic_chevron_right"
                         android:contentDescription="@string/settings_trash" />
 
@@ -265,16 +213,14 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="20dp"
+        android:layout_marginTop="@dimen/spacing_20dp"
         android:text="@string/settings_section_legal"
         android:textAppearance="@style/TextAppearance.Akin.SectionLabel" />
 
-    <!-- Legal: in-app Privacy Policy and Terms screens. Same row language
-         as the cards above (icon well + title). -->
     <com.google.android.material.card.MaterialCardView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="@dimen/section_header_gap"
         style="@style/Widget.Akin.DashboardCard">
 
         <LinearLayout
@@ -283,38 +229,26 @@
             android:orientation="vertical">
 
             <LinearLayout
-                android:id="@+id/settings_row_privacy"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:clickable="true"
-                android:focusable="true"
-                android:foreground="?attr/selectableItemBackground"
-                android:orientation="vertical">
+                android:id="@+id/settings_privacy_row"
+                style="@style/Widget.Akin.SettingsRow">
 
                 <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal"
-                    android:paddingStart="12dp"
-                    android:paddingEnd="8dp"
-                    android:paddingTop="10dp"
-                    android:paddingBottom="10dp">
+                    style="@style/Widget.Akin.SettingsRowContent">
 
                     <com.google.android.material.imageview.ShapeableImageView
-                        android:layout_width="42dp"
-                        android:layout_height="42dp"
+                        android:layout_width="@dimen/row_icon_well_size"
+                        android:layout_height="@dimen/row_icon_well_size"
                         android:background="@color/white"
                         android:contentDescription="@string/settings_privacy"
                         android:scaleType="fitCenter"
                         android:src="@drawable/ic_privacy"
-                        app:contentPadding="8dp"
+                        app:contentPadding="@dimen/row_icon_content_padding"
                         app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Akin.Rounded12" />
 
                     <LinearLayout
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="12dp"
+                        android:layout_marginStart="@dimen/row_title_icon_gap"
                         android:layout_weight="1"
                         android:orientation="vertical">
 
@@ -327,57 +261,40 @@
                     </LinearLayout>
 
                     <ImageView
-                        android:layout_width="20dp"
-                        android:layout_height="20dp"
-                        android:layout_marginStart="8dp"
+                        android:layout_width="@dimen/row_trailing_icon_size"
+                        android:layout_height="@dimen/row_trailing_icon_size"
+                        android:layout_marginStart="@dimen/spacing_8dp"
                         android:src="@drawable/ic_chevron_right"
                         android:contentDescription="@string/settings_privacy" />
 
                 </LinearLayout>
 
-                <com.google.android.material.divider.MaterialDivider
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    app:dividerColor="@color/dashboard_surface_border"
-                    app:dividerInsetEnd="8dp"
-                    app:dividerInsetStart="12dp"
-                    app:dividerThickness="1dp" />
+                <View
+                    style="@style/Widget.Akin.HairlineDivider" />
 
             </LinearLayout>
 
             <LinearLayout
-                android:id="@+id/settings_row_terms"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:clickable="true"
-                android:focusable="true"
-                android:foreground="?attr/selectableItemBackground"
-                android:orientation="vertical">
+                android:id="@+id/settings_terms_row"
+                style="@style/Widget.Akin.SettingsRow">
 
                 <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal"
-                    android:paddingStart="12dp"
-                    android:paddingEnd="8dp"
-                    android:paddingTop="10dp"
-                    android:paddingBottom="10dp">
+                    style="@style/Widget.Akin.SettingsRowContent">
 
                     <com.google.android.material.imageview.ShapeableImageView
-                        android:layout_width="42dp"
-                        android:layout_height="42dp"
+                        android:layout_width="@dimen/row_icon_well_size"
+                        android:layout_height="@dimen/row_icon_well_size"
                         android:background="@color/white"
                         android:contentDescription="@string/settings_terms"
                         android:scaleType="fitCenter"
                         android:src="@drawable/ic_terms"
-                        app:contentPadding="8dp"
+                        app:contentPadding="@dimen/row_icon_content_padding"
                         app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Akin.Rounded12" />
 
                     <LinearLayout
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="12dp"
+                        android:layout_marginStart="@dimen/row_title_icon_gap"
                         android:layout_weight="1"
                         android:orientation="vertical">
 
@@ -390,57 +307,40 @@
                     </LinearLayout>
 
                     <ImageView
-                        android:layout_width="20dp"
-                        android:layout_height="20dp"
-                        android:layout_marginStart="8dp"
+                        android:layout_width="@dimen/row_trailing_icon_size"
+                        android:layout_height="@dimen/row_trailing_icon_size"
+                        android:layout_marginStart="@dimen/spacing_8dp"
                         android:src="@drawable/ic_chevron_right"
                         android:contentDescription="@string/settings_terms" />
 
                 </LinearLayout>
 
-                <com.google.android.material.divider.MaterialDivider
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    app:dividerColor="@color/dashboard_surface_border"
-                    app:dividerInsetEnd="8dp"
-                    app:dividerInsetStart="12dp"
-                    app:dividerThickness="1dp" />
+                <View
+                    style="@style/Widget.Akin.HairlineDivider" />
 
             </LinearLayout>
 
             <LinearLayout
-                android:id="@+id/settings_row_about"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:clickable="true"
-                android:focusable="true"
-                android:foreground="?attr/selectableItemBackground"
-                android:orientation="vertical">
+                android:id="@+id/settings_about_row"
+                style="@style/Widget.Akin.SettingsRow">
 
                 <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal"
-                    android:paddingStart="12dp"
-                    android:paddingEnd="8dp"
-                    android:paddingTop="10dp"
-                    android:paddingBottom="10dp">
+                    style="@style/Widget.Akin.SettingsRowContent">
 
                     <com.google.android.material.imageview.ShapeableImageView
-                        android:layout_width="42dp"
-                        android:layout_height="42dp"
+                        android:layout_width="@dimen/row_icon_well_size"
+                        android:layout_height="@dimen/row_icon_well_size"
                         android:background="@color/white"
                         android:contentDescription="@string/settings_about"
                         android:scaleType="fitCenter"
                         android:src="@drawable/ic_info"
-                        app:contentPadding="8dp"
+                        app:contentPadding="@dimen/row_icon_content_padding"
                         app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Akin.Rounded12" />
 
                     <LinearLayout
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="12dp"
+                        android:layout_marginStart="@dimen/row_title_icon_gap"
                         android:layout_weight="1"
                         android:orientation="vertical">
 
@@ -453,9 +353,9 @@
                     </LinearLayout>
 
                     <ImageView
-                        android:layout_width="20dp"
-                        android:layout_height="20dp"
-                        android:layout_marginStart="8dp"
+                        android:layout_width="@dimen/row_trailing_icon_size"
+                        android:layout_height="@dimen/row_trailing_icon_size"
+                        android:layout_marginStart="@dimen/spacing_8dp"
                         android:src="@drawable/ic_chevron_right"
                         android:contentDescription="@string/settings_about" />
 
@@ -472,13 +372,12 @@
         android:layout_height="0dp"
         android:layout_weight="1" />
 
-    <!-- App version footer, stamped at runtime (falls back to 1.0). -->
     <TextView
-        android:id="@+id/settings_version"
+        android:id="@+id/settings_version_label"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center_horizontal"
-        android:layout_marginTop="24dp"
+        android:layout_marginTop="@dimen/spacing_24dp"
         android:gravity="center"
         android:textAppearance="@style/TextAppearance.Akin.BodyMuted" />
 

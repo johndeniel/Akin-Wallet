@@ -34,12 +34,17 @@ public class SettingsActivity extends BaseVaultActivity {
         applyChrome();
 
         // Version footer stamps the installed version.
-        TextView settingsVersion = findViewById(R.id.settings_version);
-        settingsVersion.setText(
-                getString(R.string.settings_version_format, AkinWallet.versionName()));
+        TextView versionLabel = findViewById(R.id.settings_version_label);
+        if (versionLabel != null) {
+            versionLabel.setText(
+                    getString(R.string.settings_version_format, AkinWallet.versionName()));
+        }
 
         biometricSwitch = findViewById(R.id.settings_biometric_switch);
         biometricStatus = findViewById(R.id.settings_biometric_status);
+        if (biometricSwitch == null || biometricStatus == null) {
+            return;
+        }
 
         biometricAvailable = AppLockManager.isBiometricAvailable(this);
         boolean enabled = AppLockManager.isBiometricEnabled(this) && biometricAvailable;
@@ -60,24 +65,32 @@ public class SettingsActivity extends BaseVaultActivity {
             }
         });
 
-        findViewById(R.id.settings_row_change_pin).setOnClickListener(v ->
+        bindRow(R.id.settings_change_pin_row, () ->
                 startActivity(new Intent(this, LockActivity.class)
                         .putExtra(LockActivity.EXTRA_MODE, LockActivity.MODE_CHANGE)));
 
-        findViewById(R.id.settings_row_trash).setOnClickListener(v ->
+        bindRow(R.id.settings_trash_row, () ->
                 startActivity(new Intent(this, TrashActivity.class)));
 
-        findViewById(R.id.settings_row_privacy).setOnClickListener(v ->
+        bindRow(R.id.settings_privacy_row, () ->
                 startActivity(new Intent(this, PolicyActivity.class)
                         .putExtra(PolicyActivity.EXTRA_TYPE, PolicyActivity.TYPE_PRIVACY)));
 
-        findViewById(R.id.settings_row_terms).setOnClickListener(v ->
+        bindRow(R.id.settings_terms_row, () ->
                 startActivity(new Intent(this, PolicyActivity.class)
                         .putExtra(PolicyActivity.EXTRA_TYPE, PolicyActivity.TYPE_TERMS)));
 
-        findViewById(R.id.settings_row_about).setOnClickListener(v ->
+        bindRow(R.id.settings_about_row, () ->
                 startActivity(new Intent(this, PolicyActivity.class)
                         .putExtra(PolicyActivity.EXTRA_TYPE, PolicyActivity.TYPE_ABOUT)));
+    }
+
+    /** Row taps are null-safe: a missing row is skipped, never an NPE. */
+    private void bindRow(int rowId, Runnable action) {
+        android.view.View row = findViewById(rowId);
+        if (row != null) {
+            row.setOnClickListener(v -> action.run());
+        }
     }
 
     @Override
@@ -122,7 +135,7 @@ public class SettingsActivity extends BaseVaultActivity {
                     public void onAuthenticationSucceeded(
                             @NonNull BiometricPrompt.AuthenticationResult result) {
                         confirming = false;
-                        if (isFinishing()) {
+                        if (isFinishing() || isDestroyed()) {
                             return;
                         }
                         AppLockManager.setBiometricEnabled(
@@ -135,7 +148,7 @@ public class SettingsActivity extends BaseVaultActivity {
                     public void onAuthenticationError(
                             int errorCode, @NonNull CharSequence errString) {
                         confirming = false;
-                        if (isFinishing()) {
+                        if (isFinishing() || isDestroyed()) {
                             return;
                         }
                         // Any cancel/failure reverts: ON is never stored blind.

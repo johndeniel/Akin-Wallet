@@ -46,6 +46,24 @@
         <item name="android:textColor">@color/dashboard_muted</item>
     </style>
 
+    <!-- Form field label above every input (bank / ID / social share it). -->
+    <style name="TextAppearance.Akin.FormLabel" parent="TextAppearance.Material3.BodySmall">
+        <item name="android:textSize">13sp</item>
+        <item name="android:textColor">@color/dashboard_muted</item>
+    </style>
+
+    <!-- Form field value (select rows, secret inputs): 15sp primary ink. -->
+    <style name="TextAppearance.Akin.FieldValue" parent="TextAppearance.Material3.BodyLarge">
+        <item name="android:textSize">15sp</item>
+        <item name="android:textColor">@color/text_primary</item>
+    </style>
+
+    <!-- Credential input value + form action label: 14sp primary ink. -->
+    <style name="TextAppearance.Akin.InputValue" parent="TextAppearance.Material3.BodyLarge">
+        <item name="android:textSize">14sp</item>
+        <item name="android:textColor">@color/text_primary</item>
+    </style>
+
     <!-- M3 settings section label (SECURITY / WALLET / LEGAL): muted label
          with M3 label tracking, used with textAppearance in settings. -->
     <style name="TextAppearance.Akin.SectionLabel" parent="TextAppearance.Material3.LabelSmall">
@@ -54,15 +72,7 @@
         <item name="android:letterSpacing">0.08</item>
     </style>
 
-    <!-- M3 dashboard surface card: Filled card pinned to the vault navy tokens
-         (replaces LinearLayout + bg_dashboard_card). -->
-    <style name="Widget.Akin.DashboardCard" parent="Widget.Material3.CardView.Filled">
-        <item name="cardBackgroundColor">@color/dashboard_surface</item>
-        <item name="strokeColor">@color/dashboard_surface_border</item>
-        <item name="strokeWidth">1dp</item>
-        <item name="cardCornerRadius">16dp</item>
-        <item name="cardElevation">0dp</item>
-    </style>
+    <!-- DashboardCard, SettingsRow, Form widgets live in styles.xml. -->
 
     <!-- 12dp rounded overlay for M3 icon wells (ShapeableImageView). -->
     <style name="ShapeAppearanceOverlay.Akin.Rounded12" parent="">
@@ -80,7 +90,7 @@
          title). Only android:id / app:title vary per layout; the dashboard
          toolbar reuses it and adds its subtitle. -->
     <style name="Widget.Akin.Toolbar" parent="Widget.Material3.Toolbar">
-        <item name="android:layout_height">64dp</item>
+        <item name="android:layout_height">@dimen/toolbar_height</item>
         <item name="android:layout_marginStart">-12dp</item>
         <item name="android:background">@android:color/transparent</item>
         <item name="contentInsetStart">0dp</item>
@@ -92,17 +102,7 @@
 
     <!-- Shared government-ID face header. Sizes, tracking and rhythm live
          here so all 6 faces stay identical; each face sets only its text,
-         ink colors and rule color. Title is the single bold anchor;
-         eyebrow/subtitle stay quiet for a clean document hierarchy. -->
-    <style name="IdFaceEyebrow">
-        <item name="android:layout_width">wrap_content</item>
-        <item name="android:layout_height">wrap_content</item>
-        <item name="android:textSize">8sp</item>
-        <item name="android:textStyle">bold</item>
-        <item name="android:letterSpacing">0.28</item>
-        <item name="android:singleLine">true</item>
-    </style>
-
+         ink colors and rule color. -->
     <style name="IdFaceTitle">
         <item name="android:layout_width">wrap_content</item>
         <item name="android:layout_height">wrap_content</item>

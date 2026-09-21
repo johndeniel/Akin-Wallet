@@ -1,11 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Social account form: dashboard-navy theme (bg_dashboard_root,
-     bg_dashboard_card rows, dashboard_muted labels) shared with the bank and
-     government ID forms. M3 toolbar with back + title, same insets as
-     Settings. Platform picking is an in-place full-screen M3 SearchView
-     (no separate activity): CoordinatorLayout root hosts its transition.
-     Twin outline action row (save + edit-only delete)
-     copied from the bank card form; keep the rows in sync. -->
+<!-- Social account form. Scrollable for keyboard. Pickers are in-place SearchViews. -->
 <androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
@@ -25,12 +19,11 @@
     android:clipChildren="false"
     android:clipToPadding="false"
     android:orientation="vertical"
-    android:paddingHorizontal="24dp"
-    android:paddingTop="16dp"
-    android:paddingBottom="24dp">
+    android:paddingHorizontal="@dimen/form_gutter_horizontal"
+    android:paddingTop="@dimen/screen_padding_top"
+    android:paddingBottom="@dimen/screen_padding_bottom">
 
-    <!-- M3 small top app bar: 64dp, nav icon + title. Same insets as Settings
-         so all headers match. -->
+
     <com.google.android.material.appbar.MaterialToolbar
         android:id="@+id/social_account_toolbar"
         style="@style/Widget.Akin.Toolbar"
@@ -41,46 +34,45 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/field_platform"
-        android:textColor="@color/dashboard_muted"
-        android:textSize="13sp"
-        android:layout_marginTop="12dp" />
+        style="@style/Widget.Akin.FormLabel"
+        android:layout_marginTop="@dimen/spacing_12dp" />
 
     <LinearLayout
         android:id="@+id/social_account_platform_selector"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="@dimen/spacing_8dp"
         android:background="@drawable/bg_dashboard_card"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:paddingHorizontal="16dp"
-        android:paddingVertical="14dp"
+        android:paddingHorizontal="@dimen/form_input_padding_horizontal"
+        android:paddingVertical="@dimen/form_input_padding_vertical"
         android:clickable="true"
         android:focusable="true">
 
         <ImageView
-            android:id="@+id/social_account_selector_icon"
-            android:layout_width="36dp"
-            android:layout_height="36dp"
+            android:id="@+id/social_account_platform_icon"
+            android:layout_width="@dimen/platform_row_icon_size"
+            android:layout_height="@dimen/platform_row_icon_size"
             android:adjustViewBounds="true"
             android:background="@drawable/bg_dashboard_icon_white"
             android:scaleType="fitCenter"
-            android:padding="7dp"
+            android:padding="@dimen/spacing_8dp"
             android:contentDescription="@null" />
 
         <TextView
-            android:id="@+id/social_account_selector_name"
+            android:id="@+id/social_account_platform_name"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:layout_marginStart="14dp"
+            android:layout_marginStart="@dimen/spacing_14dp"
             android:textColor="@color/text_primary"
             android:textSize="16sp"
             android:textStyle="bold" />
 
         <ImageView
-            android:layout_width="20dp"
-            android:layout_height="20dp"
+            android:layout_width="@dimen/row_trailing_icon_size"
+            android:layout_height="@dimen/row_trailing_icon_size"
             android:src="@drawable/ic_dropdown"
             android:contentDescription="@string/cd_select_platform" />
 
@@ -90,28 +82,20 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/section_account_details"
-        android:textColor="@color/dashboard_muted"
-        android:textSize="13sp"
-        android:layout_marginTop="24dp" />
+        style="@style/Widget.Akin.FormLabel"
+        android:layout_marginTop="@dimen/form_action_top_margin" />
 
-    <!-- Username row -->
+
     <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="@drawable/bg_dashboard_card"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:paddingHorizontal="14dp"
-        android:paddingVertical="12dp"
-        android:layout_marginTop="8dp">
+        style="@style/Widget.Akin.CredentialRow">
 
         <ImageView
-            android:layout_width="20dp"
-            android:layout_height="20dp"
+            android:layout_width="@dimen/row_trailing_icon_size"
+            android:layout_height="@dimen/row_trailing_icon_size"
             android:src="@drawable/ic_person"
             android:alpha="0.6"
             android:contentDescription="@null"
-            android:layout_marginEnd="14dp" />
+            android:layout_marginEnd="@dimen/spacing_14dp" />
 
         <LinearLayout
             android:layout_width="0dp"
@@ -123,45 +107,36 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/field_username"
-                android:textColor="@color/dashboard_muted"
-                android:textSize="12sp" />
+                android:textAppearance="@style/TextAppearance.Akin.BodyMuted" />
 
             <EditText
-                android:id="@+id/social_account_input_username"
+                android:id="@+id/social_account_username_field"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:background="@null"
                 android:hint="@string/hint_username"
                 android:textColorHint="@color/hint_text"
-                android:textColor="@color/text_primary"
-                android:textSize="14sp"
+                android:textAppearance="@style/TextAppearance.Akin.InputValue"
                 android:singleLine="true"
                 android:inputType="textEmailAddress"
-                android:paddingTop="2dp"
-                android:paddingBottom="4dp" />
+                android:paddingTop="@dimen/spacing_2dp"
+                android:paddingBottom="@dimen/spacing_4dp" />
 
         </LinearLayout>
 
     </LinearLayout>
 
-    <!-- Password row -->
+
     <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="@drawable/bg_dashboard_card"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:paddingHorizontal="14dp"
-        android:paddingVertical="12dp"
-        android:layout_marginTop="8dp">
+        style="@style/Widget.Akin.CredentialRow">
 
         <ImageView
-            android:layout_width="20dp"
-            android:layout_height="20dp"
+            android:layout_width="@dimen/row_trailing_icon_size"
+            android:layout_height="@dimen/row_trailing_icon_size"
             android:src="@drawable/ic_lock"
             android:alpha="0.6"
             android:contentDescription="@null"
-            android:layout_marginEnd="14dp" />
+            android:layout_marginEnd="@dimen/spacing_14dp" />
 
         <LinearLayout
             android:layout_width="0dp"
@@ -173,54 +148,45 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/field_password"
-                android:textColor="@color/dashboard_muted"
-                android:textSize="12sp" />
+                android:textAppearance="@style/TextAppearance.Akin.BodyMuted" />
 
             <EditText
-                android:id="@+id/social_account_input_password"
+                android:id="@+id/social_account_password_field"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:background="@null"
                 android:hint="@string/mask_password"
                 android:textColorHint="@color/hint_text"
-                android:textColor="@color/text_primary"
-                android:textSize="14sp"
+                android:textAppearance="@style/TextAppearance.Akin.InputValue"
                 android:singleLine="true"
                 android:inputType="textPassword"
-                android:paddingTop="2dp"
-                android:paddingBottom="4dp" />
+                android:paddingTop="@dimen/spacing_2dp"
+                android:paddingBottom="@dimen/spacing_4dp" />
 
         </LinearLayout>
 
         <ImageView
-            android:id="@+id/social_account_toggle_password_visibility"
-            android:layout_width="22dp"
-            android:layout_height="22dp"
+            android:id="@+id/social_account_password_visibility_toggle"
+            android:layout_width="@dimen/row_trailing_icon_size"
+            android:layout_height="@dimen/row_trailing_icon_size"
             android:src="@drawable/ic_eye"
             android:alpha="0.6"
-            android:layout_marginStart="8dp"
+            android:layout_marginStart="@dimen/spacing_8dp"
             android:contentDescription="@string/cd_toggle_visibility" />
 
     </LinearLayout>
 
-    <!-- PIN row -->
+
     <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="@drawable/bg_dashboard_card"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:paddingHorizontal="14dp"
-        android:paddingVertical="12dp"
-        android:layout_marginTop="8dp">
+        style="@style/Widget.Akin.CredentialRow">
 
         <ImageView
-            android:layout_width="20dp"
-            android:layout_height="20dp"
+            android:layout_width="@dimen/row_trailing_icon_size"
+            android:layout_height="@dimen/row_trailing_icon_size"
             android:src="@drawable/ic_lock"
             android:alpha="0.6"
             android:contentDescription="@null"
-            android:layout_marginEnd="14dp" />
+            android:layout_marginEnd="@dimen/spacing_14dp" />
 
         <LinearLayout
             android:layout_width="0dp"
@@ -232,40 +198,36 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/field_pin"
-                android:textColor="@color/dashboard_muted"
-                android:textSize="12sp" />
+                android:textAppearance="@style/TextAppearance.Akin.BodyMuted" />
 
             <EditText
-                android:id="@+id/social_account_input_pin"
+                android:id="@+id/social_account_pin_field"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:background="@null"
                 android:hint="@string/mask_pin"
                 android:textColorHint="@color/hint_text"
-                android:textColor="@color/text_primary"
-                android:textSize="14sp"
+                android:textAppearance="@style/TextAppearance.Akin.InputValue"
                 android:singleLine="true"
                 android:inputType="numberPassword"
                 android:maxLength="6"
-                android:paddingTop="2dp"
-                android:paddingBottom="4dp" />
+                android:paddingTop="@dimen/spacing_2dp"
+                android:paddingBottom="@dimen/spacing_4dp" />
 
         </LinearLayout>
 
         <ImageView
-            android:id="@+id/social_account_toggle_pin_visibility"
-            android:layout_width="22dp"
-            android:layout_height="22dp"
+            android:id="@+id/social_account_pin_visibility_toggle"
+            android:layout_width="@dimen/row_trailing_icon_size"
+            android:layout_height="@dimen/row_trailing_icon_size"
             android:src="@drawable/ic_eye"
             android:alpha="0.6"
-            android:layout_marginStart="8dp"
+            android:layout_marginStart="@dimen/spacing_8dp"
             android:contentDescription="@string/cd_toggle_visibility" />
 
     </LinearLayout>
 
-    <!-- Associated accounts: dashboard-style section header (bold title left,
-         icon-only Add button right) over a dashboard card holding the rows.
-         The card is hidden entirely when nothing is linked. -->
+
     <LinearLayout
         android:id="@+id/social_account_linked_section"
         android:layout_width="match_parent"
@@ -275,7 +237,7 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
+            android:layout_marginTop="@dimen/form_action_top_margin"
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
@@ -283,9 +245,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/section_associated_accounts"
-                android:textColor="@color/text_primary"
-                android:textSize="13sp"
-                android:textStyle="bold" />
+                android:textAppearance="@style/TextAppearance.Akin.SectionTitle" />
 
             <Space
                 android:layout_width="0dp"
@@ -301,12 +261,12 @@
                 android:focusable="true"
                 android:gravity="center"
                 android:orientation="horizontal"
-                android:padding="8dp"
+                android:padding="@dimen/spacing_8dp"
                 android:contentDescription="@string/cd_add_account">
 
                 <ImageView
-                    android:layout_width="14dp"
-                    android:layout_height="14dp"
+                    android:layout_width="@dimen/spacing_14dp"
+                    android:layout_height="@dimen/spacing_14dp"
                     android:src="@drawable/ic_add_circle"
                     android:importantForAccessibility="no" />
 
@@ -318,13 +278,13 @@
             android:id="@+id/social_account_linked_card"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="@dimen/spacing_8dp"
             android:background="@drawable/bg_dashboard_card"
             android:orientation="vertical"
-            android:paddingStart="6dp"
-            android:paddingEnd="6dp"
-            android:paddingTop="4dp"
-            android:paddingBottom="4dp">
+            android:paddingStart="@dimen/spacing_6dp"
+            android:paddingEnd="@dimen/spacing_6dp"
+            android:paddingTop="@dimen/spacing_4dp"
+            android:paddingBottom="@dimen/spacing_4dp">
 
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/social_account_linked_list"
@@ -337,16 +297,13 @@
 
     </LinearLayout>
 
-    <!-- Save/Delete action row, same twin-outline pattern as the bank and
-         government ID forms. Delete shows in edit mode only. -->
+
     <include layout="@layout/partial_form_action_row" />
 
 </LinearLayout>
 
 </androidx.core.widget.NestedScrollView>
-    <!-- M3 platform SearchView: full-screen picker opened from the platform
-         selector above. Same adapters/rows as the old picker activity;
-         typing filters the catalog, tapping a row picks it and closes. -->
+
     <com.google.android.material.search.SearchView
         android:id="@+id/social_account_platform_search_view"
         android:layout_width="match_parent"
@@ -359,10 +316,10 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:orientation="vertical"
-            android:paddingStart="20dp"
-            android:paddingEnd="20dp"
-            android:paddingTop="16dp"
-            android:paddingBottom="16dp">
+            android:paddingStart="@dimen/screen_gutter_horizontal"
+            android:paddingEnd="@dimen/screen_gutter_horizontal"
+            android:paddingTop="@dimen/screen_padding_top"
+            android:paddingBottom="@dimen/screen_padding_bottom">
 
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/social_account_platform_search_list"
@@ -377,15 +334,13 @@
                 style="@style/Widget.Akin.DashboardCard"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
+                android:layout_marginTop="@dimen/spacing_16dp"
                 android:visibility="gone">
 
                 <LinearLayout
+                    style="@style/Widget.Akin.EmptyStateContent"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:gravity="center"
-                    android:orientation="vertical"
-                    android:padding="20dp">
+                    android:layout_height="wrap_content">
 
                     <TextView
                         android:layout_width="wrap_content"
@@ -397,7 +352,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
+                        android:layout_marginTop="@dimen/spacing_4dp"
                         android:gravity="center"
                         android:text="@string/search_empty_sub"
                         android:textAppearance="@style/TextAppearance.Akin.BodyMuted" />
@@ -410,9 +365,7 @@
 
     </com.google.android.material.search.SearchView>
 
-    <!-- M3 link-account SearchView: in-place picker opened from the Add
-         action in Associated Accounts. Same rows as the old picker
-         activity; tapping a row links it and closes. -->
+
     <com.google.android.material.search.SearchView
         android:id="@+id/social_account_link_search_view"
         android:layout_width="match_parent"
@@ -425,10 +378,10 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:orientation="vertical"
-            android:paddingStart="20dp"
-            android:paddingEnd="20dp"
-            android:paddingTop="16dp"
-            android:paddingBottom="16dp">
+            android:paddingStart="@dimen/screen_gutter_horizontal"
+            android:paddingEnd="@dimen/screen_gutter_horizontal"
+            android:paddingTop="@dimen/screen_padding_top"
+            android:paddingBottom="@dimen/screen_padding_bottom">
 
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/social_account_link_search_list"
@@ -443,15 +396,13 @@
                 style="@style/Widget.Akin.DashboardCard"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
+                android:layout_marginTop="@dimen/spacing_16dp"
                 android:visibility="gone">
 
                 <LinearLayout
+                    style="@style/Widget.Akin.EmptyStateContent"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:gravity="center"
-                    android:orientation="vertical"
-                    android:padding="20dp">
+                    android:layout_height="wrap_content">
 
                     <TextView
                         android:layout_width="wrap_content"
@@ -463,7 +414,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
+                        android:layout_marginTop="@dimen/spacing_4dp"
                         android:gravity="center"
                         android:text="@string/search_empty_sub"
                         android:textAppearance="@style/TextAppearance.Akin.BodyMuted" />

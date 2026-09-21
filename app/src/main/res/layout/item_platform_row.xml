@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Unified platform row: icon well + title/subtitle + trailing action. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    style="@style/Widget.Akin.PlatformRow"
+    android:background="?attr/selectableItemBackground">
+
+    <ImageView
+        android:id="@+id/platform_row_icon"
+        android:layout_width="@dimen/platform_row_icon_size"
+        android:layout_height="@dimen/platform_row_icon_size"
+        android:adjustViewBounds="true"
+        android:background="@drawable/bg_dashboard_icon_white"
+        android:contentDescription="@null"
+        android:padding="@dimen/spacing_8dp"
+        android:scaleType="fitCenter" />
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/row_title_icon_gap"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/platform_row_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:singleLine="true"
+            android:textAppearance="@style/TextAppearance.Akin.CardTitle" />
+
+        <TextView
+            android:id="@+id/platform_row_subtitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:singleLine="true"
+            android:textAppearance="@style/TextAppearance.Akin.BodyMuted" />
+
+    </LinearLayout>
+
+    <ImageView
+        android:id="@+id/platform_row_action"
+        android:layout_width="@dimen/row_trailing_icon_size"
+        android:layout_height="@dimen/row_trailing_icon_size"
+        android:contentDescription="@string/cd_link_account"
+        android:src="@drawable/ic_link" />
+
+</LinearLayout>

@@ -412,8 +412,8 @@ public class TrashAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
 
         HeaderHolder(@NonNull View itemView) {
             super(itemView);
-            title = itemView.findViewById(R.id.trash_header_title);
-            count = itemView.findViewById(R.id.trash_header_count);
+            title = itemView.findViewById(R.id.trash_section_title);
+            count = itemView.findViewById(R.id.trash_section_count);
         }
     }
 
@@ -427,7 +427,7 @@ public class TrashAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
         TileHolder(@NonNull View itemView) {
             super(itemView);
             card = itemView.findViewById(R.id.trash_tile_card);
-            badge = itemView.findViewById(R.id.trash_tile_check_badge);
+            badge = itemView.findViewById(R.id.trash_tile_selection_badge);
             icon = itemView.findViewById(R.id.trash_tile_icon);
             title = itemView.findViewById(R.id.trash_tile_title);
             sub = itemView.findViewById(R.id.trash_tile_subtitle);

@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Government ID form. Scrollable for keyboard. Fields are built in code. -->
 <androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
@@ -14,12 +15,10 @@
         android:clipChildren="false"
         android:clipToPadding="false"
         android:orientation="vertical"
-        android:paddingHorizontal="24dp"
-        android:paddingTop="16dp"
-        android:paddingBottom="24dp">
+        android:paddingHorizontal="@dimen/form_gutter_horizontal"
+        android:paddingTop="@dimen/screen_padding_top"
+        android:paddingBottom="@dimen/screen_padding_bottom">
 
-        <!-- M3 small top app bar: 64dp, nav icon + title. Same insets as Settings
-             so all headers match. -->
         <com.google.android.material.appbar.MaterialToolbar
             android:id="@+id/government_id_toolbar"
             style="@style/Widget.Akin.Toolbar"
@@ -27,32 +26,30 @@
             app:title="@string/dialog_id_title" />
 
         <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/government_id_design_list"
+            android:id="@+id/government_id_design_carousel"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
+            android:layout_marginTop="@dimen/spacing_20dp"
             android:clipToPadding="false"
-            android:paddingEnd="36dp"
-            android:overScrollMode="never" />
+            android:overScrollMode="never"
+            android:paddingEnd="@dimen/carousel_end_padding" />
 
         <LinearLayout
-            android:id="@+id/government_id_design_dots"
+            android:id="@+id/government_id_design_indicator"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center_horizontal"
-            android:layout_marginTop="12dp"
-            android:orientation="horizontal"
-            android:gravity="center_vertical" />
+            android:layout_marginTop="@dimen/carousel_dots_gap_top"
+            android:gravity="center_vertical"
+            android:orientation="horizontal" />
 
         <LinearLayout
             android:id="@+id/government_id_form_container"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="@dimen/spacing_8dp"
             android:orientation="vertical" />
 
-        <!-- Save/Delete action row: shared partial_form_action_row include (twin 44dp
-             outline buttons; delete visible in edit mode only). -->
         <include layout="@layout/partial_form_action_row" />
 
     </LinearLayout>

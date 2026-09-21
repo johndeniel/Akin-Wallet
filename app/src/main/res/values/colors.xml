@@ -13,10 +13,9 @@
 
     <!-- App surfaces -->
     <color name="dark_bg">#FF0D1B2A</color>
-    <color name="dark_card">#FF1B2838</color>
     <color name="dark_card_border">#FF2A3A4A</color>
 
-    <!-- Core text & graphics -->
+    <!-- Core text & graphics. text_primary is the white used on dark surfaces. -->
     <color name="text_primary">#FFFFFFFF</color>
     <color name="text_secondary">#FF8899AA</color>
     <color name="white">#FFFFFFFF</color>
@@ -118,40 +117,22 @@
     <color name="dl_muted">#FF5F5878</color>
     <color name="dl_accent">#FF4A3F7A</color>
 
-    <!-- ============================================================
-         Dashboard (MyKey reference) — professional deep-navy theme.
-         Background is near-black navy; surfaces are lifted navy with
-         a cool hairline. Banner + wallet rows use restrained
-         blue / emerald / violet gradients sampled from the mock.
-         ============================================================ -->
+    <!-- Dashboard (MyKey reference) — deep-navy theme. Background is
+         near-black navy; surfaces are lifted navy with a cool hairline. -->
     <color name="dashboard_bg_start">#FF050B18</color>
     <color name="dashboard_bg_end">#FF0A1E3A</color>
     <color name="dashboard_surface">#FF0E1C33</color>
     <color name="dashboard_surface_border">#FF1D3154</color>
     <color name="dashboard_muted">#FF8A9BB5</color>
     <color name="dashboard_active">#FF2EA6FF</color>
-    <color name="dashboard_inactive">#FF64748F</color>
-
-    <!-- Privacy banner gradient (sampled from reference:
-         bright steel-blue left, royal mid, dark navy right) -->
-
-    <!-- Category icon tiles -->
-
-    <!-- Wallet row gradients (one ramp per row) -->
-
-    <!-- Category card gradients (dark navy ramps with a whisper of hue,
-         sampled from the reference where the cards read near-flat dark
-         and the icon tiles carry the color) -->
 
     <!-- Header avatar / settings wells -->
     <color name="dashboard_well">#FF16305A</color>
     <color name="dashboard_well_border">#FF2A4A7A</color>
 
     <!-- ============================================================
-         Lock screen — premium biometric passcode system.
-         Layered depth: halo glow, glass keys, glowing dots,
-         biometric medallion. All sampled from the Akin logo blues
-         so the 3D mark sits natively in the scene.
+         Lock screen — biometric passcode system: halo glow, glass keys,
+         glowing dots. Sampled from the Akin logo blues.
          ============================================================ -->
     <color name="lock_halo_center">#662EA6FF</color>
     <color name="lock_halo_edge">#002EA6FF</color>
@@ -166,5 +147,4 @@
     <color name="dot_filled_start">#FF4DB8FF</color>
     <color name="dot_filled_end">#FF1B6BFF</color>
     <color name="dot_filled_glow">#662EA6FF</color>
-    <color name="fp_ring_start">#FF4DB8FF</color>
 </resources>

@@ -166,14 +166,14 @@ public abstract class BaseVaultActivity extends AppCompatActivity {
 
     protected void showMessage(@StringRes int messageRes) {
         View content = findViewById(android.R.id.content);
-        if (content != null && !isFinishing()) {
+        if (content != null && !isFinishing() && !isDestroyed()) {
             Snackbar.make(content, messageRes, Snackbar.LENGTH_SHORT).show();
         }
     }
 
     protected void showMessage(String message) {
         View content = findViewById(android.R.id.content);
-        if (content != null && !isFinishing()) {
+        if (content != null && !isFinishing() && !isDestroyed()) {
             Snackbar.make(content, message, Snackbar.LENGTH_SHORT).show();
         }
     }

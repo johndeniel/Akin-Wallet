@@ -52,9 +52,9 @@ public class SocialAccountActivity extends BaseVaultActivity {
 
     private int selectedIcon = SocialPlatformModel.iconFor(DEFAULT_PLATFORM_NAME);
     private String selectedName = DEFAULT_PLATFORM_NAME;
-    private ImageView platformIcon;
-    private TextView platformName;
-    private View linkedCard;
+    private ImageView selectedPlatformIcon;
+    private TextView selectedPlatformName;
+    private View linkedAccountsCard;
     private List<SocialAccountModel> linkPool = new ArrayList<>();
     private List<SocialAccountModel> linkedItems = new ArrayList<>();
     private AssociatedAccountAdapter linkedAdapter;
@@ -116,7 +116,7 @@ public class SocialAccountActivity extends BaseVaultActivity {
                 pool = db().getAllSocialAccounts();
             }
             runOnUiThread(() -> {
-                if (!isCurrentGeneration(gen) || isFinishing()) return;
+                if (!isCurrentGeneration(gen) || isFinishing() || isDestroyed()) return;
                 if (id != -1 && item == null) {
                     finish();
                     return;
@@ -159,11 +159,11 @@ public class SocialAccountActivity extends BaseVaultActivity {
         if (name != null) {
             selectedName = name;
         }
-        if (platformIcon != null) {
-            SocialPlatformModel.bindIcon(platformIcon, selectedName, selectedIcon);
+        if (selectedPlatformIcon != null) {
+            SocialPlatformModel.bindIcon(selectedPlatformIcon, selectedName, selectedIcon);
         }
-        if (platformName != null) {
-            platformName.setText(selectedName);
+        if (selectedPlatformName != null) {
+            selectedPlatformName.setText(selectedName);
         }
         int[] ids = savedInstanceState.getIntArray(KEY_LINKED_IDS);
         if (ids != null && ids.length > 0 && linkedAdapter != null) {
@@ -201,11 +201,11 @@ public class SocialAccountActivity extends BaseVaultActivity {
                 (iconRes, name, url) -> {
                     selectedIcon = iconRes;
                     selectedName = name;
-                    if (platformIcon != null) {
-                        SocialPlatformModel.bindIcon(platformIcon, selectedName, selectedIcon);
+                    if (selectedPlatformIcon != null) {
+                        SocialPlatformModel.bindIcon(selectedPlatformIcon, selectedName, selectedIcon);
                     }
-                    if (platformName != null) {
-                        platformName.setText(selectedName);
+                    if (selectedPlatformName != null) {
+                        selectedPlatformName.setText(selectedName);
                     }
                     platformSearchView.hide();
                 });
@@ -371,31 +371,31 @@ public class SocialAccountActivity extends BaseVaultActivity {
         selectedIcon = SocialPlatformModel.iconFor(DEFAULT_PLATFORM_NAME);
         selectedName = DEFAULT_PLATFORM_NAME;
 
-        platformIcon = findViewById(R.id.social_account_selector_icon);
-        platformName = findViewById(R.id.social_account_selector_name);
+        selectedPlatformIcon = findViewById(R.id.social_account_platform_icon);
+        selectedPlatformName = findViewById(R.id.social_account_platform_name);
 
-        SocialPlatformModel.bindIcon(platformIcon, selectedName, selectedIcon);
-        platformName.setText(selectedName);
+        SocialPlatformModel.bindIcon(selectedPlatformIcon, selectedName, selectedIcon);
+        selectedPlatformName.setText(selectedName);
 
         findViewById(R.id.social_account_platform_selector).setOnClickListener(v -> openPlatformSearch());
 
-        EditText inputPassword = findViewById(R.id.social_account_input_password);
-        findViewById(R.id.social_account_toggle_password_visibility).setOnClickListener(v ->
+        EditText inputPassword = findViewById(R.id.social_account_password_field);
+        findViewById(R.id.social_account_password_visibility_toggle).setOnClickListener(v ->
                 Ui.togglePasswordVisibility(inputPassword));
 
-        EditText inputPin = findViewById(R.id.social_account_input_pin);
-        findViewById(R.id.social_account_toggle_pin_visibility).setOnClickListener(v ->
+        EditText inputPin = findViewById(R.id.social_account_pin_field);
+        findViewById(R.id.social_account_pin_visibility_toggle).setOnClickListener(v ->
                 Ui.togglePasswordVisibility(inputPin));
 
         setupAssociateSection(pool, -1, java.util.Collections.emptyList());
 
         // Add mode keeps a single full-width Save button, same as the bank
         // screen: the delete view is GONE, so its row margin is dropped.
-        View btnSaveAdd = findViewById(R.id.form_save_button);
+        View btnSaveAdd = findViewById(R.id.form_primary_action);
         Ui.makeSaveButtonFullWidth(btnSaveAdd);
 
-        findViewById(R.id.form_save_button).setOnClickListener(v -> {
-            EditText inputUsername = findViewById(R.id.social_account_input_username);
+        findViewById(R.id.form_primary_action).setOnClickListener(v -> {
+            EditText inputUsername = findViewById(R.id.social_account_username_field);
             String username = inputUsername.getText().toString().trim();
             // Secrets are stored verbatim: trimming would silently mutate
             // credentials with significant leading/trailing spaces.
@@ -413,7 +413,7 @@ public class SocialAccountActivity extends BaseVaultActivity {
             vaultIo(() -> {
                 long newId = db().saveSocialAccountWithLinks(fresh, linkedIds);
                 runOnUiThread(() -> {
-                    if (isFinishing()) return;
+                    if (isFinishing() || isDestroyed()) return;
                     if (newId < 0) {
                         v.setEnabled(true);
                         showSaveFailed();
@@ -438,7 +438,7 @@ public class SocialAccountActivity extends BaseVaultActivity {
         linkedItems = new ArrayList<>();
         LinearLayout associateSection = findViewById(R.id.social_account_linked_section);
         RecyclerView recyclerLinked = findViewById(R.id.social_account_linked_list);
-        linkedCard = findViewById(R.id.social_account_linked_card);
+        linkedAccountsCard = findViewById(R.id.social_account_linked_card);
 
         setupAssociateSectionIds(preloadedLinkedIds != null
                 ? preloadedLinkedIds : java.util.Collections.emptyList());
@@ -477,8 +477,8 @@ public class SocialAccountActivity extends BaseVaultActivity {
      */
     private void refreshLinkedVisibility() {
         boolean empty = linkedItems == null || linkedItems.isEmpty();
-        if (linkedCard != null) {
-            linkedCard.setVisibility(empty ? View.GONE : View.VISIBLE);
+        if (linkedAccountsCard != null) {
+            linkedAccountsCard.setVisibility(empty ? View.GONE : View.VISIBLE);
         }
     }
 
@@ -508,35 +508,35 @@ public class SocialAccountActivity extends BaseVaultActivity {
     private void bindEditForm(@NonNull SocialAccountModel item,
                               @NonNull List<SocialAccountModel> pool,
                               @NonNull java.util.List<Integer> linkedIds) {
-        platformIcon = findViewById(R.id.social_account_selector_icon);
-        platformName = findViewById(R.id.social_account_selector_name);
-        TextView textSaveLabel = findViewById(R.id.form_save_label);
-        EditText inputUsername = findViewById(R.id.social_account_input_username);
-        EditText inputPassword = findViewById(R.id.social_account_input_password);
-        EditText inputPin = findViewById(R.id.social_account_input_pin);
+        selectedPlatformIcon = findViewById(R.id.social_account_platform_icon);
+        selectedPlatformName = findViewById(R.id.social_account_platform_name);
+        TextView textSaveLabel = findViewById(R.id.form_primary_action_label);
+        EditText inputUsername = findViewById(R.id.social_account_username_field);
+        EditText inputPassword = findViewById(R.id.social_account_password_field);
+        EditText inputPin = findViewById(R.id.social_account_pin_field);
 
         textSaveLabel.setText(R.string.action_update);
 
         selectedIcon = SocialPlatformModel.iconFor(item.getPlatform(), item.getIconRes());
         selectedName = item.getPlatform();
-        SocialPlatformModel.bindIcon(platformIcon, selectedName, selectedIcon);
-        platformName.setText(item.getPlatform());
+        SocialPlatformModel.bindIcon(selectedPlatformIcon, selectedName, selectedIcon);
+        selectedPlatformName.setText(item.getPlatform());
         inputUsername.setText(item.getUsername());
         inputPassword.setText(item.getPassword());
         inputPin.setText(item.getPin());
 
         findViewById(R.id.social_account_platform_selector).setOnClickListener(v -> openPlatformSearch());
 
-        findViewById(R.id.social_account_toggle_password_visibility).setOnClickListener(v ->
+        findViewById(R.id.social_account_password_visibility_toggle).setOnClickListener(v ->
                 Ui.togglePasswordVisibility(inputPassword));
 
-        findViewById(R.id.social_account_toggle_pin_visibility).setOnClickListener(v ->
+        findViewById(R.id.social_account_pin_visibility_toggle).setOnClickListener(v ->
                 Ui.togglePasswordVisibility(inputPin));
 
         setupAssociateSection(pool, item.getId(), linkedIds != null
                 ? linkedIds : java.util.Collections.emptyList());
 
-        findViewById(R.id.form_save_button).setOnClickListener(v -> {
+        findViewById(R.id.form_primary_action).setOnClickListener(v -> {
             String username = inputUsername.getText().toString().trim();
             String password = inputPassword.getText().toString();
             String pin = inputPin.getText().toString();
@@ -555,7 +555,7 @@ public class SocialAccountActivity extends BaseVaultActivity {
             vaultIo(() -> {
                 long savedId = db().saveSocialAccountWithLinks(updated, outIds);
                 runOnUiThread(() -> {
-                    if (isFinishing()) return;
+                    if (isFinishing() || isDestroyed()) return;
                     if (savedId < 0) {
                         v.setEnabled(true);
                         showSaveFailed();
@@ -572,7 +572,7 @@ public class SocialAccountActivity extends BaseVaultActivity {
         // Delete in edit mode, same in-row outline-red pattern as the bank
         // and government ID screens. Soft-deletes to Trash behind a normal
         // delete dialog.
-        View btnDelete = findViewById(R.id.form_delete_button);
+        View btnDelete = findViewById(R.id.form_destructive_action);
         btnDelete.setVisibility(View.VISIBLE);
         btnDelete.setOnClickListener(v -> confirmDeleteToTrash(
                 "Delete Account",
@@ -584,7 +584,7 @@ public class SocialAccountActivity extends BaseVaultActivity {
                         db().moveSocialAccountToTrash(rowId);
                         cache().invalidate();
                         runOnUiThread(() -> {
-                            if (isFinishing()) return;
+                            if (isFinishing() || isDestroyed()) return;
                             setResult(RESULT_OK);
                             finish();
                             app().notifyOnReturn(R.string.msg_deleted);

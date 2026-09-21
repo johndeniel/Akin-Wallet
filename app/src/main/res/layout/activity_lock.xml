@@ -1,38 +1,31 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- ============================================================
-     Akin Wallet — app lock (launcher). Senior passcode system:
-     real 3D Akin mark floating on a halo (no generic lock tile),
-     glass keypad, glowing PIN dots, biometric medallion.
-     Fixed layout — not scrollable. All IDs preserved for
-     LockActivity (dots, keypad, fingerprint).
-     ============================================================ -->
+<!-- App lock. Fixed layout, never scrollable. Compact tokens fit 4-inch screens. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/bg_lock_root"
     android:gravity="center_horizontal"
     android:orientation="vertical"
-    android:paddingStart="32dp"
-    android:paddingEnd="32dp"
-    android:paddingTop="48dp"
-    android:paddingBottom="32dp">
+    android:paddingStart="@dimen/lock_screen_padding_horizontal"
+    android:paddingEnd="@dimen/lock_screen_padding_horizontal"
+    android:paddingTop="@dimen/lock_screen_padding_top"
+    android:paddingBottom="@dimen/lock_screen_padding_bottom">
 
-    <!-- Brand hero: real Akin logo floating on a soft halo. -->
     <FrameLayout
-        android:layout_width="148dp"
-        android:layout_height="148dp">
+        android:layout_width="@dimen/lock_halo_size"
+        android:layout_height="@dimen/lock_halo_size">
 
         <View
-            android:layout_width="148dp"
-            android:layout_height="148dp"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
             android:background="@drawable/bg_lock_halo" />
 
         <ImageView
-            android:layout_width="116dp"
-            android:layout_height="116dp"
+            android:layout_width="@dimen/lock_logo_size"
+            android:layout_height="@dimen/lock_logo_size"
             android:layout_gravity="center"
             android:contentDescription="@string/app_name"
-            android:elevation="8dp"
+            android:elevation="@dimen/lock_logo_elevation"
             android:src="@mipmap/ic_launcher_foreground" />
 
     </FrameLayout>
@@ -40,80 +33,77 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="20dp"
+        android:layout_marginTop="@dimen/lock_title_gap"
         android:letterSpacing="-0.01"
         android:text="@string/app_name"
         android:textColor="@color/text_primary"
         android:textSize="27sp"
         android:textStyle="bold" />
 
-    <!-- Tagline / step helper — overridden per screen (old PIN, new PIN…). -->
     <TextView
-        android:id="@+id/lock_tagline"
+        android:id="@+id/lock_step_label"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="@dimen/spacing_8dp"
         android:letterSpacing="0.22"
         android:text="@string/header_tagline"
         android:textColor="@color/dashboard_muted"
         android:textSize="11sp"
         android:textStyle="bold" />
 
-    <!-- PIN status dots (4 = PIN length). 20dp slot fits the glow. -->
     <LinearLayout
-        android:id="@+id/lock_pin_dots_row"
+        android:id="@+id/lock_pin_indicator_row"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="26dp"
+        android:layout_marginTop="@dimen/lock_dots_gap_top"
         android:gravity="center"
         android:orientation="horizontal">
 
         <View
-            android:id="@+id/lock_dot_0"
-            android:layout_width="20dp"
-            android:layout_height="20dp"
+            android:id="@+id/lock_pin_indicator_1"
+            android:layout_width="@dimen/lock_dot_size"
+            android:layout_height="@dimen/lock_dot_size"
             android:background="@drawable/bg_pin_dot_empty" />
 
         <View
-            android:id="@+id/lock_dot_1"
-            android:layout_width="20dp"
-            android:layout_height="20dp"
-            android:layout_marginStart="16dp"
+            android:id="@+id/lock_pin_indicator_2"
+            android:layout_width="@dimen/lock_dot_size"
+            android:layout_height="@dimen/lock_dot_size"
+            android:layout_marginStart="@dimen/lock_dot_gap"
             android:background="@drawable/bg_pin_dot_empty" />
 
         <View
-            android:id="@+id/lock_dot_2"
-            android:layout_width="20dp"
-            android:layout_height="20dp"
-            android:layout_marginStart="16dp"
+            android:id="@+id/lock_pin_indicator_3"
+            android:layout_width="@dimen/lock_dot_size"
+            android:layout_height="@dimen/lock_dot_size"
+            android:layout_marginStart="@dimen/lock_dot_gap"
             android:background="@drawable/bg_pin_dot_empty" />
 
         <View
-            android:id="@+id/lock_dot_3"
-            android:layout_width="20dp"
-            android:layout_height="20dp"
-            android:layout_marginStart="16dp"
+            android:id="@+id/lock_pin_indicator_4"
+            android:layout_width="@dimen/lock_dot_size"
+            android:layout_height="@dimen/lock_dot_size"
+            android:layout_marginStart="@dimen/lock_dot_gap"
             android:background="@drawable/bg_pin_dot_empty" />
 
     </LinearLayout>
 
     <TextView
-        android:id="@+id/lock_error_message"
+        android:id="@+id/lock_error_label"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="10dp"
+        android:layout_marginTop="@dimen/lock_error_gap_top"
         android:gravity="center"
-        android:minHeight="20dp"
+        android:minHeight="@dimen/lock_error_height"
         android:text=""
         android:textColor="@color/danger_bright"
         android:textSize="13sp" />
 
-    <!-- Glass numeric keypad. 74dp targets, royal pressed glow. -->
     <LinearLayout
         android:id="@+id/lock_keypad"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="10dp"
+        android:layout_marginTop="@dimen/lock_keypad_gap_top"
         android:gravity="center_horizontal"
         android:orientation="vertical">
 
@@ -123,210 +113,138 @@
             android:orientation="horizontal">
 
             <TextView
-                android:id="@+id/lock_key_1"
-                android:layout_width="74dp"
-                android:layout_height="74dp"
-                android:background="@drawable/bg_pin_key"
-                android:clickable="true"
-                android:focusable="true"
-                android:fontFamily="sans-serif-medium"
-
-                android:gravity="center"
-                android:text="1"
-                android:textColor="@color/text_primary"
-                android:textSize="24sp" />
+                android:id="@+id/lock_keypad_digit_1"
+                style="@style/Widget.Akin.LockKey"
+                android:layout_width="@dimen/lock_key_size"
+                android:layout_height="@dimen/lock_key_size"
+                android:text="1" />
 
             <TextView
-                android:id="@+id/lock_key_2"
-                android:layout_width="74dp"
-                android:layout_height="74dp"
-                android:layout_marginStart="14dp"
-                android:background="@drawable/bg_pin_key"
-                android:clickable="true"
-                android:focusable="true"
-                android:fontFamily="sans-serif-medium"
-
-                android:gravity="center"
-                android:text="2"
-                android:textColor="@color/text_primary"
-                android:textSize="24sp" />
+                android:id="@+id/lock_keypad_digit_2"
+                style="@style/Widget.Akin.LockKey"
+                android:layout_width="@dimen/lock_key_size"
+                android:layout_height="@dimen/lock_key_size"
+                android:layout_marginStart="@dimen/lock_key_gap"
+                android:text="2" />
 
             <TextView
-                android:id="@+id/lock_key_3"
-                android:layout_width="74dp"
-                android:layout_height="74dp"
-                android:layout_marginStart="14dp"
-                android:background="@drawable/bg_pin_key"
-                android:clickable="true"
-                android:focusable="true"
-                android:fontFamily="sans-serif-medium"
-
-                android:gravity="center"
-                android:text="3"
-                android:textColor="@color/text_primary"
-                android:textSize="24sp" />
+                android:id="@+id/lock_keypad_digit_3"
+                style="@style/Widget.Akin.LockKey"
+                android:layout_width="@dimen/lock_key_size"
+                android:layout_height="@dimen/lock_key_size"
+                android:layout_marginStart="@dimen/lock_key_gap"
+                android:text="3" />
 
         </LinearLayout>
 
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
+            android:layout_marginTop="@dimen/lock_key_row_gap"
             android:orientation="horizontal">
 
             <TextView
-                android:id="@+id/lock_key_4"
-                android:layout_width="74dp"
-                android:layout_height="74dp"
-                android:background="@drawable/bg_pin_key"
-                android:clickable="true"
-                android:focusable="true"
-                android:fontFamily="sans-serif-medium"
-
-                android:gravity="center"
-                android:text="4"
-                android:textColor="@color/text_primary"
-                android:textSize="24sp" />
+                android:id="@+id/lock_keypad_digit_4"
+                style="@style/Widget.Akin.LockKey"
+                android:layout_width="@dimen/lock_key_size"
+                android:layout_height="@dimen/lock_key_size"
+                android:text="4" />
 
             <TextView
-                android:id="@+id/lock_key_5"
-                android:layout_width="74dp"
-                android:layout_height="74dp"
-                android:layout_marginStart="14dp"
-                android:background="@drawable/bg_pin_key"
-                android:clickable="true"
-                android:focusable="true"
-                android:fontFamily="sans-serif-medium"
-
-                android:gravity="center"
-                android:text="5"
-                android:textColor="@color/text_primary"
-                android:textSize="24sp" />
+                android:id="@+id/lock_keypad_digit_5"
+                style="@style/Widget.Akin.LockKey"
+                android:layout_width="@dimen/lock_key_size"
+                android:layout_height="@dimen/lock_key_size"
+                android:layout_marginStart="@dimen/lock_key_gap"
+                android:text="5" />
 
             <TextView
-                android:id="@+id/lock_key_6"
-                android:layout_width="74dp"
-                android:layout_height="74dp"
-                android:layout_marginStart="14dp"
-                android:background="@drawable/bg_pin_key"
-                android:clickable="true"
-                android:focusable="true"
-                android:fontFamily="sans-serif-medium"
-
-                android:gravity="center"
-                android:text="6"
-                android:textColor="@color/text_primary"
-                android:textSize="24sp" />
+                android:id="@+id/lock_keypad_digit_6"
+                style="@style/Widget.Akin.LockKey"
+                android:layout_width="@dimen/lock_key_size"
+                android:layout_height="@dimen/lock_key_size"
+                android:layout_marginStart="@dimen/lock_key_gap"
+                android:text="6" />
 
         </LinearLayout>
 
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
+            android:layout_marginTop="@dimen/lock_key_row_gap"
             android:orientation="horizontal">
 
             <TextView
-                android:id="@+id/lock_key_7"
-                android:layout_width="74dp"
-                android:layout_height="74dp"
-                android:background="@drawable/bg_pin_key"
-                android:clickable="true"
-                android:focusable="true"
-                android:fontFamily="sans-serif-medium"
-
-                android:gravity="center"
-                android:text="7"
-                android:textColor="@color/text_primary"
-                android:textSize="24sp" />
+                android:id="@+id/lock_keypad_digit_7"
+                style="@style/Widget.Akin.LockKey"
+                android:layout_width="@dimen/lock_key_size"
+                android:layout_height="@dimen/lock_key_size"
+                android:text="7" />
 
             <TextView
-                android:id="@+id/lock_key_8"
-                android:layout_width="74dp"
-                android:layout_height="74dp"
-                android:layout_marginStart="14dp"
-                android:background="@drawable/bg_pin_key"
-                android:clickable="true"
-                android:focusable="true"
-                android:fontFamily="sans-serif-medium"
-
-                android:gravity="center"
-                android:text="8"
-                android:textColor="@color/text_primary"
-                android:textSize="24sp" />
+                android:id="@+id/lock_keypad_digit_8"
+                style="@style/Widget.Akin.LockKey"
+                android:layout_width="@dimen/lock_key_size"
+                android:layout_height="@dimen/lock_key_size"
+                android:layout_marginStart="@dimen/lock_key_gap"
+                android:text="8" />
 
             <TextView
-                android:id="@+id/lock_key_9"
-                android:layout_width="74dp"
-                android:layout_height="74dp"
-                android:layout_marginStart="14dp"
-                android:background="@drawable/bg_pin_key"
-                android:clickable="true"
-                android:focusable="true"
-                android:fontFamily="sans-serif-medium"
-
-                android:gravity="center"
-                android:text="9"
-                android:textColor="@color/text_primary"
-                android:textSize="24sp" />
+                android:id="@+id/lock_keypad_digit_9"
+                style="@style/Widget.Akin.LockKey"
+                android:layout_width="@dimen/lock_key_size"
+                android:layout_height="@dimen/lock_key_size"
+                android:layout_marginStart="@dimen/lock_key_gap"
+                android:text="9" />
 
         </LinearLayout>
 
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
+            android:layout_marginTop="@dimen/lock_key_row_gap"
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
             <FrameLayout
-                android:id="@+id/lock_key_biometric"
-                android:layout_width="74dp"
-                android:layout_height="74dp"
+                android:id="@+id/lock_keypad_biometric"
+                android:layout_width="@dimen/lock_key_size"
+                android:layout_height="@dimen/lock_key_size"
                 android:background="@drawable/bg_pin_key"
                 android:clickable="true"
                 android:focusable="true"
-
                 android:visibility="invisible">
 
-                    <ImageView
-                        android:layout_width="34dp"
-                        android:layout_height="34dp"
-                        android:layout_gravity="center"
-                        android:contentDescription="@string/lock_use_fingerprint"
-                        android:src="@drawable/fingerprint"
-                        android:tint="@color/white" />
+                <ImageView
+                    android:layout_width="@dimen/lock_key_icon_medium"
+                    android:layout_height="@dimen/lock_key_icon_medium"
+                    android:layout_gravity="center"
+                    android:contentDescription="@string/lock_use_fingerprint"
+                    android:src="@drawable/fingerprint"
+                    android:tint="@color/white" />
 
             </FrameLayout>
 
             <TextView
-                android:id="@+id/lock_key_0"
-                android:layout_width="74dp"
-                android:layout_height="74dp"
-                android:layout_marginStart="14dp"
-                android:background="@drawable/bg_pin_key"
-                android:clickable="true"
-                android:focusable="true"
-                android:fontFamily="sans-serif-medium"
-
-                android:gravity="center"
-                android:text="0"
-                android:textColor="@color/text_primary"
-                android:textSize="24sp" />
+                android:id="@+id/lock_keypad_digit_0"
+                style="@style/Widget.Akin.LockKey"
+                android:layout_width="@dimen/lock_key_size"
+                android:layout_height="@dimen/lock_key_size"
+                android:layout_marginStart="@dimen/lock_key_gap"
+                android:text="0" />
 
             <FrameLayout
-                android:id="@+id/lock_key_backspace"
-                android:layout_width="74dp"
-                android:layout_height="74dp"
-                android:layout_marginStart="14dp"
+                android:id="@+id/lock_keypad_backspace"
+                android:layout_width="@dimen/lock_key_size"
+                android:layout_height="@dimen/lock_key_size"
+                android:layout_marginStart="@dimen/lock_key_gap"
                 android:background="@drawable/bg_pin_key"
                 android:clickable="true"
-                android:focusable="true"
->
+                android:focusable="true">
 
                 <ImageView
-                    android:layout_width="30dp"
-                    android:layout_height="30dp"
+                    android:layout_width="@dimen/lock_key_icon_small"
+                    android:layout_height="@dimen/lock_key_icon_small"
                     android:layout_gravity="center"
                     android:contentDescription="@string/cd_back"
                     android:src="@drawable/ic_backspace" />

@@ -1,7 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Social Account row (item_social_account): M3 list item (rounded icon well + title/
-     supporting text + trailing chevron) with M3 ripple and divider.
-     Hairline divider below every row except the last (toggled by adapter). -->
+<!-- Social account row: icon well + title/subtitle + chevron + divider. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
@@ -13,19 +11,12 @@
     android:orientation="vertical">
 
     <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:gravity="center_vertical"
-        android:orientation="horizontal"
-        android:paddingStart="12dp"
-        android:paddingEnd="8dp"
-        android:paddingTop="10dp"
-        android:paddingBottom="10dp">
+        style="@style/Widget.Akin.SettingsRowContent">
 
         <com.google.android.material.imageview.ShapeableImageView
-            android:id="@+id/social_account_icon"
-            android:layout_width="42dp"
-            android:layout_height="42dp"
+            android:id="@+id/social_account_row_icon"
+            android:layout_width="@dimen/row_icon_well_size"
+            android:layout_height="@dimen/row_icon_well_size"
             android:background="@color/white"
             android:contentDescription="@string/cd_platform"
             android:scaleType="fitCenter"
@@ -36,12 +27,12 @@
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginStart="12dp"
+            android:layout_marginStart="@dimen/row_title_icon_gap"
             android:layout_weight="1"
             android:orientation="vertical">
 
         <TextView
-            android:id="@+id/social_account_title"
+            android:id="@+id/social_account_row_title"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:ellipsize="end"
@@ -51,10 +42,10 @@
             tools:text="Platform" />
 
             <TextView
-                android:id="@+id/social_account_subtitle"
+                android:id="@+id/social_account_row_subtitle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="2dp"
+                android:layout_marginTop="@dimen/spacing_2dp"
                 android:ellipsize="end"
                 android:maxLines="1"
                 android:singleLine="true"
@@ -64,9 +55,9 @@
         </LinearLayout>
 
         <ImageView
-            android:layout_width="20dp"
-            android:layout_height="20dp"
-            android:layout_marginStart="8dp"
+            android:layout_width="@dimen/row_trailing_icon_size"
+            android:layout_height="@dimen/row_trailing_icon_size"
+            android:layout_marginStart="@dimen/spacing_8dp"
             android:alpha="0.6"
             android:contentDescription="@null"
             android:src="@drawable/ic_chevron_right"
@@ -74,13 +65,8 @@
 
     </LinearLayout>
 
-    <com.google.android.material.divider.MaterialDivider
-        android:id="@+id/social_account_divider"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        app:dividerColor="@color/dashboard_surface_border"
-        app:dividerInsetEnd="8dp"
-        app:dividerInsetStart="12dp"
-        app:dividerThickness="1dp" />
+    <View
+        android:id="@+id/social_account_row_divider"
+        style="@style/Widget.Akin.HairlineDivider" />
 
 </LinearLayout>

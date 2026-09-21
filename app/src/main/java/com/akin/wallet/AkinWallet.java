@@ -226,7 +226,7 @@ public class AkinWallet extends Application {
 
     /** Shows the stashed message on the return target, if any. */
     public void showPendingMessage(@Nullable Activity activity) {
-        if (activity == null || activity.isFinishing()) {
+        if (activity == null || activity.isFinishing() || activity.isDestroyed()) {
             takePendingMessage();
             return;
         }

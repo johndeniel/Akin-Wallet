@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Akin Wallet widget system. Shared chrome lives here; one-off
+         art and component physics may stay inline. -->
+
+    <!-- Dashboard surface card shared by dashboard, settings, trash and search. -->
+    <style name="Widget.Akin.DashboardCard" parent="Widget.Material3.CardView.Filled">
+        <item name="cardBackgroundColor">@color/dashboard_surface</item>
+        <item name="strokeColor">@color/dashboard_surface_border</item>
+        <item name="strokeWidth">1dp</item>
+        <item name="cardCornerRadius">@dimen/card_corner_radius</item>
+        <item name="cardElevation">0dp</item>
+    </style>
+
+    <!-- Empty-state card content -->
+    <style name="Widget.Akin.EmptyStateContent" parent="">
+        <item name="android:gravity">center</item>
+        <item name="android:orientation">vertical</item>
+        <item name="android:padding">@dimen/card_content_padding</item>
+    </style>
+
+    <!-- Settings row: full-bleed ripple container holding a padded content row. -->
+    <style name="Widget.Akin.SettingsRow" parent="">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:clickable">true</item>
+        <item name="android:focusable">true</item>
+        <item name="android:foreground">?attr/selectableItemBackground</item>
+        <item name="android:orientation">vertical</item>
+    </style>
+
+    <style name="Widget.Akin.SettingsRowContent" parent="">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:orientation">horizontal</item>
+        <item name="android:paddingStart">@dimen/row_content_padding_start</item>
+        <item name="android:paddingEnd">@dimen/row_content_padding_end</item>
+        <item name="android:paddingTop">@dimen/row_content_padding_vertical</item>
+        <item name="android:paddingBottom">@dimen/row_content_padding_vertical</item>
+    </style>
+
+    <!-- Hairline divider: plain 1dp View, version-proof (no M3 Divider style
+         dependency). Margins reproduce the 12dp/8dp row insets. -->
+    <style name="Widget.Akin.HairlineDivider" parent="">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">1dp</item>
+        <item name="android:layout_marginStart">@dimen/row_content_padding_start</item>
+        <item name="android:layout_marginEnd">@dimen/row_content_padding_end</item>
+        <item name="android:background">@color/dashboard_surface_border</item>
+    </style>
+
+    <!-- Form field label above every input -->
+    <style name="Widget.Akin.FormLabel" parent="">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textAppearance">@style/TextAppearance.Akin.FormLabel</item>
+    </style>
+
+    <!-- Single-line form input box -->
+    <style name="Widget.Akin.FormInput" parent="">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">@dimen/form_label_gap</item>
+        <item name="android:background">@drawable/bg_dashboard_card</item>
+        <item name="android:paddingStart">@dimen/form_input_padding_horizontal</item>
+        <item name="android:paddingEnd">@dimen/form_input_padding_horizontal</item>
+        <item name="android:paddingTop">@dimen/form_input_padding_vertical</item>
+        <item name="android:paddingBottom">@dimen/form_input_padding_vertical</item>
+        <item name="android:singleLine">true</item>
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="android:textColorHint">@color/hint_text</item>
+        <item name="android:textSize">15sp</item>
+    </style>
+
+    <!-- Select row (card type / network / platform) -->
+    <style name="Widget.Akin.FormSelectRow" parent="">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">@dimen/form_label_gap</item>
+        <item name="android:background">@drawable/bg_dashboard_card</item>
+        <item name="android:clickable">true</item>
+        <item name="android:focusable">true</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:orientation">horizontal</item>
+        <item name="android:paddingStart">@dimen/form_input_padding_horizontal</item>
+        <item name="android:paddingEnd">@dimen/form_input_padding_horizontal</item>
+        <item name="android:paddingTop">@dimen/form_input_padding_vertical</item>
+        <item name="android:paddingBottom">@dimen/form_input_padding_vertical</item>
+    </style>
+
+    <!-- Icon + label credential row (username / password / PIN) -->
+    <style name="Widget.Akin.CredentialRow" parent="">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">@dimen/spacing_8dp</item>
+        <item name="android:background">@drawable/bg_dashboard_card</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:orientation">horizontal</item>
+        <item name="android:paddingStart">@dimen/spacing_14dp</item>
+        <item name="android:paddingEnd">@dimen/spacing_14dp</item>
+        <item name="android:paddingTop">@dimen/row_content_padding_start</item>
+        <item name="android:paddingBottom">@dimen/row_content_padding_start</item>
+    </style>
+
+    <!-- Quick-add FAB menu option: tonal pill, trailing-edge aligned. -->
+    <style name="Widget.Akin.QuickAddOption" parent="Widget.Material3.Button.TonalButton">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_gravity">end</item>
+        <item name="android:layout_marginBottom">@dimen/spacing_8dp</item>
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="backgroundTint">@color/dashboard_surface</item>
+        <item name="strokeColor">@color/dashboard_surface_border</item>
+        <item name="strokeWidth">1dp</item>
+    </style>
+
+    <!-- Secret input wrapper (CVV / PIN): card box holding a borderless
+         field plus an eye toggle. -->
+    <style name="Widget.Akin.SecretInputRow" parent="">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">@dimen/form_label_gap</item>
+        <item name="android:background">@drawable/bg_dashboard_card</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:orientation">horizontal</item>
+        <item name="android:paddingStart">@dimen/form_input_padding_horizontal</item>
+        <item name="android:paddingEnd">@dimen/form_input_padding_horizontal</item>
+        <item name="android:paddingTop">@dimen/spacing_4dp</item>
+        <item name="android:paddingBottom">@dimen/spacing_4dp</item>
+    </style>
+
+    <!-- Lock keypad digit key -->
+    <style name="Widget.Akin.LockKey" parent="">
+        <item name="android:background">@drawable/bg_pin_key</item>
+        <item name="android:clickable">true</item>
+        <item name="android:focusable">true</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:gravity">center</item>
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="android:textSize">24sp</item>
+    </style>
+
+    <!-- Header IconButton (dashboard search / settings) -->
+    <style name="Widget.Akin.HeaderIconButton" parent="Widget.Material3.Button.IconButton.Filled.Tonal">
+        <item name="android:insetLeft">0dp</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetRight">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+        <item name="android:layout_width">40dp</item>
+        <item name="android:layout_height">40dp</item>
+        <item name="android:layout_marginStart">@dimen/row_content_padding_start</item>
+    </style>
+
+    <!-- Platform / associated-account picker row -->
+    <style name="Widget.Akin.PlatformRow" parent="">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:orientation">horizontal</item>
+        <item name="android:paddingStart">@dimen/spacing_8dp</item>
+        <item name="android:paddingEnd">@dimen/spacing_8dp</item>
+        <item name="android:paddingTop">@dimen/row_content_padding_start</item>
+        <item name="android:paddingBottom">@dimen/row_content_padding_start</item>
+    </style>
+</resources>

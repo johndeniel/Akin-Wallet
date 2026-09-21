@@ -1,22 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Shared form action row (bank card / government ID / social account):
-     outline Save + outline-red Delete side by side. Delete starts GONE
-     (add mode); edit mode shows it and drops Save's trailing margin in code.
-     Included with <include layout="@layout/partial_form_action_row" /> — ids are
-     shared, so findViewById(R.id.form_save_button/form_delete_button/form_save_label) works
-     unchanged in every form. -->
+<!-- Shared form actions: primary save/update + edit-only destructive delete. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginTop="24dp"
+    android:layout_marginTop="@dimen/form_action_top_margin"
     android:orientation="horizontal">
 
     <LinearLayout
-        android:id="@+id/form_save_button"
+        android:id="@+id/form_primary_action"
         android:layout_width="0dp"
-        android:layout_height="44dp"
+        android:layout_height="@dimen/form_action_height"
+        android:layout_marginEnd="@dimen/form_action_gap"
         android:layout_weight="1"
-        android:layout_marginEnd="8dp"
         android:background="@drawable/bg_button_outline"
         android:clickable="true"
         android:focusable="true"
@@ -24,28 +19,27 @@
         android:orientation="horizontal">
 
         <ImageView
-            android:layout_width="16dp"
-            android:layout_height="16dp"
+            android:layout_width="@dimen/form_action_icon_size"
+            android:layout_height="@dimen/form_action_icon_size"
             android:contentDescription="@string/action_save"
             android:src="@drawable/ic_edit" />
 
         <TextView
-            android:id="@+id/form_save_label"
+            android:id="@+id/form_primary_action_label"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="6dp"
+            android:layout_marginStart="@dimen/spacing_6dp"
             android:text="@string/action_save"
-            android:textColor="@color/text_primary"
-            android:textSize="14sp" />
+            android:textAppearance="@style/TextAppearance.Akin.InputValue" />
 
     </LinearLayout>
 
     <LinearLayout
-        android:id="@+id/form_delete_button"
+        android:id="@+id/form_destructive_action"
         android:layout_width="0dp"
-        android:layout_height="44dp"
+        android:layout_height="@dimen/form_action_height"
+        android:layout_marginStart="@dimen/form_action_gap"
         android:layout_weight="1"
-        android:layout_marginStart="8dp"
         android:background="@drawable/bg_button_outline_red"
         android:clickable="true"
         android:focusable="true"
@@ -54,19 +48,18 @@
         android:visibility="gone">
 
         <ImageView
-            android:layout_width="16dp"
-            android:layout_height="16dp"
+            android:layout_width="@dimen/form_action_icon_size"
+            android:layout_height="@dimen/form_action_icon_size"
             android:contentDescription="@string/action_delete"
             android:src="@drawable/ic_delete" />
 
         <TextView
-            android:id="@+id/form_delete_label"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="6dp"
+            android:layout_marginStart="@dimen/spacing_6dp"
             android:text="@string/action_delete"
-            android:textColor="@color/danger"
-            android:textSize="14sp" />
+            android:textAppearance="@style/TextAppearance.Akin.InputValue"
+            android:textColor="@color/danger" />
 
     </LinearLayout>
 

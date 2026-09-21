@@ -32,12 +32,12 @@ import java.util.List;
 public class TrashActivity extends BaseVaultActivity {
 
     private MaterialToolbar toolbar;
-    private RecyclerView recyclerTrash;
+    private RecyclerView trashGrid;
     private TrashAdapter trashAdapter;
-    private View emptyTrash;
-    private View bottomActionBar;
-    private MaterialButton btnBulkRestore;
-    private MaterialButton btnBulkDelete;
+    private View trashEmptyState;
+    private View bulkActionBar;
+    private MaterialButton restoreSelectedButton;
+    private MaterialButton deleteForeverButton;
 
     private static final String KEY_SELECTION = "trash_selection";
 
@@ -53,32 +53,32 @@ public class TrashActivity extends BaseVaultActivity {
         toolbar = findViewById(R.id.trash_toolbar);
         // Select All lives in code, not a menu XML: single always-shown item,
         // hidden until a selection starts (see updateChrome).
-        MenuItem selectAllItem = toolbar.getMenu().add(Menu.NONE, R.id.action_select_all,
+        MenuItem selectAllItem = toolbar.getMenu().add(Menu.NONE, R.id.trash_select_all_action,
                 Menu.NONE, R.string.trash_select_all);
         selectAllItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
         selectAllItem.setVisible(false);
         toolbar.setOnMenuItemClickListener(item -> {
-            if (item.getItemId() == R.id.action_select_all) {
+            if (item.getItemId() == R.id.trash_select_all_action) {
                 trashAdapter.selectAll();
                 return true;
             }
             return false;
         });
 
-        recyclerTrash = findViewById(R.id.trash_list);
-        recyclerTrash.setLayoutManager(createGridLayoutManager());
+        trashGrid = findViewById(R.id.trash_grid);
+        trashGrid.setLayoutManager(createGridLayoutManager());
         trashAdapter = new TrashAdapter();
         trashAdapter.setOnSelectionChangedListener(this::updateChrome);
-        recyclerTrash.setAdapter(trashAdapter);
-        recyclerTrash.setHasFixedSize(true);
-        recyclerTrash.setItemViewCacheSize(6);
+        trashGrid.setAdapter(trashAdapter);
+        trashGrid.setHasFixedSize(true);
+        trashGrid.setItemViewCacheSize(6);
 
-        emptyTrash = findViewById(R.id.trash_empty_state);
-        bottomActionBar = findViewById(R.id.trash_bulk_action_bar);
-        btnBulkRestore = findViewById(R.id.trash_bulk_restore_button);
-        btnBulkDelete = findViewById(R.id.trash_bulk_delete_button);
-        btnBulkRestore.setOnClickListener(v -> bulkRestore());
-        btnBulkDelete.setOnClickListener(v -> confirmBulkDelete());
+        trashEmptyState = findViewById(R.id.trash_empty_state);
+        bulkActionBar = findViewById(R.id.trash_bulk_action_bar);
+        restoreSelectedButton = findViewById(R.id.trash_restore_selected_button);
+        deleteForeverButton = findViewById(R.id.trash_delete_forever_button);
+        restoreSelectedButton.setOnClickListener(v -> bulkRestore());
+        deleteForeverButton.setOnClickListener(v -> confirmBulkDelete());
 
         // Idle chrome before the first load lands: without this, Select All
         // stays at its inflated visibility until bindTrash runs updateChrome.
@@ -157,7 +157,7 @@ public class TrashActivity extends BaseVaultActivity {
                 accounts = db().getTrashedSocialAccounts();
             } catch (RuntimeException e) {
                 runOnUiThread(() -> {
-                    if (!isCurrentGeneration(generation) || isFinishing()) {
+                    if (!isCurrentGeneration(generation) || isFinishing() || isDestroyed()) {
                         return;
                     }
                     showError(R.string.err_trash_load);
@@ -166,7 +166,7 @@ public class TrashActivity extends BaseVaultActivity {
             }
             cache().publishTrash(ids, cards, accounts);
             runOnUiThread(() -> {
-                if (!isCurrentGeneration(generation) || isFinishing()) {
+                if (!isCurrentGeneration(generation) || isFinishing() || isDestroyed()) {
                     return;
                 }
                 bindTrash(ids, cards, accounts);
@@ -221,8 +221,8 @@ public class TrashActivity extends BaseVaultActivity {
             pendingSelection = null;
         }
         boolean allEmpty = entries.isEmpty();
-        emptyTrash.setVisibility(allEmpty ? View.VISIBLE : View.GONE);
-        recyclerTrash.setVisibility(allEmpty ? View.GONE : View.VISIBLE);
+        trashEmptyState.setVisibility(allEmpty ? View.VISIBLE : View.GONE);
+        trashGrid.setVisibility(allEmpty ? View.GONE : View.VISIBLE);
         updateChrome(trashAdapter.getSelectedCount(), trashAdapter.getSelectableCount());
     }
 
@@ -238,15 +238,15 @@ public class TrashActivity extends BaseVaultActivity {
         toolbar.setNavigationIcon(selecting
                 ? R.drawable.ic_close : R.drawable.ic_arrow_back);
         if (toolbar.getMenu() != null) {
-            MenuItem selectAll = toolbar.getMenu().findItem(R.id.action_select_all);
+            MenuItem selectAll = toolbar.getMenu().findItem(R.id.trash_select_all_action);
             if (selectAll != null) {
                 selectAll.setVisible(selecting && selected < total);
             }
         }
-        bottomActionBar.setVisibility(selecting ? View.VISIBLE : View.GONE);
+        bulkActionBar.setVisibility(selecting ? View.VISIBLE : View.GONE);
         if (selecting) {
-            btnBulkRestore.setText(getString(R.string.trash_restore_count, selected));
-            btnBulkDelete.setText(getString(R.string.trash_delete_count, selected));
+            restoreSelectedButton.setText(getString(R.string.trash_restore_count, selected));
+            deleteForeverButton.setText(getString(R.string.trash_delete_count, selected));
         }
     }
 
@@ -267,7 +267,7 @@ public class TrashActivity extends BaseVaultActivity {
             db().restoreSocialAccounts(socials);
             cache().invalidate();
             runOnUiThread(() -> {
-                if (isFinishing()) {
+                if (isFinishing() || isDestroyed()) {
                     return;
                 }
                 loadTrash();
@@ -313,7 +313,7 @@ public class TrashActivity extends BaseVaultActivity {
                     db().deleteSocialAccounts(socials);
                     cache().invalidate();
                     runOnUiThread(() -> {
-                        if (isFinishing()) {
+                        if (isFinishing() || isDestroyed()) {
                             return;
                         }
                         loadTrash();

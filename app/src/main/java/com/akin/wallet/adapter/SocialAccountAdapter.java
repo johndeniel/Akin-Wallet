@@ -101,6 +101,15 @@ public class SocialAccountAdapter extends RecyclerView.Adapter<SocialAccountAdap
         if (position < 0 || position >= accounts.size()) {
             return;
         }
+        // A missing row view (rename drift, bad inflation) renders nothing:
+        // hide the row and drop its click so recycled content never shows
+        // stale data with a live tap target.
+        if (holder.icon == null || holder.title == null || holder.sub == null) {
+            holder.itemView.setVisibility(View.GONE);
+            holder.itemView.setOnClickListener(null);
+            return;
+        }
+        holder.itemView.setVisibility(View.VISIBLE);
         SocialAccountModel account = accounts.get(position);
         try {
             String fallback = holder.itemView.getContext().getString(R.string.label_social_account);
@@ -118,8 +127,10 @@ public class SocialAccountAdapter extends RecyclerView.Adapter<SocialAccountAdap
                 listener.onAccountClick(account);
             }
         });
-        holder.divider.setVisibility(
-                position == getItemCount() - 1 ? View.GONE : View.VISIBLE);
+        if (holder.divider != null) {
+            holder.divider.setVisibility(
+                    position == getItemCount() - 1 ? View.GONE : View.VISIBLE);
+        }
     }
 
     @Override
@@ -135,10 +146,10 @@ public class SocialAccountAdapter extends RecyclerView.Adapter<SocialAccountAdap
 
         AccountViewHolder(@NonNull View itemView) {
             super(itemView);
-            icon = itemView.findViewById(R.id.social_account_icon);
-            title = itemView.findViewById(R.id.social_account_title);
-            sub = itemView.findViewById(R.id.social_account_subtitle);
-            divider = itemView.findViewById(R.id.social_account_divider);
+            icon = itemView.findViewById(R.id.social_account_row_icon);
+            title = itemView.findViewById(R.id.social_account_row_title);
+            sub = itemView.findViewById(R.id.social_account_row_subtitle);
+            divider = itemView.findViewById(R.id.social_account_row_divider);
         }
     }
 }

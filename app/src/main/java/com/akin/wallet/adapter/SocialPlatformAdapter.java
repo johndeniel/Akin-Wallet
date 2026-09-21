@@ -44,7 +44,7 @@ public class SocialPlatformAdapter extends RecyclerView.Adapter<SocialPlatformAd
     @NonNull
     @Override
     public PlatformViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_social_platform, parent, false);
+        View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_platform_row, parent, false);
         return new PlatformViewHolder(view);
     }
 
@@ -54,6 +54,7 @@ public class SocialPlatformAdapter extends RecyclerView.Adapter<SocialPlatformAd
         holder.icon.setImageResource(platform.getIconRes());
         holder.name.setText(platform.getName());
         holder.url.setText(platform.getUrl());
+        holder.action.setVisibility(View.GONE);
         holder.itemView.setOnClickListener(v -> {
             if (listener != null) {
                 listener.onPlatformSelected(platform.getIconRes(), platform.getName(), platform.getUrl());
@@ -145,12 +146,14 @@ public class SocialPlatformAdapter extends RecyclerView.Adapter<SocialPlatformAd
         ImageView icon;
         TextView name;
         TextView url;
+        View action;
 
         PlatformViewHolder(@NonNull View itemView) {
             super(itemView);
-            icon = itemView.findViewById(R.id.social_platform_icon);
-            name = itemView.findViewById(R.id.social_platform_name);
-            url = itemView.findViewById(R.id.social_platform_url);
+            icon = itemView.findViewById(R.id.platform_row_icon);
+            name = itemView.findViewById(R.id.platform_row_title);
+            url = itemView.findViewById(R.id.platform_row_subtitle);
+            action = itemView.findViewById(R.id.platform_row_action);
         }
     }
 }

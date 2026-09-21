@@ -54,7 +54,7 @@ public class AssociatedAccountAdapter extends RecyclerView.Adapter<AssociatedAcc
     @NonNull
     @Override
     public AccountViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_associated_account, parent, false);
+        View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_platform_row, parent, false);
         return new AccountViewHolder(view);
     }
 
@@ -66,6 +66,10 @@ public class AssociatedAccountAdapter extends RecyclerView.Adapter<AssociatedAcc
         SocialPlatformModel.bindIcon(holder.icon, account.getPlatform(), account.getIconRes());
 
         if (unlinkMode) {
+            // Every branch resets the full row state: holders are recycled
+            // across modes, so visibility, icon, row click and action click
+            // must all be assigned here, never inherited.
+            holder.action.setVisibility(View.VISIBLE);
             holder.action.setImageResource(R.drawable.ic_remove_circle);
             holder.action.setOnClickListener(v -> {
                 int clicked = holder.getBindingAdapterPosition();
@@ -79,6 +83,7 @@ public class AssociatedAccountAdapter extends RecyclerView.Adapter<AssociatedAcc
                 notifyItemRangeChanged(clicked, visibleAccounts.size() - clicked);
                 listener.onAction(removed, true);
             });
+            holder.itemView.setOnClickListener(null);
         } else {
             // Pick mode (link search): the [+] icon mirrors the row tap when
             // visible; either one links the account.
@@ -203,10 +208,10 @@ public class AssociatedAccountAdapter extends RecyclerView.Adapter<AssociatedAcc
 
         AccountViewHolder(@NonNull View itemView) {
             super(itemView);
-            icon = itemView.findViewById(R.id.associated_account_icon);
-            name = itemView.findViewById(R.id.associated_account_name);
-            username = itemView.findViewById(R.id.associated_account_username);
-            action = itemView.findViewById(R.id.associated_account_action);
+            icon = itemView.findViewById(R.id.platform_row_icon);
+            name = itemView.findViewById(R.id.platform_row_title);
+            username = itemView.findViewById(R.id.platform_row_subtitle);
+            action = itemView.findViewById(R.id.platform_row_action);
         }
     }
 }

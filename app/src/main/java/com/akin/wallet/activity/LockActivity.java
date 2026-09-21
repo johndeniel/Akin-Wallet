@@ -62,12 +62,12 @@ public class LockActivity extends AppCompatActivity {
     private final java.util.concurrent.ExecutorService pinIo =
             java.util.concurrent.Executors.newSingleThreadExecutor();
 
-    private TextView error;
-    private TextView tagline;
-    private View dotsRow;
-    private final View[] dots = new View[AppLockManager.PIN_LENGTH];
-    private LinearLayout keypad;
-    private View bioKey;
+    private TextView errorLabel;
+    private TextView stepLabel;
+    private View pinIndicatorRow;
+    private final View[] pinIndicators = new View[AppLockManager.PIN_LENGTH];
+    private LinearLayout keypadLayout;
+    private View biometricKey;
 
     private BiometricPrompt biometricPrompt;
     private boolean promptActive;
@@ -100,21 +100,21 @@ public class LockActivity extends AppCompatActivity {
             mode = extra;
         }
 
-        error = findViewById(R.id.lock_error_message);
-        tagline = findViewById(R.id.lock_tagline);
-        dotsRow = findViewById(R.id.lock_pin_dots_row);
-        keypad = findViewById(R.id.lock_keypad);
-        bioKey = findViewById(R.id.lock_key_biometric);
-        int[] dotIds = {R.id.lock_dot_0, R.id.lock_dot_1, R.id.lock_dot_2, R.id.lock_dot_3};
-        for (int i = 0; i < dotIds.length; i++) {
-            dots[i] = findViewById(dotIds[i]);
+        errorLabel = findViewById(R.id.lock_error_label);
+        stepLabel = findViewById(R.id.lock_step_label);
+        pinIndicatorRow = findViewById(R.id.lock_pin_indicator_row);
+        keypadLayout = findViewById(R.id.lock_keypad);
+        biometricKey = findViewById(R.id.lock_keypad_biometric);
+        int[] pinIndicatorIds = {R.id.lock_pin_indicator_1, R.id.lock_pin_indicator_2, R.id.lock_pin_indicator_3, R.id.lock_pin_indicator_4};
+        for (int i = 0; i < pinIndicatorIds.length; i++) {
+            pinIndicators[i] = findViewById(pinIndicatorIds[i]);
         }
 
         wireKeypad();
         // Keypad fingerprint key — same design, just asks the system
         // prompt. The keypad never switches screens.
-        if (bioKey != null) {
-            bioKey.setOnClickListener(v -> startBiometric());
+        if (biometricKey != null) {
+            biometricKey.setOnClickListener(v -> startBiometric());
         }
 
         biometricPrompt = new BiometricPrompt(this,
@@ -158,7 +158,7 @@ public class LockActivity extends AppCompatActivity {
             showPinScreen();
             // Biometric available: ask via system prompt over the same keypad.
             if (AppLockManager.canUseBiometric(this)) {
-                keypad.postDelayed(autoBiometric, 400);
+                keypadLayout.postDelayed(autoBiometric, 400);
             }
         }
     }
@@ -221,11 +221,11 @@ public class LockActivity extends AppCompatActivity {
     protected void onPause() {
         paused = true;
         cancelBiometric();
-        if (keypad != null) {
-            keypad.removeCallbacks(autoBiometric);
+        if (keypadLayout != null) {
+            keypadLayout.removeCallbacks(autoBiometric);
         }
-        if (dotsRow != null) {
-            dotsRow.removeCallbacks(pendingEntry);
+        if (pinIndicatorRow != null) {
+            pinIndicatorRow.removeCallbacks(pendingEntry);
         }
         // RC2: a 4-digit entry whose delayed submit was cancelled (or whose
         // background verify was dropped) must not stay buffered — resumed
@@ -234,7 +234,7 @@ public class LockActivity extends AppCompatActivity {
         entry.setLength(0);
         submitting = false;
         lockoutHandler.removeCallbacks(lockoutTicker);
-        if (dotsRow != null) {
+        if (pinIndicatorRow != null) {
             renderDots();
         }
         super.onPause();
@@ -242,11 +242,11 @@ public class LockActivity extends AppCompatActivity {
 
     @Override
     protected void onDestroy() {
-        if (keypad != null) {
-            keypad.removeCallbacks(autoBiometric);
+        if (keypadLayout != null) {
+            keypadLayout.removeCallbacks(autoBiometric);
         }
-        if (dotsRow != null) {
-            dotsRow.removeCallbacks(pendingEntry);
+        if (pinIndicatorRow != null) {
+            pinIndicatorRow.removeCallbacks(pendingEntry);
         }
         lockoutHandler.removeCallbacks(lockoutTicker);
         pinIo.shutdownNow();
@@ -315,26 +315,26 @@ public class LockActivity extends AppCompatActivity {
     }
 
     private void showKeypadMode() {
-        keypad.setVisibility(View.VISIBLE);
-        dotsRow.setVisibility(View.VISIBLE);
+        keypadLayout.setVisibility(View.VISIBLE);
+        pinIndicatorRow.setVisibility(View.VISIBLE);
     }
 
     /** Keypad biometric key left of 0 — INVISIBLE (not GONE) to keep 0 centered. */
     private void setBioKeyVisible(boolean visible) {
-        if (bioKey != null) {
-            bioKey.setVisibility(visible ? View.VISIBLE : View.INVISIBLE);
+        if (biometricKey != null) {
+            biometricKey.setVisibility(visible ? View.VISIBLE : View.INVISIBLE);
         }
     }
 
     /** Tagline slot doubles as the step helper during setup / update. */
     private void setStepText(String text) {
-        tagline.setText(text);
-        tagline.setLetterSpacing(0.02f);
+        stepLabel.setText(text);
+        stepLabel.setLetterSpacing(0.02f);
     }
 
     private void resetTagline() {
-        tagline.setText(R.string.header_tagline);
-        tagline.setLetterSpacing(0.22f);
+        stepLabel.setText(R.string.header_tagline);
+        stepLabel.setLetterSpacing(0.22f);
     }
 
     // ------------------------------------------------------------------
@@ -342,17 +342,17 @@ public class LockActivity extends AppCompatActivity {
     // ------------------------------------------------------------------
 
     private void wireKeypad() {
-        int[] keyIds = {R.id.lock_key_1, R.id.lock_key_2, R.id.lock_key_3, R.id.lock_key_4, R.id.lock_key_5,
-                R.id.lock_key_6, R.id.lock_key_7, R.id.lock_key_8, R.id.lock_key_9, R.id.lock_key_0};
-        for (int i = 0; i < keyIds.length; i++) {
+        int[] digitKeyIds = {R.id.lock_keypad_digit_1, R.id.lock_keypad_digit_2, R.id.lock_keypad_digit_3, R.id.lock_keypad_digit_4, R.id.lock_keypad_digit_5,
+                R.id.lock_keypad_digit_6, R.id.lock_keypad_digit_7, R.id.lock_keypad_digit_8, R.id.lock_keypad_digit_9, R.id.lock_keypad_digit_0};
+        for (int i = 0; i < digitKeyIds.length; i++) {
             // i = 0..8 -> '1'..'9', i = 9 -> '0'.
             final char digit = i == 9 ? '0' : (char) ('1' + i);
-            View key = findViewById(keyIds[i]);
+            View key = findViewById(digitKeyIds[i]);
             if (key != null) {
                 key.setOnClickListener(v -> onDigit(digit));
             }
         }
-        View backKey = findViewById(R.id.lock_key_backspace);
+        View backKey = findViewById(R.id.lock_keypad_backspace);
         if (backKey != null) {
             backKey.setOnClickListener(v -> onBackspace());
         }
@@ -374,7 +374,7 @@ public class LockActivity extends AppCompatActivity {
         renderDots();
         if (entry.length() == AppLockManager.PIN_LENGTH) {
             submitting = true;
-            dotsRow.postDelayed(pendingEntry, 120);
+            pinIndicatorRow.postDelayed(pendingEntry, 120);
         }
     }
 
@@ -672,18 +672,18 @@ public class LockActivity extends AppCompatActivity {
     // ------------------------------------------------------------------
 
     private void renderDots() {
-        for (int i = 0; i < dots.length; i++) {
-            dots[i].setBackgroundResource(i < entry.length()
+        for (int i = 0; i < pinIndicators.length; i++) {
+            pinIndicators[i].setBackgroundResource(i < entry.length()
                     ? R.drawable.bg_pin_dot_filled : R.drawable.bg_pin_dot_empty);
         }
     }
 
     private void showError(String message) {
-        error.setText(message);
+        errorLabel.setText(message);
     }
 
     private void clearError() {
-        error.setText("");
+        errorLabel.setText("");
     }
 
     private void showLockout() {
@@ -695,7 +695,7 @@ public class LockActivity extends AppCompatActivity {
 
     private void shakeDots() {
         android.animation.ObjectAnimator shake =
-                android.animation.ObjectAnimator.ofFloat(dotsRow, View.TRANSLATION_X, 0f, 12f, 0f, -12f, 0f);
+                android.animation.ObjectAnimator.ofFloat(pinIndicatorRow, View.TRANSLATION_X, 0f, 12f, 0f, -12f, 0f);
         shake.setDuration(240);
         shake.start();
     }

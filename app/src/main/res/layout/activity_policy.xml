@@ -1,7 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Policy — static legal text (Privacy Policy or Terms). Uncarded sections:
-     accent-blue letterspaced heading over light body copy, built row by row
-     by PolicyActivity from the bundled string. -->
+<!-- Policy legal text. Scrollable. Sections built in code. -->
 <androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
@@ -17,12 +15,10 @@
         android:clipChildren="false"
         android:clipToPadding="false"
         android:orientation="vertical"
-        android:paddingHorizontal="24dp"
-        android:paddingTop="16dp"
-        android:paddingBottom="24dp">
+        android:paddingHorizontal="@dimen/form_gutter_horizontal"
+        android:paddingTop="@dimen/screen_padding_top"
+        android:paddingBottom="@dimen/screen_padding_bottom">
 
-        <!-- M3 small top app bar: 64dp, nav icon + two-line headline. Title is
-             set per type by PolicyActivity; same insets as Settings. -->
         <com.google.android.material.appbar.MaterialToolbar
             android:id="@+id/policy_toolbar"
             style="@style/Widget.Akin.Toolbar"
@@ -33,7 +29,7 @@
             android:id="@+id/policy_sections"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
+            android:layout_marginTop="@dimen/spacing_20dp"
             android:orientation="vertical" />
 
     </LinearLayout>

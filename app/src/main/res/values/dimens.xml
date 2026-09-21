@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Akin Wallet spacing scale. Chrome prefers these tokens; fixed
+         document art and component physics may stay literal. -->
+    <dimen name="spacing_2dp">2dp</dimen>
+    <dimen name="spacing_4dp">4dp</dimen>
+    <dimen name="spacing_6dp">6dp</dimen>
+    <dimen name="spacing_8dp">8dp</dimen>
+    <dimen name="spacing_10dp">10dp</dimen>
+    <dimen name="spacing_12dp">12dp</dimen>
+    <dimen name="spacing_14dp">14dp</dimen>
+    <dimen name="spacing_16dp">16dp</dimen>
+    <dimen name="spacing_20dp">20dp</dimen>
+    <dimen name="spacing_24dp">24dp</dimen>
+    <dimen name="spacing_28dp">28dp</dimen>
+
+    <!-- Screen gutters. Default fits 320dp-wide phones; w360dp widens. -->
+    <dimen name="screen_gutter_horizontal">16dp</dimen>
+    <dimen name="screen_padding_top">12dp</dimen>
+    <dimen name="screen_padding_bottom">12dp</dimen>
+    <dimen name="form_gutter_horizontal">20dp</dimen>
+
+    <!-- Toolbar + headers -->
+    <dimen name="toolbar_height">64dp</dimen>
+    <dimen name="section_gap_top">16dp</dimen>
+    <dimen name="section_header_gap">8dp</dimen>
+    <dimen name="carousel_end_padding">36dp</dimen>
+
+    <!-- Cards + rows -->
+    <dimen name="card_corner_radius">16dp</dimen>
+    <dimen name="card_content_padding">16dp</dimen>
+    <dimen name="row_icon_well_size">42dp</dimen>
+    <dimen name="row_icon_content_padding">8dp</dimen>
+    <dimen name="row_content_padding_start">12dp</dimen>
+    <dimen name="row_content_padding_end">8dp</dimen>
+    <dimen name="row_content_padding_vertical">10dp</dimen>
+    <dimen name="row_title_icon_gap">12dp</dimen>
+    <dimen name="row_trailing_icon_size">20dp</dimen>
+    <dimen name="platform_row_icon_size">40dp</dimen>
+
+    <!-- Form inputs -->
+    <dimen name="form_label_gap">8dp</dimen>
+    <dimen name="form_field_gap">16dp</dimen>
+    <dimen name="form_input_padding_horizontal">16dp</dimen>
+    <dimen name="form_input_padding_vertical">14dp</dimen>
+    <dimen name="form_action_height">44dp</dimen>
+    <dimen name="form_action_icon_size">16dp</dimen>
+    <dimen name="form_action_gap">8dp</dimen>
+    <dimen name="form_action_top_margin">24dp</dimen>
+
+    <!-- Lock screen. Default is the 4-inch-safe compact budget; h640dp enlarges. -->
+    <dimen name="lock_screen_padding_top">16dp</dimen>
+    <dimen name="lock_screen_padding_bottom">12dp</dimen>
+    <dimen name="lock_screen_padding_horizontal">32dp</dimen>
+    <dimen name="lock_halo_size">96dp</dimen>
+    <dimen name="lock_logo_size">76dp</dimen>
+    <dimen name="lock_logo_elevation">8dp</dimen>
+    <dimen name="lock_title_gap">14dp</dimen>
+    <dimen name="lock_dots_gap_top">20dp</dimen>
+    <dimen name="lock_dot_size">20dp</dimen>
+    <dimen name="lock_dot_gap">16dp</dimen>
+    <dimen name="lock_error_height">20dp</dimen>
+    <dimen name="lock_error_gap_top">8dp</dimen>
+    <dimen name="lock_keypad_gap_top">8dp</dimen>
+    <dimen name="lock_key_size">60dp</dimen>
+    <dimen name="lock_key_gap">10dp</dimen>
+    <dimen name="lock_key_row_gap">10dp</dimen>
+    <dimen name="lock_key_icon_small">30dp</dimen>
+    <dimen name="lock_key_icon_medium">34dp</dimen>
+
+    <!-- Carousels + dots + trash -->
+    <dimen name="carousel_dots_gap_top">12dp</dimen>
+    <dimen name="trash_tile_height">172dp</dimen>
+    <dimen name="trash_tile_margin">4dp</dimen>
+    <dimen name="trash_tile_icon_size">52dp</dimen>
+    <dimen name="trash_badge_size">26dp</dimen>
+    <dimen name="fab_margin">16dp</dimen>
+    <dimen name="fab_menu_gap_bottom">76dp</dimen>
+</resources>

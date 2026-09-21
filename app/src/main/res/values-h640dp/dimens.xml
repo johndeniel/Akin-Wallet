@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Tall phones (>=640dp height): restore comfortable lock + section rhythm. -->
+    <dimen name="lock_screen_padding_top">48dp</dimen>
+    <dimen name="lock_screen_padding_bottom">32dp</dimen>
+    <dimen name="lock_halo_size">148dp</dimen>
+    <dimen name="lock_logo_size">116dp</dimen>
+    <dimen name="lock_title_gap">20dp</dimen>
+    <dimen name="lock_dots_gap_top">26dp</dimen>
+    <dimen name="lock_error_gap_top">10dp</dimen>
+    <dimen name="lock_keypad_gap_top">10dp</dimen>
+    <dimen name="lock_key_size">74dp</dimen>
+    <dimen name="lock_key_gap">14dp</dimen>
+    <dimen name="lock_key_row_gap">12dp</dimen>
+    <dimen name="section_gap_top">28dp</dimen>
+    <dimen name="screen_padding_top">16dp</dimen>
+    <dimen name="screen_padding_bottom">16dp</dimen>
+</resources>

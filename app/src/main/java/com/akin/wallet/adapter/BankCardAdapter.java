@@ -159,12 +159,12 @@ public class BankCardAdapter extends RecyclerView.Adapter<BankCardAdapter.CardVi
         CardViewHolder(@NonNull View itemView) {
             super(itemView);
             cardRoot = itemView.findViewById(R.id.bank_card_root);
-            bank = itemView.findViewById(R.id.bank_preview_bank);
-            network = itemView.findViewById(R.id.bank_preview_network);
-            type = itemView.findViewById(R.id.bank_preview_type);
-            number = itemView.findViewById(R.id.bank_preview_number);
-            cardholder = itemView.findViewById(R.id.bank_preview_holder);
-            expiry = itemView.findViewById(R.id.bank_preview_expiry);
+            bank = itemView.findViewById(R.id.bank_card_preview_bank_name);
+            network = itemView.findViewById(R.id.bank_card_preview_network);
+            type = itemView.findViewById(R.id.bank_card_preview_type);
+            number = itemView.findViewById(R.id.bank_card_preview_number);
+            cardholder = itemView.findViewById(R.id.bank_card_preview_holder_name);
+            expiry = itemView.findViewById(R.id.bank_card_preview_expiry);
             BankCardDesignAdapter.applyCardOutline(cardRoot);
         }
 

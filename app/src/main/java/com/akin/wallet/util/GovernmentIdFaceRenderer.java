@@ -31,7 +31,6 @@ public final class GovernmentIdFaceRenderer {
     /** Cached face views — bound once per ViewHolder, never per bind. */
     public static final class FaceViews {
         public final View cardRoot;
-        public final TextView eyebrow;
         public final TextView title;
         public final TextView subtitle;
         public final View rule;
@@ -51,7 +50,6 @@ public final class GovernmentIdFaceRenderer {
 
         private FaceViews(@NonNull View root) {
             cardRoot = root.findViewById(R.id.government_id_card_root);
-            eyebrow = root.findViewById(R.id.government_id_eyebrow);
             title = root.findViewById(R.id.government_id_title);
             subtitle = root.findViewById(R.id.government_id_subtitle);
             rule = root.findViewById(R.id.government_id_rule);
@@ -91,16 +89,15 @@ public final class GovernmentIdFaceRenderer {
         GovernmentIDModel.FaceScheme scheme = GovernmentIDModel.faceScheme(typeName);
         // Avoid redundant background swaps while scrolling: framework caches
         // drawables but setBackgroundResource still triggers invalidate.
-        Object bgTag = f.cardRoot.getTag(com.akin.wallet.R.id.tag_face_bg);
+        Object bgTag = f.cardRoot.getTag(com.akin.wallet.R.id.tag_card_face_background);
         if (!(bgTag instanceof Integer) || ((Integer) bgTag) != scheme.backgroundRes) {
             f.cardRoot.setBackgroundResource(scheme.backgroundRes);
-            f.cardRoot.setTag(com.akin.wallet.R.id.tag_face_bg, scheme.backgroundRes);
+            f.cardRoot.setTag(com.akin.wallet.R.id.tag_card_face_background, scheme.backgroundRes);
         }
 
         // Primary number resolves through the spec so the face stays free of
         // per-type key branches.
         String number = GovernmentIDModel.displayNumber(spec, fields);
-        f.eyebrow.setTextColor(colorOf(f, scheme.subtitleColorRes));
         f.title.setText(title.toUpperCase(java.util.Locale.ROOT));
         f.title.setTextColor(colorOf(f, scheme.titleColorRes));
         f.title.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 12);
@@ -166,7 +163,7 @@ public final class GovernmentIdFaceRenderer {
     private static void applyFaceMetrics(@NonNull FaceViews f,
                                             @NonNull GovernmentIDModel.FaceScheme scheme) {
         // Colors are cheap but layout is not: run paddings/margins/sizes once.
-        boolean metricsDone = Boolean.TRUE.equals(f.cardRoot.getTag(com.akin.wallet.R.id.tag_face_metrics));
+        boolean metricsDone = Boolean.TRUE.equals(f.cardRoot.getTag(com.akin.wallet.R.id.tag_card_face_metrics));
         // Micro-label colors still refresh every bind (scheme-dependent).
         microLabelColor(f, f.holderLabel, scheme.numberLabelColorRes, metricsDone);
         microLabelColor(f, f.numberLabel, scheme.numberLabelColorRes, metricsDone);
@@ -224,7 +221,7 @@ public final class GovernmentIdFaceRenderer {
                 ((LinearLayout) photoRow).setGravity(android.view.Gravity.TOP);
             }
         }
-        f.cardRoot.setTag(com.akin.wallet.R.id.tag_face_metrics, Boolean.TRUE);
+        f.cardRoot.setTag(com.akin.wallet.R.id.tag_card_face_metrics, Boolean.TRUE);
     }
 
     /** Per-bind color refresh; one-time sizing/margins handled by caller. */

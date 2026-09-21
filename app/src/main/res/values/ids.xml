@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- View-tag key for the pending empty-state measure runnable. -->
-    <item name="tag_measure" type="id" />
+    <item name="tag_empty_state_measure" type="id" />
     <!-- View-tag key for the last applied network logo (icon + height). -->
-    <item name="tag_network" type="id" />
+    <item name="tag_network_logo" type="id" />
     <!-- View-tag keys for ID face: applied background + one-time metrics. -->
-    <item name="tag_face_bg" type="id" />
-    <item name="tag_face_metrics" type="id" />
+    <item name="tag_card_face_background" type="id" />
+    <item name="tag_card_face_metrics" type="id" />
     <!-- Programmatic toolbar item: Trash Select All (no menu XML). -->
-    <item name="action_select_all" type="id" />
+    <item name="trash_select_all_action" type="id" />
 </resources>
