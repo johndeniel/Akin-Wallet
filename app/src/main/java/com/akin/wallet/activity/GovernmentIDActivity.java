@@ -229,7 +229,8 @@ public class GovernmentIDActivity extends BaseVaultActivity {
                 new LinearLayoutManager(GovernmentIDActivity.this, LinearLayoutManager.HORIZONTAL, false);
         recyclerDesign.setLayoutManager(layoutManager);
         recyclerDesign.setAdapter(designAdapter);
-        recyclerDesign.setHasFixedSize(true);
+        // wrap_content height: the carousel can resize with its content, so fixed-size must stay off.
+        recyclerDesign.setHasFixedSize(false);
         recyclerDesign.setItemViewCacheSize(4);
         recyclerDesign.addItemDecoration(Ui.carouselGapDecoration(this));
         PagerSnapHelper snapHelper = new PagerSnapHelper();

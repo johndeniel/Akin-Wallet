@@ -1,10 +1,10 @@
 package com.akin.wallet.adapter;
 
 import android.view.LayoutInflater;
-import com.akin.wallet.R;
-import com.akin.wallet.model.SocialPlatformModel;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Filter;
+import android.widget.Filterable;
 import android.widget.ImageView;
 import android.widget.TextView;
 
@@ -12,17 +12,15 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.DiffUtil;
 import androidx.recyclerview.widget.RecyclerView;
 
-import android.widget.Filter;
-import android.widget.Filterable;
+import com.akin.wallet.R;
+import com.akin.wallet.model.SocialPlatformModel;
+import com.akin.wallet.util.Ui;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
-/**
- * Platform picker rows for the Social Account screen (icon + name + URL).
- * Tapping a row selects the platform.
- */
+/** Platform picker rows (icon + name + URL). Tap selects the platform. */
 public class SocialPlatformAdapter extends RecyclerView.Adapter<SocialPlatformAdapter.PlatformViewHolder> implements Filterable {
 
     public interface OnPlatformSelectedListener {
@@ -34,8 +32,6 @@ public class SocialPlatformAdapter extends RecyclerView.Adapter<SocialPlatformAd
     private final OnPlatformSelectedListener listener;
 
     public SocialPlatformAdapter(List<SocialPlatformModel.Option> platforms, OnPlatformSelectedListener listener) {
-        // Owned copy: filtering mutates the displayed list, which must never
-        // leak back into the caller's catalog.
         this.visiblePlatforms = platforms != null ? new ArrayList<>(platforms) : new ArrayList<>();
         this.allPlatforms = new ArrayList<>(this.visiblePlatforms);
         this.listener = listener;
@@ -45,7 +41,20 @@ public class SocialPlatformAdapter extends RecyclerView.Adapter<SocialPlatformAd
     @Override
     public PlatformViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_platform_row, parent, false);
-        return new PlatformViewHolder(view);
+        PlatformViewHolder holder = new PlatformViewHolder(view);
+        holder.action.setVisibility(View.GONE);
+        holder.itemView.setOnClickListener(v -> {
+            if (listener == null) {
+                return;
+            }
+            int pos = holder.getBindingAdapterPosition();
+            if (pos < 0 || pos >= visiblePlatforms.size()) {
+                return;
+            }
+            SocialPlatformModel.Option platform = visiblePlatforms.get(pos);
+            listener.onPlatformSelected(platform.getIconRes(), platform.getName(), platform.getUrl());
+        });
+        return holder;
     }
 
     @Override
@@ -54,12 +63,6 @@ public class SocialPlatformAdapter extends RecyclerView.Adapter<SocialPlatformAd
         holder.icon.setImageResource(platform.getIconRes());
         holder.name.setText(platform.getName());
         holder.url.setText(platform.getUrl());
-        holder.action.setVisibility(View.GONE);
-        holder.itemView.setOnClickListener(v -> {
-            if (listener != null) {
-                listener.onPlatformSelected(platform.getIconRes(), platform.getName(), platform.getUrl());
-            }
-        });
     }
 
     @Override
@@ -86,7 +89,12 @@ public class SocialPlatformAdapter extends RecyclerView.Adapter<SocialPlatformAd
             Object rawValues = results != null ? results.values : null;
             final List<SocialPlatformModel.Option> nextOptions =
                     rawValues instanceof List ? (List<SocialPlatformModel.Option>) rawValues : new ArrayList<>();
-            DiffUtil.DiffResult diff = platformDiff(nextOptions);
+            DiffUtil.DiffResult diff = Ui.calculateDiff(
+                    visiblePlatforms, nextOptions,
+                    (a, b) -> a.getName().equals(b.getName()),
+                    (a, b) -> a.getIconRes() == b.getIconRes()
+                            && a.getName().equals(b.getName())
+                            && a.getUrl().equals(b.getUrl()));
             visiblePlatforms.clear();
             visiblePlatforms.addAll(nextOptions);
             diff.dispatchUpdatesTo(SocialPlatformAdapter.this);
@@ -109,37 +117,8 @@ public class SocialPlatformAdapter extends RecyclerView.Adapter<SocialPlatformAd
     }
 
     private static boolean matchesPlatform(SocialPlatformModel.Option platform, String filterPattern) {
-        return platform.getName().toLowerCase(Locale.ROOT).contains(filterPattern)
-                || platform.getUrl().toLowerCase(Locale.ROOT).contains(filterPattern);
-    }
-
-    private DiffUtil.DiffResult platformDiff(final List<SocialPlatformModel.Option> nextOptions) {
-        return DiffUtil.calculateDiff(new DiffUtil.Callback() {
-                @Override
-                public int getOldListSize() {
-                    return visiblePlatforms.size();
-                }
-
-                @Override
-                public int getNewListSize() {
-                    return nextOptions.size();
-                }
-
-                @Override
-                public boolean areItemsTheSame(int oldPos, int newPos) {
-                    return visiblePlatforms.get(oldPos).getName()
-                            .equals(nextOptions.get(newPos).getName());
-                }
-
-                @Override
-                public boolean areContentsTheSame(int oldPos, int newPos) {
-                    SocialPlatformModel.Option oldOption = visiblePlatforms.get(oldPos);
-                    SocialPlatformModel.Option newOption = nextOptions.get(newPos);
-                    return oldOption.getIconRes() == newOption.getIconRes()
-                            && oldOption.getName().equals(newOption.getName())
-                            && oldOption.getUrl().equals(newOption.getUrl());
-                }
-            });
+        return Ui.matchesFilter(platform.getName(), filterPattern)
+                || Ui.matchesFilter(platform.getUrl(), filterPattern);
     }
 
     public static class PlatformViewHolder extends RecyclerView.ViewHolder {

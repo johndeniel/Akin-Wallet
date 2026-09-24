@@ -1,13 +1,11 @@
 package com.akin.wallet.adapter;
 
-import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
-import androidx.recyclerview.widget.DiffUtil;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.akin.wallet.R;
@@ -17,28 +15,30 @@ import com.akin.wallet.util.CardText;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
-/**
- * Bank Card carousel — the user's real bank cards with the authentic face
- * (background ramp, network logo, masked number). Tapping a card opens its
- * editor.
- */
+/** Bank card carousel. Tap opens the editor. */
 public class BankCardAdapter extends RecyclerView.Adapter<BankCardAdapter.CardViewHolder> {
 
-    /** Shared carousel page width (fraction of viewport). IDs use the same
-        constant so both carousels stay pixel-identical in size. */
-
-    /**
-     * Card face ramps, shared with the bank picker. Order doubles as the
-     * persisted design index — never reorder without a DB migration.
-     */
-    static final int[] BACKGROUNDS = {
+    /** Design index -> background. Order is persisted, never reorder. */
+    private static final int[] BACKGROUNDS = {
             R.drawable.bg_bank_card_blue,
             R.drawable.bg_bank_card_purple,
             R.drawable.bg_bank_card_green,
             R.drawable.bg_bank_card_orange,
             R.drawable.bg_bank_card_slate
     };
+
+    public static int designCount() {
+        return BACKGROUNDS.length;
+    }
+
+    public static int backgroundAt(int design) {
+        if (design < 0 || design >= BACKGROUNDS.length) {
+            return BACKGROUNDS[0];
+        }
+        return BACKGROUNDS[design];
+    }
 
     public interface OnCardClickListener {
         void onCardClick(BankCardModel item);
@@ -52,93 +52,24 @@ public class BankCardAdapter extends RecyclerView.Adapter<BankCardAdapter.CardVi
     }
 
     public void updateData(List<BankCardModel> newCards) {
-        // Drops null rows; a null would NPE inside areItemsTheSame.
-        List<BankCardModel> next = new ArrayList<>();
-        if (newCards != null) {
-            for (BankCardModel card : newCards) {
-                if (card != null) {
-                    next.add(card);
-                }
-            }
-        }
-        // Roll back on failed dispatch so adapter and RecyclerView stay
-        // in agreement (previously crashed the 2nd search).
+        List<BankCardModel> next = Ui.nonNullList(newCards);
         List<BankCardModel> old = new ArrayList<>(cards);
-        DiffUtil.DiffResult diff;
-        try {
-            diff = computeDiff(old, next);
-        } catch (RuntimeException e) {
-            return;
-        }
         cards.clear();
         cards.addAll(next);
-        try {
-            diff.dispatchUpdatesTo(this);
-        } catch (RuntimeException e) {
-            cards.clear();
-            cards.addAll(old);
-        }
-    }
-
-    private static DiffUtil.DiffResult computeDiff(List<BankCardModel> oldList,
-                                                   List<BankCardModel> next) {
-        return DiffUtil.calculateDiff(new DiffUtil.Callback() {
-            @Override
-            public int getOldListSize() {
-                return oldList.size();
-            }
-
-            @Override
-            public int getNewListSize() {
-                return next.size();
-            }
-
-            @Override
-            public boolean areItemsTheSame(int oldPos, int newPos) {
-                return oldList.get(oldPos).getId() == next.get(newPos).getId();
-            }
-
-            @Override
-            public boolean areContentsTheSame(int oldPos, int newPos) {
-                return oldList.get(oldPos).equals(next.get(newPos));
-            }
-        });
+        Ui.calculateDiff(old, next,
+                (a, b) -> a.getId() == b.getId(),
+                Object::equals).dispatchUpdatesTo(this);
     }
 
     @NonNull
     @Override
     public CardViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        View view = LayoutInflater.from(parent.getContext())
-                .inflate(R.layout.item_bank_card, parent, false);
-        // Slightly narrower than the viewport so the card reads smaller
-        // and the next card peeks in from the right.
-        ViewGroup.LayoutParams lp = view.getLayoutParams();
-        int parentWidth = parent.getMeasuredWidth();
-        if (parentWidth <= 0) {
-            // Pre-layout inflation: display width minus carousel padding, the
-            // same viewport the dashboard measures pages against.
-            parentWidth = parent.getResources().getDisplayMetrics().widthPixels
-                    - parent.getPaddingStart() - parent.getPaddingEnd();
-        }
-        if (lp != null && parentWidth > 0) {
-            lp.width = (int) (parentWidth * Ui.CAROUSEL_PAGE_RATIO);
-            view.setLayoutParams(lp);
-        }
-        return new CardViewHolder(view);
+        return new CardViewHolder(Ui.inflateCarouselPage(parent, R.layout.item_bank_card), listener);
     }
 
     @Override
     public void onBindViewHolder(@NonNull CardViewHolder holder, int position) {
-        // RecyclerView may bind a stale position while removals animate.
-        if (position < 0 || position >= cards.size()) {
-            return;
-        }
-        BankCardModel card = cards.get(position);
-        try {
-            holder.bind(card, listener);
-        } catch (RuntimeException e) {
-            // One bad row must never close the app.
-        }
+        holder.bind(cards.get(position));
     }
 
     @Override
@@ -154,9 +85,9 @@ public class BankCardAdapter extends RecyclerView.Adapter<BankCardAdapter.CardVi
         TextView number;
         TextView cardholder;
         TextView expiry;
-        private int boundDesign = -1;
+        private BankCardModel bound;
 
-        CardViewHolder(@NonNull View itemView) {
+        CardViewHolder(@NonNull View itemView, OnCardClickListener listener) {
             super(itemView);
             cardRoot = itemView.findViewById(R.id.bank_card_root);
             bank = itemView.findViewById(R.id.bank_card_preview_bank_name);
@@ -165,30 +96,28 @@ public class BankCardAdapter extends RecyclerView.Adapter<BankCardAdapter.CardVi
             number = itemView.findViewById(R.id.bank_card_preview_number);
             cardholder = itemView.findViewById(R.id.bank_card_preview_holder_name);
             expiry = itemView.findViewById(R.id.bank_card_preview_expiry);
-            BankCardDesignAdapter.applyCardOutline(cardRoot);
+            Ui.applyCardOutline(cardRoot);
+            itemView.setOnClickListener(v -> {
+                if (listener != null && bound != null) {
+                    listener.onCardClick(bound);
+                }
+            });
         }
 
-        void bind(BankCardModel card, OnCardClickListener listener) {
+        void bind(BankCardModel card) {
+            bound = card;
             int design = card.getDesign();
-            if (design < 0 || design >= BACKGROUNDS.length) {
+            if (design < 0 || design >= designCount()) {
                 design = 0;
             }
-            if (design != boundDesign) {
-                cardRoot.setBackgroundResource(BACKGROUNDS[design]);
-                boundDesign = design;
-            }
-            bank.setText(CardText.safe(card.getBankName(), "YOUR BANK").toUpperCase(java.util.Locale.ROOT));
-            cardholder.setText(CardText.safe(card.getHolderName(), "CARDHOLDER NAME").toUpperCase(java.util.Locale.ROOT));
+            cardRoot.setBackgroundResource(backgroundAt(design));
+            bank.setText(CardText.safe(card.getBankName(), "YOUR BANK").toUpperCase(Locale.ROOT));
+            cardholder.setText(CardText.safe(card.getHolderName(), "CARDHOLDER NAME").toUpperCase(Locale.ROOT));
             number.setText(itemView.getContext().getString(R.string.mask_card_number,
                     CardText.last4(card.getCardNumber())));
             expiry.setText(CardText.formatExpiry(card.getExpiry()));
             BankCardDesignAdapter.applyNetworkLogo(network, card.getCardNetwork());
-            type.setText(CardText.safe(card.getCardType(), "DEBIT").toUpperCase(java.util.Locale.ROOT));
-            itemView.setOnClickListener(v -> {
-                if (listener != null) {
-                    listener.onCardClick(card);
-                }
-            });
+            type.setText(CardText.safe(card.getCardType(), "DEBIT").toUpperCase(Locale.ROOT));
         }
     }
 }

@@ -381,8 +381,6 @@ public class SocialAccountActivity extends BaseVaultActivity {
             }
             linkSearchView.hide();
         });
-        // [+] icon on each row mirrors the row tap: both link the account.
-        linkSearchAdapter.setPickActionVisible(true);
         linkSearchAdapter.registerAdapterDataObserver(new RecyclerView.AdapterDataObserver() {
             @Override
             public void onChanged() {

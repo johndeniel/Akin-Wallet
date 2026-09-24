@@ -19,6 +19,8 @@ import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.recyclerview.widget.DiffUtil;
+import android.view.LayoutInflater;
 import com.akin.wallet.R;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
@@ -210,6 +212,97 @@ public final class Ui {
 
     /** Canonical carousel page ratio: viewport * 0.68 with peek. */
     public static final float CAROUSEL_PAGE_RATIO = 0.68f;
+
+    /** Inflate a carousel page sized to the viewport with a peek of the next card. */
+    public static View inflateCarouselPage(android.view.ViewGroup parent, int layoutRes) {
+        View view = LayoutInflater.from(parent.getContext()).inflate(layoutRes, parent, false);
+        ViewGroup.LayoutParams lp = view.getLayoutParams();
+        int parentWidth = parent.getMeasuredWidth();
+        if (parentWidth <= 0) {
+            parentWidth = parent.getResources().getDisplayMetrics().widthPixels
+                    - parent.getPaddingStart() - parent.getPaddingEnd();
+        }
+        if (lp != null && parentWidth > 0) {
+            lp.width = (int) (parentWidth * CAROUSEL_PAGE_RATIO);
+            view.setLayoutParams(lp);
+        }
+        return view;
+    }
+
+    private static final android.view.ViewOutlineProvider CARD_OUTLINE =
+            new android.view.ViewOutlineProvider() {
+                @Override
+                public void getOutline(View view, android.graphics.Outline outline) {
+                    float density = view.getResources().getDisplayMetrics().density;
+                    outline.setRoundRect(0, 0, view.getWidth(), view.getHeight(),
+                            16 * density);
+                }
+            };
+
+    /** Shared rounded-clip outline for every card face. */
+    public static void applyCardOutline(View cardRoot) {
+        if (cardRoot.getOutlineProvider() != CARD_OUTLINE) {
+            cardRoot.setOutlineProvider(CARD_OUTLINE);
+            cardRoot.setClipToOutline(true);
+        }
+    }
+
+    /** Item identity/content check for DiffUtil. */
+    public interface ItemSame<T> {
+        boolean same(T a, T b);
+    }
+
+    /** Diff of two lists with caller-supplied identity rules. */
+    public static <T> DiffUtil.DiffResult calculateDiff(java.util.List<T> oldList,
+                                                        java.util.List<T> newList,
+                                                        ItemSame<T> itemsSame,
+                                                        ItemSame<T> contentsSame) {
+        return DiffUtil.calculateDiff(new DiffUtil.Callback() {
+            @Override
+            public int getOldListSize() {
+                return oldList.size();
+            }
+
+            @Override
+            public int getNewListSize() {
+                return newList.size();
+            }
+
+            @Override
+            public boolean areItemsTheSame(int oldPos, int newPos) {
+                return itemsSame.same(oldList.get(oldPos), newList.get(newPos));
+            }
+
+            @Override
+            public boolean areContentsTheSame(int oldPos, int newPos) {
+                return contentsSame.same(oldList.get(oldPos), newList.get(newPos));
+            }
+        });
+    }
+
+    /** Copy dropping null rows. */
+    public static <T> java.util.List<T> nonNullList(java.util.List<T> input) {
+        java.util.List<T> out = new java.util.ArrayList<>();
+        if (input != null) {
+            for (T item : input) {
+                if (item != null) {
+                    out.add(item);
+                }
+            }
+        }
+        return out;
+    }
+
+    /** Case-insensitive contains after trim. Null-safe on both sides. */
+    public static boolean matchesFilter(String value, String pattern) {
+        if (pattern == null || pattern.isEmpty()) {
+            return true;
+        }
+        if (value == null) {
+            return false;
+        }
+        return value.toLowerCase(java.util.Locale.ROOT).contains(pattern);
+    }
 
     /**
      * TextWatcher with empty defaults so call sites override only the phase

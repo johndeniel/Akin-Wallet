@@ -256,7 +256,8 @@ public class DashboardActivity extends BaseVaultActivity {
                 new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
         searchGovernmentIdList.setAdapter(searchIdAdapter);
         searchGovernmentIdList.addItemDecoration(sharedGap);
-        searchGovernmentIdList.setHasFixedSize(true);
+        // wrap_content height: the list can resize with its content, so fixed-size must stay off.
+        searchGovernmentIdList.setHasFixedSize(false);
         searchGovernmentIdList.setItemViewCacheSize(4);
         searchHeaderIds = findViewById(R.id.dashboard_search_government_id_header);
 
@@ -266,7 +267,8 @@ public class DashboardActivity extends BaseVaultActivity {
                 new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
         searchBankCardList.setAdapter(searchCardAdapter);
         searchBankCardList.addItemDecoration(sharedGap);
-        searchBankCardList.setHasFixedSize(true);
+        // wrap_content height: the list can resize with its content, so fixed-size must stay off.
+        searchBankCardList.setHasFixedSize(false);
         searchBankCardList.setItemViewCacheSize(4);
         searchHeaderCards = findViewById(R.id.dashboard_search_bank_card_header);
 
@@ -609,7 +611,8 @@ public class DashboardActivity extends BaseVaultActivity {
                 new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
         bankCardCarousel.setAdapter(cardAdapter);
         bankCardCarousel.addItemDecoration(sharedGap);
-        bankCardCarousel.setHasFixedSize(true);
+        // wrap_content height: the carousel can resize with its content, so fixed-size must stay off.
+        bankCardCarousel.setHasFixedSize(false);
         bankCardCarousel.setItemViewCacheSize(4);
         new PagerSnapHelper().attachToRecyclerView(bankCardCarousel);
 
@@ -687,7 +690,8 @@ public class DashboardActivity extends BaseVaultActivity {
                 new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
         governmentIdCarousel.setAdapter(idAdapter);
         governmentIdCarousel.addItemDecoration(sharedGap);
-        governmentIdCarousel.setHasFixedSize(true);
+        // wrap_content height: the carousel can resize with its content, so fixed-size must stay off.
+        governmentIdCarousel.setHasFixedSize(false);
         governmentIdCarousel.setItemViewCacheSize(4);
         new PagerSnapHelper().attachToRecyclerView(governmentIdCarousel);
 

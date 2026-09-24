@@ -293,7 +293,8 @@ public class BankCardActivity extends BaseVaultActivity {
                 this, LinearLayoutManager.HORIZONTAL, false);
         designCarousel.setLayoutManager(designLayoutManager);
         designCarousel.setAdapter(designAdapter);
-        designCarousel.setHasFixedSize(true);
+        // wrap_content height: the carousel can resize with its content, so fixed-size must stay off.
+        designCarousel.setHasFixedSize(false);
         designCarousel.setItemViewCacheSize(4);
 
         designCarousel.addItemDecoration(Ui.carouselGapDecoration(this));

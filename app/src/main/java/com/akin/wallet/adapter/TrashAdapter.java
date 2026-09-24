@@ -17,20 +17,16 @@ import com.akin.wallet.model.SocialAccountModel;
 import com.akin.wallet.model.GovernmentIDModel;
 import com.akin.wallet.model.SocialPlatformModel;
 import com.akin.wallet.util.CardText;
+import com.akin.wallet.util.Ui;
 import com.google.android.material.card.MaterialCardView;
 
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
-/**
- * Trash rows as one uniform set of selectable tiles (centered icon well +
- * title + masked hint, paired two-per-row). No real card faces or sensitive
- * values are shown. Tapping a tile toggles its selection (check badge +
- * blue stroke); headers never select. The host reads
- * {@link #selectedEntries()} for bulk restore / delete.
- */
+/** Trash tiles with multi-select. Headers never select. */
 public class TrashAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
     public static final int TYPE_HEADER = 0;
@@ -78,10 +74,6 @@ public class TrashAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
             return new Entry(KIND_SOCIAL, false, null, 0, null, null, item);
         }
 
-        public boolean isSelectable() {
-            return !header;
-        }
-
         @Override
         public boolean equals(Object o) {
             if (this == o) {
@@ -96,15 +88,15 @@ public class TrashAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
             }
             if (header) {
                 return headerCount == that.headerCount
-                        && java.util.Objects.equals(headerTitle, that.headerTitle);
+                        && Objects.equals(headerTitle, that.headerTitle);
             }
             switch (kind) {
                 case KIND_ID:
-                    return java.util.Objects.equals(idCard, that.idCard);
+                    return Objects.equals(idCard, that.idCard);
                 case KIND_CARD:
-                    return java.util.Objects.equals(bankCard, that.bankCard);
+                    return Objects.equals(bankCard, that.bankCard);
                 case KIND_SOCIAL:
-                    return java.util.Objects.equals(socialAccount, that.socialAccount);
+                    return Objects.equals(socialAccount, that.socialAccount);
                 default:
                     return false;
             }
@@ -113,10 +105,10 @@ public class TrashAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
         @Override
         public int hashCode() {
             if (header) {
-                return java.util.Objects.hash(kind, headerTitle, headerCount);
+                return Objects.hash(kind, headerTitle, headerCount);
             }
             Object item = kind == KIND_ID ? idCard : kind == KIND_CARD ? bankCard : socialAccount;
-            return java.util.Objects.hash(kind, item);
+            return Objects.hash(kind, item);
         }
 
         /** Stable selection key across reloads (kind + row id). */
@@ -132,7 +124,7 @@ public class TrashAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
                 case KIND_SOCIAL:
                     return "social:" + (socialAccount != null ? socialAccount.getId() : -1);
                 default:
-                    return "header:" + headerTitle;
+                    return "unknown";
             }
         }
     }
@@ -151,27 +143,8 @@ public class TrashAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
 
     public void updateData(List<Entry> newEntries) {
         List<Entry> next = newEntries != null ? new ArrayList<>(newEntries) : new ArrayList<>();
-        DiffUtil.DiffResult diff = DiffUtil.calculateDiff(new DiffUtil.Callback() {
-            @Override
-            public int getOldListSize() {
-                return entries.size();
-            }
-
-            @Override
-            public int getNewListSize() {
-                return next.size();
-            }
-
-            @Override
-            public boolean areItemsTheSame(int oldPos, int newPos) {
-                return entries.get(oldPos).key().equals(next.get(newPos).key());
-            }
-
-            @Override
-            public boolean areContentsTheSame(int oldPos, int newPos) {
-                return entries.get(oldPos).equals(next.get(newPos));
-            }
-        });
+        DiffUtil.DiffResult diff = Ui.calculateDiff(entries, next,
+                (a, b) -> a.key().equals(b.key()), Object::equals);
         entries.clear();
         entries.addAll(next);
         if (!selectedKeys.isEmpty()) {
@@ -209,7 +182,7 @@ public class TrashAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
     public List<Entry> selectedEntries() {
         List<Entry> selected = new ArrayList<>();
         for (Entry entry : entries) {
-            if (entry.isSelectable() && selectedKeys.contains(entry.key())) {
+            if (!entry.header && selectedKeys.contains(entry.key())) {
                 selected.add(entry);
             }
         }
@@ -223,7 +196,7 @@ public class TrashAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
     public int getSelectableCount() {
         int count = 0;
         for (Entry entry : entries) {
-            if (entry.isSelectable()) {
+            if (!entry.header) {
                 count++;
             }
         }
@@ -235,32 +208,29 @@ public class TrashAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
             return;
         }
         selectedKeys.clear();
-        notifySelectableChanged();
+        if (!entries.isEmpty()) {
+            notifyItemRangeChanged(0, entries.size());
+        }
         emitSelection();
     }
 
     public void selectAll() {
+        if (entries.isEmpty()) {
+            return;
+        }
         for (Entry entry : entries) {
-            if (entry.isSelectable()) {
+            if (!entry.header) {
                 selectedKeys.add(entry.key());
             }
         }
-        notifySelectableChanged();
+        notifyItemRangeChanged(0, entries.size());
         emitSelection();
-    }
-
-    private void notifySelectableChanged() {
-        for (int position = 0; position < entries.size(); position++) {
-            if (entries.get(position).isSelectable()) {
-                notifyItemChanged(position);
-            }
-        }
     }
 
     private Set<String> selectableKeys() {
         Set<String> keys = new HashSet<>();
         for (Entry entry : entries) {
-            if (entry.isSelectable()) {
+            if (!entry.header) {
                 keys.add(entry.key());
             }
         }
@@ -275,9 +245,6 @@ public class TrashAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
 
     @Override
     public int getItemViewType(int position) {
-        if (position < 0 || position >= entries.size()) {
-            return TYPE_HEADER;
-        }
         return entries.get(position).header ? TYPE_HEADER : TYPE_TILE;
     }
 
@@ -288,7 +255,9 @@ public class TrashAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
         if (viewType == TYPE_HEADER) {
             return new HeaderHolder(inflater.inflate(R.layout.item_trash_header, parent, false));
         } else {
-            return new TileHolder(inflater.inflate(R.layout.item_trash_tile, parent, false));
+            TileHolder tile = new TileHolder(inflater.inflate(R.layout.item_trash_tile, parent, false));
+            tile.card.setOnClickListener(v -> toggleSelection(tile));
+            return tile;
         }
     }
 
@@ -313,7 +282,7 @@ public class TrashAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
             bindIdCard(tile, entry.idCard);
         } else if (entry.kind == KIND_CARD && entry.bankCard != null) {
             bindBankCard(tile, entry.bankCard);
-        } else if (entry.socialAccount != null) {
+        } else if (entry.kind == KIND_SOCIAL && entry.socialAccount != null) {
             bindSocialAccount(tile, entry.socialAccount);
         }
         applySelection(tile, entry);
@@ -322,15 +291,13 @@ public class TrashAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
     private static void bindIdCard(TileHolder tile, GovernmentIDModel idCard) {
         Context context = tile.itemView.getContext();
         tile.icon.setImageResource(R.drawable.ic_person);
-        String rawType = idCard.getIdType().trim();
-        tile.title.setText(rawType.isEmpty()
-                ? context.getString(R.string.trash_section_ids) : rawType);
+        String raw = idCard.getIdType().trim();
+        tile.title.setText(raw.isEmpty()
+                ? context.getString(R.string.trash_section_ids) : raw);
         tile.sub.setText(GovernmentIDModel.displayNumber(faceSpec(idCard), idCard.getFields()));
     }
 
     private static GovernmentIDModel.IdType faceSpec(GovernmentIDModel idCard) {
-        // Unknown types render through the generic face, never masquerading
-        // as another document.
         return GovernmentIDModel.isKnownType(idCard.getIdType())
                 ? GovernmentIDModel.forName(idCard.getIdType())
                 : GovernmentIDModel.genericType(idCard.getIdType(), idCard.getFields());
@@ -346,12 +313,9 @@ public class TrashAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
     private static void bindSocialAccount(TileHolder tile, SocialAccountModel socialAccount) {
         Context context = tile.itemView.getContext();
         String fallback = context.getString(R.string.label_social_account);
-        String platform = socialAccount.getPlatform() != null
-                && !socialAccount.getPlatform().trim().isEmpty()
-                ? socialAccount.getPlatform().trim() : fallback;
+        tile.title.setText(CardText.safe(socialAccount.getPlatform(), fallback));
         String username = socialAccount.getUsername() != null
                 ? socialAccount.getUsername().trim() : "";
-        tile.title.setText(platform);
         tile.sub.setText(username.isEmpty() ? fallback : username);
         SocialPlatformModel.bindIcon(tile.icon, socialAccount.getPlatform(),
                 socialAccount.getIconRes());
@@ -364,28 +328,24 @@ public class TrashAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
         androidx.core.view.ViewCompat.setStateDescription(card, selected
                 ? card.getContext().getString(R.string.state_selected) : null);
         float density = card.getResources().getDisplayMetrics().density;
-        if (selected) {
-            card.setStrokeColor(card.getContext().getColor(R.color.brand_blue));
-            card.setStrokeWidth(Math.round(2 * density));
-        } else {
-            card.setStrokeColor(card.getContext().getColor(R.color.dashboard_surface_border));
-            card.setStrokeWidth(Math.round(1 * density));
+        card.setStrokeColor(card.getContext().getColor(selected
+                ? R.color.brand_blue : R.color.dashboard_surface_border));
+        card.setStrokeWidth(Math.round((selected ? 2 : 1) * density));
+    }
+
+    private void toggleSelection(TileHolder tile) {
+        int clicked = tile.getBindingAdapterPosition();
+        if (clicked < 0 || clicked >= entries.size()) {
+            return;
         }
-        card.setOnClickListener(v -> {
-            // Bind-time positions go stale after reloads; resolve at click time.
-            int clicked = tile.getBindingAdapterPosition();
-            if (clicked < 0 || clicked >= entries.size()) {
-                return;
-            }
-            String key = entries.get(clicked).key();
-            if (selectedKeys.contains(key)) {
-                selectedKeys.remove(key);
-            } else {
-                selectedKeys.add(key);
-            }
-            notifyItemChanged(clicked);
-            emitSelection();
-        });
+        String key = entries.get(clicked).key();
+        if (selectedKeys.contains(key)) {
+            selectedKeys.remove(key);
+        } else {
+            selectedKeys.add(key);
+        }
+        notifyItemChanged(clicked);
+        emitSelection();
     }
 
     @Override
@@ -394,8 +354,8 @@ public class TrashAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
     }
 
     private static String cardTitle(Context context, BankCardModel card) {
-        String bank = card.getBankName() != null ? card.getBankName().trim() : "";
-        String type = card.getCardType() != null ? card.getCardType().trim() : "";
+        String bank = CardText.safe(card.getBankName(), "");
+        String type = CardText.safe(card.getCardType(), "");
         if (!bank.isEmpty() && !type.isEmpty()) {
             return bank + " " + type;
         }

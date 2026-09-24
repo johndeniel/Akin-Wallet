@@ -61,7 +61,7 @@
             android:alpha="0.6"
             android:contentDescription="@null"
             android:src="@drawable/ic_chevron_right"
-            android:tint="@color/dashboard_muted" />
+            app:tint="@color/dashboard_muted" />
 
     </LinearLayout>
 

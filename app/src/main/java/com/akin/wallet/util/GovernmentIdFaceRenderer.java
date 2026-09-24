@@ -10,7 +10,6 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 
 import com.akin.wallet.R;
-import com.akin.wallet.adapter.BankCardDesignAdapter;
 import com.akin.wallet.model.GovernmentIDModel;
 
 import java.util.Map;
@@ -85,7 +84,7 @@ public final class GovernmentIdFaceRenderer {
     public static void render(@NonNull FaceViews f, @NonNull GovernmentIDModel.IdType spec,
                               @NonNull String typeName, @NonNull String title,
                               @NonNull Map<String, String> fields) {
-        BankCardDesignAdapter.applyCardOutline(f.cardRoot);
+        Ui.applyCardOutline(f.cardRoot);
         GovernmentIDModel.FaceScheme scheme = GovernmentIDModel.faceScheme(typeName);
         // Avoid redundant background swaps while scrolling: framework caches
         // drawables but setBackgroundResource still triggers invalidate.
