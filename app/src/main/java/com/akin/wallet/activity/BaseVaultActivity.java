@@ -21,36 +21,21 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Shared vault-screen base. Owns what every screen repeated:
- * system-bar paint (plus re-paint on focus), back-toolbar wiring, session
- * re-lock gating, return-screen messages, one load-generation counter, owned
- * dialogs, and the vault I/O shortcut.
- *
- * <p>Subclasses call {@link #applyChrome()} once after {@code setContentView}.
- * Auth-exempt screens (none currently — {@code LockActivity} stays outside
- * this base precisely to avoid re-locking itself) would override
- * {@link #requiresAuth()}.
+ * Shared base for vault screens: chrome, re-lock gate, messages,
+ * load generation guard, owned dialogs, vault I/O.
  */
 public abstract class BaseVaultActivity extends AppCompatActivity {
 
     private final List<AlertDialog> ownedDialogs = new ArrayList<>();
     private int loadGeneration;
 
-    /**
-     * Session re-lock: backing out of verify means "do not enter", so the
-     * screen closes instead of sitting unlocked behind it.
-     */
+    /** Backing out of verify closes the screen instead of leaving it unlocked. */
     protected final ActivityResultLauncher<Intent> verifyLauncher = registerForActivityResult(
             new ActivityResultContracts.StartActivityForResult(), result -> {
                 if (result.getResultCode() != RESULT_OK) {
                     finish();
                 }
             });
-
-    /** False only for auth-exempt screens. All vault screens require unlock. */
-    protected boolean requiresAuth() {
-        return true;
-    }
 
     protected AkinWallet app() {
         return (AkinWallet) getApplication();
@@ -77,14 +62,31 @@ public abstract class BaseVaultActivity extends AppCompatActivity {
         return generation == loadGeneration;
     }
 
-    /**
-     * Paints system bars and wires the back toolbar when the layout has one.
-     * Call once after {@code setContentView}. Each form uses its own
-     * descriptive toolbar id (bank_card_toolbar, government_id_toolbar,
-     * social_account_toolbar, trash_toolbar, settings_toolbar,
-     * policy_toolbar); layouts without a toolbar (dashboard, lock) just get
-     * the bars.
-     */
+    protected boolean isAlive() {
+        return !isFinishing() && !isDestroyed();
+    }
+
+    protected boolean isAlive(int generation) {
+        return isCurrentGeneration(generation) && isAlive();
+    }
+
+    protected void runIfAlive(int generation, Runnable action) {
+        runOnUiThread(() -> {
+            if (isAlive(generation)) {
+                action.run();
+            }
+        });
+    }
+
+    protected void runIfAlive(Runnable action) {
+        runOnUiThread(() -> {
+            if (isAlive()) {
+                action.run();
+            }
+        });
+    }
+
+    /** Paints system bars and wires the back toolbar when the layout has one. */
     protected void applyChrome() {
         Ui.applySystemBars(this);
         MaterialToolbar toolbar = findToolbar();
@@ -94,7 +96,7 @@ public abstract class BaseVaultActivity extends AppCompatActivity {
         }
     }
 
-    /** Resolves whichever per-screen toolbar the current layout owns, or null. */
+    /** Resolves the per-screen toolbar owned by the current layout, or null. */
     private MaterialToolbar findToolbar() {
         int[] toolbarIds = {
                 R.id.bank_card_toolbar,
@@ -113,7 +115,7 @@ public abstract class BaseVaultActivity extends AppCompatActivity {
         return null;
     }
 
-    /** Back/close action. Trash overrides to clear selection first. */
+    /** Back action. Trash overrides to clear selection first. */
     protected void onNavigateBack() {
         finish();
     }
@@ -121,9 +123,7 @@ public abstract class BaseVaultActivity extends AppCompatActivity {
     @Override
     protected void onStart() {
         super.onStart();
-        if (requiresAuth()) {
-            app().requireUnlock(this, verifyLauncher);
-        }
+        app().requireUnlock(this, verifyLauncher);
     }
 
     @Override
@@ -149,19 +149,13 @@ public abstract class BaseVaultActivity extends AppCompatActivity {
         super.onDestroy();
     }
 
-    /**
-     * Tracks a shown dialog so rotation/finish cannot leak its window.
-     */
+    /** Tracks a shown dialog so rotation/finish cannot leak its window. */
     protected void trackDialog(AlertDialog dialog) {
         if (dialog != null) {
             ownedDialogs.add(dialog);
         }
     }
 
-    /**
-     * "Delete <thing>?" confirm, tracked for auto-dismiss. Runs {@code onDelete} on Delete.
-     * Returns the dialog so callers can retain intent across rotation.
-     */
     protected AlertDialog confirmDeleteToTrash(String title, String message, Runnable onDelete) {
         AlertDialog dialog = Ui.confirmDelete(this, title, message, onDelete);
         trackDialog(dialog);
@@ -169,26 +163,23 @@ public abstract class BaseVaultActivity extends AppCompatActivity {
     }
 
     protected void showMessage(@StringRes int messageRes) {
-        View content = findViewById(android.R.id.content);
-        if (content != null && !isFinishing() && !isDestroyed()) {
-            com.google.android.material.snackbar.Snackbar bar =
-                    Snackbar.make(content, messageRes, Snackbar.LENGTH_SHORT);
-            bar.getView().setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
-            bar.show();
-        }
+        showSnackbar(getString(messageRes));
+    }
+
+    protected void showMessage(@StringRes int messageRes, Object... args) {
+        showSnackbar(getString(messageRes, args));
     }
 
     protected void showMessage(String message) {
+        showSnackbar(message);
+    }
+
+    private void showSnackbar(CharSequence message) {
         View content = findViewById(android.R.id.content);
-        if (content != null && !isFinishing() && !isDestroyed()) {
-            com.google.android.material.snackbar.Snackbar bar =
-                    Snackbar.make(content, message, Snackbar.LENGTH_SHORT);
+        if (content != null && isAlive()) {
+            Snackbar bar = Snackbar.make(content, message, Snackbar.LENGTH_SHORT);
             bar.getView().setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
             bar.show();
         }
-    }
-
-    protected void showError(@StringRes int messageRes) {
-        showMessage(messageRes);
     }
 }

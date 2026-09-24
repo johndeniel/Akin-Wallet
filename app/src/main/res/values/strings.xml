@@ -24,6 +24,14 @@
     <string name="msg_account_saved">Account Saved</string>
     <string name="msg_card_saved">Card Saved</string>
     <string name="msg_id_saved">ID Saved</string>
+    <string name="msg_id_type_fixed">ID type is fixed for entries from a newer version</string>
+    <string name="msg_all_linked">All accounts already linked</string>
+    <string name="confirm_delete_card_title">Delete Card</string>
+    <string name="confirm_delete_card_message">Are you sure you want to delete this card?</string>
+    <string name="confirm_delete_id_title">Delete ID</string>
+    <string name="confirm_delete_id_message">Are you sure you want to delete this %1$s?</string>
+    <string name="confirm_delete_account_title">Delete Account</string>
+    <string name="confirm_delete_account_message">Are you sure you want to delete this %1$s account?</string>
     <!-- Shared actions (also reused as content descriptions) -->
     <string name="action_save">Save</string>
     <string name="action_update">Update</string>

@@ -1,5 +1,6 @@
 package com.akin.wallet.activity;
 
+import android.animation.ObjectAnimator;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
@@ -16,22 +17,15 @@ import androidx.core.content.ContextCompat;
 import com.akin.wallet.AkinWallet;
 import com.akin.wallet.R;
 import com.akin.wallet.security.AppLockManager;
+import com.akin.wallet.security.DbKeyManager;
 import com.akin.wallet.util.Ui;
 
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
 /**
- * App lock — the launcher screen. First run walks 4-digit PIN setup
- * (create + confirm); afterward it is PIN entry or, only when the user
- * opted in from Settings, fingerprint unlock. Result taps reuse the same
- * unlock-success routing per launch mode:
- *
- * <ul>
- *   <li>{@link #MODE_START} (launcher): success opens DashboardActivity.</li>
- *   <li>{@link #MODE_VERIFY}: success just returns RESULT_OK.</li>
- *   <li>{@link #MODE_CHANGE}: verifies the current PIN, then sets a new one.</li>
- * </ul>
- *
- * <p>Secrets policy: password / PIN / CVV are never searchable here — this
- * screen only ever handles the 4-digit app PIN, verified as a salted hash.
+ * App lock — launcher screen. First run walks PIN setup (create + confirm);
+ * afterward PIN entry or fingerprint (only when opted in).
  */
 public class LockActivity extends AppCompatActivity {
 
@@ -51,16 +45,12 @@ public class LockActivity extends AppCompatActivity {
 
     private static final String KEY_MODE = "lock_mode";
     private static final String KEY_SCREEN = "lock_screen";
-    // Secrets never touch savedInstanceState: rotation clears in-progress
-    // digits by design (user retypes). Persisting PINs in a Bundle risks
-    // parceling them to disk via system state.
+    // Secrets never touch savedInstanceState: rotation clears in-progress digits.
 
     /** Delayed biometric ask / entry submit, removable on pause/destroy. */
     private final Runnable autoBiometric = this::startBiometric;
     private final Runnable pendingEntry = this::processEntry;
-    /** PBKDF2 (120k) off the UI thread: PIN tap feedback never janks. */
-    private final java.util.concurrent.ExecutorService pinIo =
-            java.util.concurrent.Executors.newSingleThreadExecutor();
+    private final ExecutorService pinIo = Executors.newSingleThreadExecutor();
 
     private TextView errorLabel;
     private TextView stepLabel;
@@ -74,18 +64,15 @@ public class LockActivity extends AppCompatActivity {
     private boolean paused;
 
     private final Handler lockoutHandler = new Handler(Looper.getMainLooper());
-    private final Runnable lockoutTicker = new Runnable() {
-        @Override
-        public void run() {
-            if (isFinishing()) {
-                return;
-            }
-            if (AppLockManager.isLockedOut(LockActivity.this)) {
-                showLockout();
-                lockoutHandler.postDelayed(this, 1000);
-            } else {
-                clearError();
-            }
+    private final Runnable lockoutTicker = () -> {
+        if (!isAlive()) {
+            return;
+        }
+        if (AppLockManager.isLockedOut(LockActivity.this)) {
+            showLockout();
+            lockoutHandler.postDelayed(this.lockoutTicker, 1000);
+        } else {
+            clearError();
         }
     };
 
@@ -111,8 +98,6 @@ public class LockActivity extends AppCompatActivity {
         }
 
         wireKeypad();
-        // Keypad fingerprint key — same design, just asks the system
-        // prompt. The keypad never switches screens.
         if (biometricKey != null) {
             biometricKey.setOnClickListener(v -> startBiometric());
         }
@@ -120,18 +105,13 @@ public class LockActivity extends AppCompatActivity {
         biometricPrompt = new BiometricPrompt(this,
                 ContextCompat.getMainExecutor(this), biometricCallback());
 
-        // Vault warm-up (pre-auth half): connection + catalog only, never rows.
-        // Runs while the keypad inflates so the post-auth preload below starts
-        // from an open connection. AkinWallet.onCreate already kicked this;
-        // repeating here is intentional for process-warm re-entry and collapses
-        // inside the cache when already warmed.
+        // Pre-auth warm-up: connection + catalog only, never rows.
         if (AppLockManager.isPinSet(this)) {
             app().warmPreAuth();
         }
 
         if (savedInstanceState != null) {
-            // Rotation: resume screen/mode only — typed digits are dropped
-            // deliberately (never parcel secrets).
+            // Rotation resumes screen/mode only; typed digits are dropped.
             String savedMode = savedInstanceState.getString(KEY_MODE, null);
             if (savedMode != null) {
                 mode = savedMode;
@@ -163,20 +143,15 @@ public class LockActivity extends AppCompatActivity {
         }
     }
 
-    /** Re-renders the current screen after a rotation (no state reset). */
+    /** Re-renders the current screen after a rotation. Digits stay cleared. */
     private void restoreScreen() {
-        // The show* calls reset entry/firstPin by design — snapshot first,
-        // re-render, then put the in-progress typing back.
-        String savedDigits = entry.toString();
-        String savedFirst = firstPin;
         switch (screen) {
             case CREATE:
                 showCreateScreen();
                 break;
             case CONFIRM:
+                // First PIN is a secret and was never saved: restart setup.
                 showCreateScreen();
-                firstPin = savedFirst;
-                showConfirmScreen();
                 break;
             case VERIFY:
                 showVerifyScreen();
@@ -186,12 +161,6 @@ public class LockActivity extends AppCompatActivity {
                 showPinScreen();
                 break;
         }
-        entry.setLength(0);
-        if (savedDigits.length() <= AppLockManager.PIN_LENGTH) {
-            entry.append(savedDigits);
-        }
-        submitting = false;
-        renderDots();
     }
 
     @Override
@@ -221,16 +190,8 @@ public class LockActivity extends AppCompatActivity {
     protected void onPause() {
         paused = true;
         cancelBiometric();
-        if (keypadLayout != null) {
-            keypadLayout.removeCallbacks(autoBiometric);
-        }
-        if (pinIndicatorRow != null) {
-            pinIndicatorRow.removeCallbacks(pendingEntry);
-        }
-        // RC2: a 4-digit entry whose delayed submit was cancelled (or whose
-        // background verify was dropped) must not stay buffered — resumed
-        // taps would hit `len>=4 -> return` with filled dots, looking like a
-        // rejected PIN. Clear so the user retypes from a clean state.
+        cancelPending();
+        // A cancelled delayed submit must not stay buffered.
         entry.setLength(0);
         submitting = false;
         lockoutHandler.removeCallbacks(lockoutTicker);
@@ -242,73 +203,72 @@ public class LockActivity extends AppCompatActivity {
 
     @Override
     protected void onDestroy() {
+        cancelPending();
+        lockoutHandler.removeCallbacks(lockoutTicker);
+        pinIo.shutdownNow();
+        super.onDestroy();
+    }
+
+    private void cancelPending() {
         if (keypadLayout != null) {
             keypadLayout.removeCallbacks(autoBiometric);
         }
         if (pinIndicatorRow != null) {
             pinIndicatorRow.removeCallbacks(pendingEntry);
         }
-        lockoutHandler.removeCallbacks(lockoutTicker);
-        pinIo.shutdownNow();
-        super.onDestroy();
     }
 
     // ------------------------------------------------------------------
     // Screens
     // ------------------------------------------------------------------
 
+    private void resetEntry() {
+        entry.setLength(0);
+        submitting = false;
+        showKeypadMode();
+        renderDots();
+    }
+
     private void showCreateScreen() {
         screen = Screen.CREATE;
         firstPin = null;
-        entry.setLength(0);
-        submitting = false;
+        resetEntry();
         if (MODE_CHANGE.equals(mode)) {
             setStepText(getString(R.string.lock_step_new_pin));
         } else {
             setStepText(getString(R.string.lock_sub_create));
         }
-        showKeypadMode();
         clearError();
         setBioKeyVisible(false);
-        renderDots();
     }
 
     private void showConfirmScreen() {
         screen = Screen.CONFIRM;
-        entry.setLength(0);
-        submitting = false;
+        resetEntry();
         if (MODE_CHANGE.equals(mode)) {
             setStepText(getString(R.string.lock_step_confirm_pin));
         } else {
             setStepText(getString(R.string.lock_sub_confirm));
         }
-        showKeypadMode();
         setBioKeyVisible(false);
-        renderDots();
     }
 
     /** Change-PIN step 1: prove the current PIN before setting a new one. */
     private void showVerifyScreen() {
         screen = Screen.VERIFY;
-        entry.setLength(0);
-        submitting = false;
+        resetEntry();
         setStepText(getString(R.string.lock_step_old_pin));
-        showKeypadMode();
         clearError();
         setBioKeyVisible(false);
-        renderDots();
     }
 
     private void showPinScreen() {
         screen = Screen.PIN;
-        entry.setLength(0);
-        submitting = false;
+        resetEntry();
         cancelBiometric();
         resetTagline();
-        showKeypadMode();
         clearError();
         setBioKeyVisible(AppLockManager.canUseBiometric(this) && !MODE_CHANGE.equals(mode));
-        renderDots();
         if (AppLockManager.isLockedOut(this)) {
             showLockout();
         }
@@ -319,8 +279,7 @@ public class LockActivity extends AppCompatActivity {
         pinIndicatorRow.setVisibility(View.VISIBLE);
     }
 
-    /** Keypad biometric key left of 0 — INVISIBLE (not GONE) to keep 0 centered.
-     * Invisible also drops focus + TalkBack so readers never trap on a hidden key. */
+    /** Keypad biometric key left of 0 — INVISIBLE (not GONE) to keep 0 centered. */
     private void setBioKeyVisible(boolean visible) {
         if (biometricKey != null) {
             biometricKey.setVisibility(visible ? View.VISIBLE : View.INVISIBLE);
@@ -393,10 +352,7 @@ public class LockActivity extends AppCompatActivity {
     }
 
     private void processEntry() {
-        // Dropped when the screen went away mid-delay (back/rotate): clear
-        // the buffered digits (RC2) so resume never sits on 4 filled dots
-        // that swallow taps; the user simply retypes.
-        if (isFinishing() || paused) {
+        if (!isAlive() || paused) {
             entry.setLength(0);
             submitting = false;
             return;
@@ -406,7 +362,6 @@ public class LockActivity extends AppCompatActivity {
         final Screen current = screen;
         final String capturedFirst = firstPin;
         if (current == Screen.CREATE) {
-            // No crypto: just advance.
             firstPin = pin;
             showConfirmScreen();
             submitting = false;
@@ -420,11 +375,7 @@ public class LockActivity extends AppCompatActivity {
                     try {
                         AppLockManager.setPin(LockActivity.this, pin);
                     } catch (RuntimeException e) {
-                        runOnUiThread(() -> {
-                            if (isFinishing() || paused) {
-                                submitting = false;
-                                return;
-                            }
+                        runOnUiAlive(() -> {
                             firstPin = null;
                             showCreateScreen();
                             showError(getString(R.string.lock_error_mismatch));
@@ -433,11 +384,7 @@ public class LockActivity extends AppCompatActivity {
                         });
                         return;
                     }
-                    runOnUiThread(() -> {
-                        if (isFinishing() || paused) {
-                            submitting = false;
-                            return;
-                        }
+                    runOnUiAlive(() -> {
                         unlockSuccess();
                         submitting = false;
                         renderDots();
@@ -453,7 +400,7 @@ public class LockActivity extends AppCompatActivity {
             }
             return;
         }
-        // VERIFY / PIN: PBKDF2 off UI thread to keep dot animation at 60fps.
+        // VERIFY / PIN: hash off UI thread to keep dot animation smooth.
         pinIo.execute(() -> {
             final boolean lockedOutAtSample;
             final boolean ok;
@@ -461,78 +408,19 @@ public class LockActivity extends AppCompatActivity {
                 lockedOutAtSample = AppLockManager.isLockedOut(LockActivity.this);
                 ok = !lockedOutAtSample && AppLockManager.verifyPin(LockActivity.this, pin);
             } catch (RuntimeException e) {
-                runOnUiThread(() -> {
-                    if (isFinishing() || paused) {
-                        submitting = false;
-                        return;
-                    }
-                    showError(getString(R.string.lock_error_fingerprint));
-                    submitting = false;
-                    renderDots();
-                });
+                runOnUiAlive(this::showPinIoError);
                 return;
             }
-            runOnUiThread(() -> {
-                if (isFinishing() || paused) {
-                    submitting = false;
-                    return;
-                }
-                // RC4: the 120k-iteration hash can outlive a 30s cooldown, so
-                // re-sample on the UI thread. A stale `lockedOut` must not
-                // force one more lockout screen, nor a failure count, when
-                // the cooldown already expired mid-hash.
+            runOnUiAlive(() -> {
                 boolean nowLockedOut = AppLockManager.isLockedOut(LockActivity.this);
                 if (nowLockedOut) {
                     showLockout();
                 } else if (lockedOutAtSample) {
-                    // Expired mid-hash: we skipped verifyPin above, so retry
-                    // once with a fresh sample instead of recording a failure.
-                    submitting = true;
-                    pinIo.execute(() -> {
-                        final boolean retryOk;
-                        try {
-                            retryOk = AppLockManager.verifyPin(LockActivity.this, pin);
-                        } catch (RuntimeException e) {
-                            runOnUiThread(() -> {
-                                if (isFinishing() || paused) {
-                                    submitting = false;
-                                    return;
-                                }
-                                showError(getString(R.string.lock_error_fingerprint));
-                                submitting = false;
-                                renderDots();
-                            });
-                            return;
-                        }
-                        runOnUiThread(() -> {
-                            if (isFinishing() || paused) {
-                                submitting = false;
-                                return;
-                            }
-                            if (AppLockManager.isLockedOut(LockActivity.this)) {
-                                showLockout();
-                            } else if (retryOk) {
-                                AppLockManager.resetFailures(LockActivity.this);
-                                if (current == Screen.VERIFY) {
-                                    showCreateScreen();
-                                } else {
-                                    unlockSuccess();
-                                }
-                            } else {
-                                handleWrongPin();
-                            }
-                            submitting = false;
-                            renderDots();
-                        });
-                    });
+                    // Cooldown expired mid-hash: retry once instead of recording a failure.
+                    retryVerify(pin, current);
                     return;
                 } else if (ok) {
-                    AppLockManager.resetFailures(LockActivity.this);
-                    if (current == Screen.VERIFY) {
-                        showCreateScreen();
-                    } else {
-                        unlockSuccess();
-                    }
+                    onPinVerified(current);
                 } else {
                     handleWrongPin();
                 }
@@ -542,14 +430,60 @@ public class LockActivity extends AppCompatActivity {
         });
     }
 
-    /** Wrong-PIN path: lockout escalation / wipe / remaining-attempts error. */
+    private void retryVerify(String pin, Screen current) {
+        submitting = true;
+        pinIo.execute(() -> {
+            final boolean retryOk;
+            try {
+                retryOk = AppLockManager.verifyPin(LockActivity.this, pin);
+            } catch (RuntimeException e) {
+                runOnUiAlive(this::showPinIoError);
+                return;
+            }
+            runOnUiAlive(() -> {
+                if (AppLockManager.isLockedOut(LockActivity.this)) {
+                    showLockout();
+                } else if (retryOk) {
+                    onPinVerified(current);
+                } else {
+                    handleWrongPin();
+                }
+                submitting = false;
+                renderDots();
+            });
+        });
+    }
+
+    private void onPinVerified(Screen current) {
+        AppLockManager.resetFailures(LockActivity.this);
+        if (current == Screen.VERIFY) {
+            showCreateScreen();
+        } else {
+            unlockSuccess();
+        }
+    }
+
+    private void runOnUiAlive(Runnable action) {
+        runOnUiThread(() -> {
+            if (!isAlive() || paused) {
+                submitting = false;
+                return;
+            }
+            action.run();
+        });
+    }
+
+    private void showPinIoError() {
+        showFingerprintError();
+        submitting = false;
+        renderDots();
+    }
+
     private void handleWrongPin() {
         int left = AppLockManager.recordFailure(this);
         if (left < 0) {
             if (AppLockManager.shouldWipe(this)) {
-                // Aggressive posture: brute-force threshold hit.
-                // Wipe vault + lock state, force fresh setup.
-                com.akin.wallet.security.DbKeyManager.wipeVault(this);
+                DbKeyManager.wipeVault(this);
                 AppLockManager.resetFailures(this);
                 firstPin = null;
                 showCreateScreen();
@@ -566,19 +500,12 @@ public class LockActivity extends AppCompatActivity {
     private void unlockSuccess() {
         cancelBiometric();
         if (MODE_CHANGE.equals(mode)) {
-            // PIN change returns to Settings, not the vault lists: mark the
-            // session unlocked but skip the row preload. Still restarts the
-            // grace window so returning to Settings cannot stack VERIFY (RC1).
             AppLockManager.setSessionUnlocked(true);
             app().resetGrace();
             app().notifyOnReturn(R.string.lock_pin_updated);
             setResult(RESULT_OK);
             finish();
         } else {
-            // Vault warm-up (post-auth half): dashboard/trash/link-pool rows.
-            // Overlapped handoff — DashboardActivity binds from the snapshot
-            // the moment it lands instead of querying from a cold open.
-            // Skipped for MODE_CHANGE (returns to Settings, no vault lists).
             app().onUnlocked();
             if (MODE_VERIFY.equals(mode)) {
                 setResult(RESULT_OK);
@@ -594,8 +521,12 @@ public class LockActivity extends AppCompatActivity {
         return (AkinWallet) getApplication();
     }
 
+    private boolean isAlive() {
+        return !isFinishing() && !isDestroyed();
+    }
+
     // ------------------------------------------------------------------
-    // Biometrics (system prompt; only reachable when opted in + supported)
+    // Biometrics (only reachable when opted in + supported)
     // ------------------------------------------------------------------
 
     private void startBiometric() {
@@ -606,7 +537,6 @@ public class LockActivity extends AppCompatActivity {
         if (AppLockManager.isLockedOut(this)) {
             return;
         }
-        // Only auto-ask on plain PIN unlock — never during setup / change.
         if (screen != Screen.PIN || MODE_CHANGE.equals(mode)) {
             return;
         }
@@ -629,17 +559,23 @@ public class LockActivity extends AppCompatActivity {
         }
     }
 
+    private boolean isBiometricGuarded() {
+        return !isAlive() || paused;
+    }
+
+    private void showFingerprintError() {
+        showError(getString(R.string.lock_error_fingerprint));
+    }
+
     private BiometricPrompt.AuthenticationCallback biometricCallback() {
         return new BiometricPrompt.AuthenticationCallback() {
             @Override
             public void onAuthenticationSucceeded(
                     @NonNull BiometricPrompt.AuthenticationResult result) {
                 promptActive = false;
-                if (isFinishing() || paused) {
+                if (isBiometricGuarded()) {
                     return;
                 }
-                // RC4: never drop a good fingerprint silently. If a cooldown
-                // started while the prompt was open, show it explicitly.
                 if (AppLockManager.isLockedOut(LockActivity.this)) {
                     showLockout();
                     return;
@@ -651,24 +587,23 @@ public class LockActivity extends AppCompatActivity {
             @Override
             public void onAuthenticationError(int errorCode, @NonNull CharSequence errString) {
                 promptActive = false;
-                if (isFinishing() || paused) {
+                if (isBiometricGuarded()) {
                     return;
                 }
                 if (errorCode == BiometricPrompt.ERROR_USER_CANCELED
                         || errorCode == BiometricPrompt.ERROR_CANCELED
                         || errorCode == BiometricPrompt.ERROR_NEGATIVE_BUTTON) {
-                    // User dismissed — stay on the same keypad design.
                     return;
                 }
-                showError(getString(R.string.lock_error_fingerprint));
+                showFingerprintError();
             }
 
             @Override
             public void onAuthenticationFailed() {
-                if (isFinishing() || paused) {
+                if (isBiometricGuarded()) {
                     return;
                 }
-                showError(getString(R.string.lock_error_fingerprint));
+                showFingerprintError();
             }
         };
     }
@@ -700,8 +635,8 @@ public class LockActivity extends AppCompatActivity {
     }
 
     private void shakeDots() {
-        android.animation.ObjectAnimator shake =
-                android.animation.ObjectAnimator.ofFloat(pinIndicatorRow, View.TRANSLATION_X, 0f, 12f, 0f, -12f, 0f);
+        ObjectAnimator shake =
+                ObjectAnimator.ofFloat(pinIndicatorRow, View.TRANSLATION_X, 0f, 12f, 0f, -12f, 0f);
         shake.setDuration(240);
         shake.start();
     }

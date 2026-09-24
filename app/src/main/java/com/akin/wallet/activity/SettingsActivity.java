@@ -14,10 +14,7 @@ import com.akin.wallet.security.AppLockManager;
 import com.google.android.material.materialswitch.MaterialSwitch;
 
 /**
- * Settings — security preferences behind the app lock. Biometric unlock is
- * OFF by default and can only be turned on here: enabling runs a live
- * fingerprint check first, so a stored ON always means a working biometric.
- * Also hosts app-PIN change (current PIN is verified inside LockActivity).
+ * Settings — security preferences behind the app lock.
  */
 public class SettingsActivity extends BaseVaultActivity {
 
@@ -33,27 +30,16 @@ public class SettingsActivity extends BaseVaultActivity {
         setContentView(R.layout.activity_settings);
         applyChrome();
 
-        // Version footer stamps the installed version.
         TextView versionLabel = findViewById(R.id.settings_version_label);
-        if (versionLabel != null) {
-            versionLabel.setText(
-                    getString(R.string.settings_version_format, AkinWallet.versionName()));
-        }
+        versionLabel.setText(
+                getString(R.string.settings_version_format, AkinWallet.versionName()));
 
         biometricSwitch = findViewById(R.id.settings_biometric_switch);
         biometricStatus = findViewById(R.id.settings_biometric_status);
-        if (biometricSwitch == null || biometricStatus == null) {
-            return;
-        }
 
-        biometricAvailable = AppLockManager.isBiometricAvailable(this);
-        boolean enabled = AppLockManager.isBiometricEnabled(this) && biometricAvailable;
-        biometricSwitch.setChecked(enabled);
-        biometricSwitch.setEnabled(biometricAvailable);
-        refreshBiometricStatus(biometricAvailable, enabled);
+        refreshBiometric();
 
         biometricSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            // Programmatic setChecked (e.g. reverting) must not re-trigger.
             if (!buttonView.isPressed()) {
                 return;
             }
@@ -85,12 +71,24 @@ public class SettingsActivity extends BaseVaultActivity {
                         .putExtra(PolicyActivity.EXTRA_TYPE, PolicyActivity.TYPE_ABOUT)));
     }
 
-    /** Row taps are null-safe: a missing row is skipped, never an NPE. */
     private void bindRow(int rowId, Runnable action) {
-        android.view.View row = findViewById(rowId);
-        if (row != null) {
-            row.setOnClickListener(v -> action.run());
+        findViewById(rowId).setOnClickListener(v -> action.run());
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (!confirming) {
+            refreshBiometric();
         }
+    }
+
+    private void refreshBiometric() {
+        biometricAvailable = AppLockManager.isBiometricAvailable(this);
+        boolean enabled = AppLockManager.isBiometricEnabled(this) && biometricAvailable;
+        biometricSwitch.setChecked(enabled);
+        biometricSwitch.setEnabled(biometricAvailable);
+        refreshBiometricStatus(biometricAvailable, enabled);
     }
 
     @Override
@@ -115,10 +113,7 @@ public class SettingsActivity extends BaseVaultActivity {
         }
     }
 
-    /**
-     * Enabling biometrics proves a working fingerprint first: the toggle
-     * only sticks when the system prompt succeeds, otherwise it reverts.
-     */
+    /** Toggle sticks only when the system prompt succeeds, else it reverts. */
     private void confirmBiometric() {
         if (confirming) {
             return;
@@ -135,7 +130,7 @@ public class SettingsActivity extends BaseVaultActivity {
                     public void onAuthenticationSucceeded(
                             @NonNull BiometricPrompt.AuthenticationResult result) {
                         confirming = false;
-                        if (isFinishing() || isDestroyed()) {
+                        if (!isAlive()) {
                             return;
                         }
                         AppLockManager.setBiometricEnabled(
@@ -148,10 +143,9 @@ public class SettingsActivity extends BaseVaultActivity {
                     public void onAuthenticationError(
                             int errorCode, @NonNull CharSequence errString) {
                         confirming = false;
-                        if (isFinishing() || isDestroyed()) {
+                        if (!isAlive()) {
                             return;
                         }
-                        // Any cancel/failure reverts: ON is never stored blind.
                         biometricSwitch.setChecked(false);
                         refreshBiometricStatus(biometricAvailable, false);
                     }

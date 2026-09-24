@@ -1,10 +1,10 @@
 package com.akin.wallet.activity;
 
 import android.content.Intent;
-import android.graphics.Rect;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.animation.DecelerateInterpolator;
@@ -20,6 +20,7 @@ import com.akin.wallet.R;
 import com.akin.wallet.adapter.BankCardAdapter;
 import com.akin.wallet.adapter.GovernmentIdAdapter;
 import com.akin.wallet.adapter.SocialAccountAdapter;
+import com.akin.wallet.db.VaultWarmCache;
 import com.akin.wallet.model.BankCardModel;
 import com.akin.wallet.model.SocialAccountModel;
 import com.akin.wallet.model.GovernmentIDModel;
@@ -34,11 +35,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
- * Dashboard (Home) — single-screen host, no fragments. Shows live Government
- * IDs, Bank Cards and Social Accounts from SQLite, plus the quick-add FAB
- * menu. Child screens open as full-screen activities and this refreshes in
- * onResume. (Merged from DashboardFragment: one screen never needed the
- * fragment back stack.)
+ * Dashboard (Home) — single-screen host, no fragments.
  */
 public class DashboardActivity extends BaseVaultActivity {
 
@@ -56,16 +53,13 @@ public class DashboardActivity extends BaseVaultActivity {
     /** Shared carousel gap. */
     private RecyclerView.ItemDecoration sharedGap;
 
-    /** Card ratio. */
     private static final float CARD_ASPECT_RATIO = 1.586f;
     private FloatingActionButton quickAddButton;
     private View quickAddMenu;
     private View quickAddScrim;
     private boolean isFabMenuOpen = false;
 
-    // M3 Search state. Masters hold the full newest-first rows; a pre-lowered
-    // DashboardSearch.Index snapshot filters them off the UI thread into the
-    // SearchView result lists (the dashboard behind stays whole).
+    // M3 Search state. Masters hold full rows; keystrokes filter on a background thread.
     private List<GovernmentIDModel> allIds;
     private List<BankCardModel> allCards;
     private List<SocialAccountModel> allAccounts;
@@ -93,10 +87,8 @@ public class DashboardActivity extends BaseVaultActivity {
     private TextView emptySearchSub;
 
     /**
-     * Search pipeline: masters are normalized once per refresh into
-     * {@link #searchIndex}; each keystroke scans pre-lowered strings on
-     * {@link #searchExecutor}. Single thread = ordered, generation drops
-     * stale results, 120ms debounce collapses fast typing.
+     * Search pipeline: single thread = ordered, generation drops stale results,
+     * 120ms debounce collapses fast typing.
      */
     private DashboardSearch.Index searchIndex = DashboardSearch.EMPTY_INDEX;
     private final ExecutorService searchExecutor = Executors.newSingleThreadExecutor();
@@ -105,14 +97,8 @@ public class DashboardActivity extends BaseVaultActivity {
     private int searchGeneration;
     private static final long SEARCH_DEBOUNCE_MS = 120L;
 
-    /** Viewport-cap epoch for the social list: newer refresh/destroy wins. */
     private int socialCapGeneration;
 
-    /**
-     * Last bound social row count. A shrink drops any fixed cap first so the
-     * card adopts the new row count through normal layout; growth keeps the
-     * current height until the settled clamp below re-checks it.
-     */
     private int lastSocialCount = -1;
 
     @Override
@@ -131,9 +117,6 @@ public class DashboardActivity extends BaseVaultActivity {
         bindCachedSnapshot();
 
         if (savedInstanceState != null) {
-            // Rotation: restore the query and re-open the SearchView exactly
-            // as left (masters load async in onResume, which re-filters into
-            // the results).
             currentQuery = savedInstanceState.getString(KEY_SEARCH_QUERY, "");
             boolean open = savedInstanceState.getBoolean(KEY_SEARCH_OPEN, false);
             if (open && searchView != null) {
@@ -150,7 +133,7 @@ public class DashboardActivity extends BaseVaultActivity {
                 });
             }
         }
-        // No refresh here: onResume always follows onCreate and owns loading.
+        // No refresh here: onResume owns loading.
     }
 
     @Override
@@ -169,23 +152,22 @@ public class DashboardActivity extends BaseVaultActivity {
 
     @Override
     protected void onDestroy() {
-        // Animators hold child views; cancel so a mid-entrance finish cannot leak them.
         cancelMenuEntrance();
-        // Drop pending empty-state measures that capture views (activity).
         clearPendingMeasure(bankCardEmptyState);
         clearPendingMeasure(governmentIdEmptyState);
         clearPendingMeasure(socialAccountList);
-        // Invalidate any viewport-cap runnable still queued behind the clear.
         socialCapGeneration++;
-        // Search: drop debounced + in-flight work so no callback touches a
-        // dead activity, then stop the single search thread.
+        cancelSearch();
+        searchExecutor.shutdownNow();
+        super.onDestroy();
+    }
+
+    private void cancelSearch() {
         if (pendingSearch != null) {
             searchHandler.removeCallbacks(pendingSearch);
             pendingSearch = null;
         }
         searchGeneration++;
-        searchExecutor.shutdownNow();
-        super.onDestroy();
     }
 
     private static void clearPendingMeasure(View empty) {
@@ -198,11 +180,7 @@ public class DashboardActivity extends BaseVaultActivity {
         }
     }
 
-    /**
-     * M3 TopAppBar header: title/subtitle are static in XML; search opens
-     * the full-screen SearchView, settings opens Security preferences
-     * (biometrics live there). Back closes search first.
-     */
+    /** TopAppBar header: search opens SearchView, gear opens Settings. */
     private void setupHeader() {
         headerIds = findViewById(R.id.dashboard_government_id_section_header);
         headerCards = findViewById(R.id.dashboard_bank_card_section_header);
@@ -235,49 +213,29 @@ public class DashboardActivity extends BaseVaultActivity {
         });
     }
 
-    /**
-     * M3 Search: full-screen SearchView (toolbar back + field + clear built
-     * in), opened from the header search IconButton. Typing filters the
-     * master lists into its own result lists while the dashboard behind
-     * stays whole. The FAB hides while results cover it.
-     */
+    /** Full-screen SearchView: typing filters masters into result lists. */
     private void setupSearch() {
         searchView = findViewById(R.id.dashboard_search_view);
         if (searchView == null) {
             return;
         }
-        // Each search list keeps its own RecycledViewPool (the default).
-        // IDs and cards inflate different layouts under the same viewType 0,
-        // so sharing one pool recycled a bank-card view into the ID carousel
-        // (and vice versa) on the 2nd search -> ClassCastException mid-layout.
+        // Each search list keeps its own pool: IDs and cards share viewType 0
+        // but inflate different layouts, so a shared pool recycles across lists.
         searchIdAdapter = new GovernmentIdAdapter(this::openIdEditor);
         searchGovernmentIdList = findViewById(R.id.dashboard_search_government_id_list);
-        searchGovernmentIdList.setLayoutManager(
-                new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
-        searchGovernmentIdList.setAdapter(searchIdAdapter);
-        searchGovernmentIdList.addItemDecoration(sharedGap);
-        // wrap_content height: the list can resize with its content, so fixed-size must stay off.
-        searchGovernmentIdList.setHasFixedSize(false);
-        searchGovernmentIdList.setItemViewCacheSize(4);
+        setupHorizontalList(searchGovernmentIdList, searchIdAdapter);
         searchHeaderIds = findViewById(R.id.dashboard_search_government_id_header);
 
         searchCardAdapter = new BankCardAdapter(this::openBankEditor);
         searchBankCardList = findViewById(R.id.dashboard_search_bank_card_list);
-        searchBankCardList.setLayoutManager(
-                new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
-        searchBankCardList.setAdapter(searchCardAdapter);
-        searchBankCardList.addItemDecoration(sharedGap);
-        // wrap_content height: the list can resize with its content, so fixed-size must stay off.
-        searchBankCardList.setHasFixedSize(false);
-        searchBankCardList.setItemViewCacheSize(4);
+        setupHorizontalList(searchBankCardList, searchCardAdapter);
         searchHeaderCards = findViewById(R.id.dashboard_search_bank_card_header);
 
-        // Row taps open the account's edit screen, same as the dashboard list.
+        // Row taps open the edit screen, same as the dashboard list.
         searchSocialAdapter = new SocialAccountAdapter(this::openSocialEditor);
         searchSocialAccountList = findViewById(R.id.dashboard_search_social_account_list);
         searchSocialAccountList.setLayoutManager(new LinearLayoutManager(this));
         searchSocialAccountList.setAdapter(searchSocialAdapter);
-        // Same wrap_content vertical list contract as the dashboard list.
         searchSocialAccountList.setHasFixedSize(false);
         searchSocialAccountCard = findViewById(R.id.dashboard_search_social_account_card);
         searchHeaderSocial = findViewById(R.id.dashboard_search_social_account_header);
@@ -294,8 +252,6 @@ public class DashboardActivity extends BaseVaultActivity {
             @Override
             public void onTextChanged(CharSequence text, int start, int before, int count) {
                 currentQuery = text != null ? text.toString() : "";
-                // Cheap on UI: just re-schedule. Normalize + scan run on the
-                // background search thread (see scheduleSearch).
                 scheduleSearch();
             }
         });
@@ -318,31 +274,22 @@ public class DashboardActivity extends BaseVaultActivity {
 
     /** FAB hides while the SearchView covers the screen. */
     private void setFabVisible(boolean visible) {
-        if (quickAddButton != null) {
-            quickAddButton.setVisibility(visible ? View.VISIBLE : View.GONE);
-        }
+        quickAddButton.setVisibility(visible ? View.VISIBLE : View.GONE);
     }
 
-    /**
-     * Rebuilds the pre-lowered search index from the current masters.
-     * Called once per masters refresh, never per keystroke.
-     */
+    /** Rebuilds the search index from the current masters. Once per refresh. */
     private void rebuildSearchIndex() {
         try {
             searchIndex = DashboardSearch.buildIndex(allIds, allCards, allAccounts);
         } catch (RuntimeException e) {
+            Log.w("Dashboard", "rebuildSearchIndex failed", e);
             searchIndex = DashboardSearch.EMPTY_INDEX;
         }
     }
 
-    /**
-     * Debounced search entry point (UI thread only). Each schedule bumps the
-     * generation so in-flight passes with an older generation are discarded.
-     */
+    /** Debounced search entry point (UI thread only). Drops stale generations. */
     private void scheduleSearch() {
         if (searchIdAdapter == null || searchCardAdapter == null || searchSocialAdapter == null) {
-            // Pre-load: search sections default to gone in XML; the first
-            // bind restores them.
             return;
         }
         if (pendingSearch != null) {
@@ -356,16 +303,13 @@ public class DashboardActivity extends BaseVaultActivity {
             try {
                 searchExecutor.execute(() -> runSearch(generation, raw, snapshot));
             } catch (RuntimeException e) {
-                // Executor shut down (activity destroyed): nothing to bind.
+                Log.w("Dashboard", "search executor shut down", e);
             }
         };
         searchHandler.postDelayed(pendingSearch, SEARCH_DEBOUNCE_MS);
     }
 
-    /**
-     * Background pass: normalize only the query, scan pre-lowered strings.
-     * Binds on the UI thread only if still current and the activity is alive.
-     */
+    /** Background pass: normalize query, scan pre-lowered strings. */
     private void runSearch(int generation, String raw, DashboardSearch.Index snapshot) {
         final DashboardSearch.Query query;
         final DashboardSearch.Result result;
@@ -373,12 +317,11 @@ public class DashboardActivity extends BaseVaultActivity {
             query = DashboardSearch.normalizeQuery(raw);
             result = DashboardSearch.search(snapshot, query);
         } catch (RuntimeException e) {
-            // Defensive: search must never crash the app. Keep previous
-            // results visible; next keystroke retries.
+            Log.w("Dashboard", "search failed, keeping previous results", e);
             return;
         }
         searchHandler.post(() -> {
-            if (generation != searchGeneration || isFinishing() || isDestroyed()) {
+            if (generation != searchGeneration || !isAlive()) {
                 return;
             }
             if (allIds == null || allCards == null || allAccounts == null
@@ -390,7 +333,7 @@ public class DashboardActivity extends BaseVaultActivity {
         });
     }
 
-    /** True while any search list is mid-layout (a diff's animations still running). */
+    /** True while any search list is mid-layout. */
     private boolean isAnySearchListLayingOut() {
         return (searchGovernmentIdList != null && searchGovernmentIdList.isComputingLayout())
                 || (searchBankCardList != null && searchBankCardList.isComputingLayout())
@@ -399,52 +342,33 @@ public class DashboardActivity extends BaseVaultActivity {
 
     private void bindSearchResults(List<GovernmentIDModel> ids, List<BankCardModel> cards,
                                     List<SocialAccountModel> accounts, boolean searching, int generation) {
-        if (isFinishing() || isDestroyed() || generation != searchGeneration) {
+        if (!isAlive() || generation != searchGeneration) {
             return;
         }
         // Never dispatch into a running layout pass; re-queue behind it.
-        // The generation check above drops this if a newer keystroke won.
         if (isAnySearchListLayingOut()) {
             searchHandler.post(() ->
                     bindSearchResults(ids, cards, accounts, searching, generation));
             return;
         }
-        // Adapters roll back on rejected dispatch, so bind every section:
-        // no mid-bind early return that leaves half-updated lists behind.
         searchIdAdapter.updateData(ids);
         boolean hasIds = ids != null && !ids.isEmpty();
-        if (searchGovernmentIdList != null) {
-            searchGovernmentIdList.setVisibility(hasIds ? View.VISIBLE : View.GONE);
-        }
-        if (searchHeaderIds != null) {
-            searchHeaderIds.setVisibility(hasIds ? View.VISIBLE : View.GONE);
-        }
+        setVisible(searchGovernmentIdList, hasIds);
+        setVisible(searchHeaderIds, hasIds);
 
         searchCardAdapter.updateData(cards);
         boolean hasCards = cards != null && !cards.isEmpty();
-        if (searchBankCardList != null) {
-            searchBankCardList.setVisibility(hasCards ? View.VISIBLE : View.GONE);
-        }
-        if (searchHeaderCards != null) {
-            searchHeaderCards.setVisibility(hasCards ? View.VISIBLE : View.GONE);
-        }
+        setVisible(searchBankCardList, hasCards);
+        setVisible(searchHeaderCards, hasCards);
 
         searchSocialAdapter.updateData(accounts);
         boolean hasAccounts = accounts != null && !accounts.isEmpty();
-        if (searchSocialAccountCard != null) {
-            searchSocialAccountCard.setVisibility(hasAccounts ? View.VISIBLE : View.GONE);
-        }
-        if (searchHeaderSocial != null) {
-            searchHeaderSocial.setVisibility(hasAccounts ? View.VISIBLE : View.GONE);
-        }
+        setVisible(searchSocialAccountCard, hasAccounts);
+        setVisible(searchHeaderSocial, hasAccounts);
 
         boolean allEmpty = !hasIds && !hasCards && !hasAccounts;
-        if (emptySearchResults != null) {
-            emptySearchResults.setVisibility(allEmpty ? View.VISIBLE : View.GONE);
-        }
+        setVisible(emptySearchResults, allEmpty);
         if (allEmpty) {
-            // One card, two jobs: a dead-end query keeps the no-results
-            // wording, while a genuinely empty vault gets its own invite.
             if (searching) {
                 if (emptySearchTitle != null) {
                     emptySearchTitle.setText(R.string.search_empty_title);
@@ -464,32 +388,29 @@ public class DashboardActivity extends BaseVaultActivity {
         }
     }
 
+    private static void setVisible(View view, boolean visible) {
+        if (view != null) {
+            view.setVisibility(visible ? View.VISIBLE : View.GONE);
+        }
+    }
+
     /** Extended FAB: round main button expanding the 3-option menu above it. */
     private void setupAddMenu() {
         quickAddButton = findViewById(R.id.dashboard_quick_add_button);
         quickAddMenu = findViewById(R.id.dashboard_quick_add_menu);
         quickAddScrim = findViewById(R.id.dashboard_quick_add_scrim);
-        if (quickAddButton == null) {
-            return;
-        }
         quickAddButton.setOnClickListener(v -> toggleAddMenu());
-        if (quickAddScrim != null) {
-            quickAddScrim.setOnClickListener(v -> {
-                if (isFabMenuOpen) {
-                    toggleAddMenu();
-                }
-            });
-        }
-        setMenuOption(R.id.dashboard_quick_add_option_government_id, this::openIdCreator);
-        setMenuOption(R.id.dashboard_quick_add_option_bank_card, this::openBankCreator);
-        setMenuOption(R.id.dashboard_quick_add_option_social_account, this::openSocialCreator);
-    }
-
-    private void setMenuOption(int viewId, Runnable action) {
-        View option = findViewById(viewId);
-        if (option != null) {
-            option.setOnClickListener(v -> action.run());
-        }
+        quickAddScrim.setOnClickListener(v -> {
+            if (isFabMenuOpen) {
+                toggleAddMenu();
+            }
+        });
+        findViewById(R.id.dashboard_quick_add_option_government_id)
+                .setOnClickListener(v -> openCreator(GovernmentIDActivity.class));
+        findViewById(R.id.dashboard_quick_add_option_bank_card)
+                .setOnClickListener(v -> openCreator(BankCardActivity.class));
+        findViewById(R.id.dashboard_quick_add_option_social_account)
+                .setOnClickListener(v -> openCreator(SocialAccountActivity.class));
     }
 
     private void toggleAddMenu() {
@@ -511,7 +432,7 @@ public class DashboardActivity extends BaseVaultActivity {
         }
     }
 
-    /** Staggered fade/rise entrance, top item first (M3 FAB menu motion). */
+    /** Staggered fade/rise entrance, top item first. */
     private void playMenuEntrance() {
         if (!(quickAddMenu instanceof ViewGroup)) {
             return;
@@ -546,15 +467,13 @@ public class DashboardActivity extends BaseVaultActivity {
         }
     }
 
-    /** Opens a social edit screen directly (dashboard rows open the editor). */
+    /** Tap bumps updated_at so the row sorts newest-first on return. */
     private void openSocialEditor(SocialAccountModel item) {
-        // Recency bump rides the I/O thread; navigation never waits for it.
-        final int id = item.getId();
-        vaultIo(() -> db().touchSocialAccountUpdatedAt(id));
-        startActivity(SocialAccountActivity.editIntent(this, item));
+        touchAndOpen(() -> db().touchSocialAccountUpdatedAt(item.getId()),
+                SocialAccountActivity.editIntent(this, item));
     }
 
-    /** Opens a creation screen directly (FAB is the only entry). */
+    /** Opens a creation screen. FAB is the only entry. */
     private void openCreator(Class<?> editorScreen) {
         if (isFabMenuOpen) {
             toggleAddMenu();
@@ -562,67 +481,44 @@ public class DashboardActivity extends BaseVaultActivity {
         startActivity(new Intent(this, editorScreen));
     }
 
-    /** Opens the ID creation screen directly (FAB is the only entry). */
-    private void openIdCreator() {
-        openCreator(GovernmentIDActivity.class);
-    }
-
-    /**
-     * Opens an ID edit screen directly (dashboard is the editor). The tap itself
-     * is a recency signal: updated_at is bumped first so the ID sorts
-     * newest-first on return — mirroring the bank-card and account open paths.
-     * No immediate refresh here; onResume re-queries after the editor closes.
-     */
+    /** Tap bumps updated_at so the row sorts newest-first on return. */
     private void openIdEditor(GovernmentIDModel item) {
-        final int id = item.getId();
-        vaultIo(() -> db().touchIdCardUpdatedAt(id));
-        startActivity(GovernmentIDActivity.editIntent(this, item));
+        touchAndOpen(() -> db().touchIdCardUpdatedAt(item.getId()),
+                GovernmentIDActivity.editIntent(this, item));
     }
 
-    /** Opens the bank creation screen directly (FAB is the only entry). */
-    private void openBankCreator() {
-        openCreator(BankCardActivity.class);
-    }
-
-    /**
-     * Opens a bank card for editing. The tap itself is a recency signal: the
-     * card's updated_at is bumped first so it sorts newest-first when the
-     * list refreshes on return — even if the edit is canceled. No immediate
-     * refresh here; onResume already re-queries after the editor closes.
-     */
+    /** Tap bumps updated_at so the row sorts newest-first on return. */
     private void openBankEditor(BankCardModel item) {
-        final int id = item.getId();
-        vaultIo(() -> db().touchBankCardUpdatedAt(id));
-        startActivity(BankCardActivity.editIntent(this, item));
+        touchAndOpen(() -> db().touchBankCardUpdatedAt(item.getId()),
+                BankCardActivity.editIntent(this, item));
     }
 
-    /** Opens the account creation screen directly (dashboard rows open the editor). */
-    private void openSocialCreator() {
-        openCreator(SocialAccountActivity.class);
+    private void touchAndOpen(Runnable touch, Intent intent) {
+        vaultIo(touch);
+        startActivity(intent);
     }
 
-    /** Horizontal snap carousel rendering the user's real bank cards. */
+    private void setupHorizontalList(RecyclerView list, RecyclerView.Adapter<?> adapter) {
+        list.setLayoutManager(
+                new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
+        list.setAdapter(adapter);
+        list.addItemDecoration(sharedGap);
+        list.setHasFixedSize(false);
+        list.setItemViewCacheSize(4);
+    }
+
+    /** Horizontal snap carousel rendering the user's bank cards. */
     private void setupCardCarousel() {
         bankCardCarousel = findViewById(R.id.dashboard_bank_card_carousel);
         bankCardEmptyState = findViewById(R.id.dashboard_bank_card_empty_state);
 
         cardAdapter = new BankCardAdapter(this::openBankEditor);
-        bankCardCarousel.setLayoutManager(
-                new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
-        bankCardCarousel.setAdapter(cardAdapter);
-        bankCardCarousel.addItemDecoration(sharedGap);
-        // wrap_content height: the carousel can resize with its content, so fixed-size must stay off.
-        bankCardCarousel.setHasFixedSize(false);
-        bankCardCarousel.setItemViewCacheSize(4);
+        setupHorizontalList(bankCardCarousel, cardAdapter);
         new PagerSnapHelper().attachToRecyclerView(bankCardCarousel);
 
-        if (bankCardEmptyState != null) {
-            bankCardEmptyState.setOnClickListener(v -> openBankCreator());
-        }
-        View btnEmptyCards = findViewById(R.id.dashboard_bank_card_empty_action);
-        if (btnEmptyCards != null) {
-            btnEmptyCards.setOnClickListener(v -> openBankCreator());
-        }
+        bankCardEmptyState.setOnClickListener(v -> openCreator(BankCardActivity.class));
+        findViewById(R.id.dashboard_bank_card_empty_action).setOnClickListener(
+                v -> openCreator(BankCardActivity.class));
     }
 
     private void refreshCardCarousel(List<BankCardModel> cards) {
@@ -643,21 +539,14 @@ public class DashboardActivity extends BaseVaultActivity {
         }
     }
 
-    /**
-     * Sizes an empty-state card exactly like one carousel page (0.68 viewport
-     * width at 1.586:1) so the section keeps its height with no data.
-     * Measures the visible empty card itself — the carousel is GONE here and
-     * always measures zero.
-     */
+    /** Sizes an empty-state card like one carousel page to keep section height. */
     private void matchEmptyHeightToCards(@NonNull RecyclerView carousel, @NonNull View empty) {
-        // One pending measure per view: a second refresh supersedes the first
-        // instead of stacking posts that outlive the screen.
         Runnable pending = (Runnable) empty.getTag(R.id.tag_empty_state_measure);
         if (pending != null) {
             empty.removeCallbacks(pending);
         }
         Runnable measure = () -> {
-            if (isFinishing() || isDestroyed()) {
+            if (!isAlive()) {
                 return;
             }
             int contentWidth = empty.getWidth();
@@ -680,28 +569,18 @@ public class DashboardActivity extends BaseVaultActivity {
         empty.post(measure);
     }
 
-    /** Horizontal snap carousel rendering the user's real government IDs. */
+    /** Horizontal snap carousel rendering the user's government IDs. */
     private void setupIdsCarousel() {
         governmentIdCarousel = findViewById(R.id.dashboard_government_id_carousel);
         governmentIdEmptyState = findViewById(R.id.dashboard_government_id_empty_state);
 
         idAdapter = new GovernmentIdAdapter(this::openIdEditor);
-        governmentIdCarousel.setLayoutManager(
-                new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
-        governmentIdCarousel.setAdapter(idAdapter);
-        governmentIdCarousel.addItemDecoration(sharedGap);
-        // wrap_content height: the carousel can resize with its content, so fixed-size must stay off.
-        governmentIdCarousel.setHasFixedSize(false);
-        governmentIdCarousel.setItemViewCacheSize(4);
+        setupHorizontalList(governmentIdCarousel, idAdapter);
         new PagerSnapHelper().attachToRecyclerView(governmentIdCarousel);
 
-        if (governmentIdEmptyState != null) {
-            governmentIdEmptyState.setOnClickListener(v -> openIdCreator());
-        }
-        View btnEmptyIds = findViewById(R.id.dashboard_government_id_empty_action);
-        if (btnEmptyIds != null) {
-            btnEmptyIds.setOnClickListener(v -> openIdCreator());
-        }
+        governmentIdEmptyState.setOnClickListener(v -> openCreator(GovernmentIDActivity.class));
+        findViewById(R.id.dashboard_government_id_empty_action).setOnClickListener(
+                v -> openCreator(GovernmentIDActivity.class));
     }
 
     private void refreshIdsCarousel(List<GovernmentIDModel> ids) {
@@ -722,49 +601,25 @@ public class DashboardActivity extends BaseVaultActivity {
         }
     }
 
-    /** Social Account — vertical list of created social accounts only. */
+    /** Social Account — vertical list of created accounts. */
     private void setupSocialAccounts() {
         socialAccountCard = findViewById(R.id.dashboard_social_account_card);
         socialAccountList = findViewById(R.id.dashboard_social_account_list);
         socialAccountEmptyState = findViewById(R.id.dashboard_social_account_empty_state);
-        if (socialAccountList == null) {
-            return;
-        }
 
-        // Row taps open the account's edit screen, same as the IDs and cards above.
         socialAdapter = new SocialAccountAdapter(this::openSocialEditor);
         socialAccountList.setLayoutManager(new LinearLayoutManager(this));
         socialAccountList.setAdapter(socialAdapter);
-        // Wrap-content list inside the wrap-content card: the card adopts
-        // the row count (shrinks on delete, hugs a single row). Fixed size
-        // stays off so row-count changes re-measure; refreshSocialAccounts
-        // caps the height to the viewport when rows overflow.
         socialAccountList.setHasFixedSize(false);
 
-        if (socialAccountEmptyState != null) {
-            socialAccountEmptyState.setOnClickListener(v -> openSocialCreator());
-        }
-        View btnEmptySocial = findViewById(R.id.dashboard_social_account_empty_action);
-        if (btnEmptySocial != null) {
-            btnEmptySocial.setOnClickListener(v -> openSocialCreator());
-        }
+        socialAccountEmptyState.setOnClickListener(v -> openCreator(SocialAccountActivity.class));
+        findViewById(R.id.dashboard_social_account_empty_action).setOnClickListener(
+                v -> openCreator(SocialAccountActivity.class));
     }
 
-    /**
-     * Binds the social rows then adopts-then-caps the height. The Diff dispatch
-     * is deferred while the list is mid-layout or still holding unconsumed
-     * adapter updates (mirrors the search-path guard): dispatching into a
-     * running layout both throws and rolls back. Shrinks reset to
-     * wrap_content first so the card adopts through normal layout; the
-     * settled clamp below re-caps only on real overflow. The deferral
-     * re-posts without a bound: layout passes always end between frames, and
-     * a newer refresh or destroy supersedes the chain.
-     */
+    /** Binds social rows then adopts-then-caps the height. Defers while mid-layout. */
     private void refreshSocialAccounts(List<SocialAccountModel> accounts) {
-        if (socialAdapter == null || socialAccountList == null) {
-            return;
-        }
-        if (isFinishing() || isDestroyed()) {
+        if (socialAdapter == null || socialAccountList == null || !isAlive()) {
             return;
         }
         if (socialAccountList.isComputingLayout()
@@ -787,24 +642,14 @@ public class DashboardActivity extends BaseVaultActivity {
             socialAccountEmptyState.setVisibility(!hasAccounts ? View.VISIBLE : View.GONE);
         }
         if (!hasAccounts) {
-            // Back to zero rows: drop any stale fixed cap so the next
-            // non-empty bind starts from wrap_content instead of the old
-            // viewport height.
             lastSocialCount = 0;
             resetSocialListHeight();
             return;
         }
         if (lastSocialCount >= 0 && count < lastSocialCount) {
-            // Shrink (delete): drop any stale fixed cap first so the card
-            // adopts the new row count through normal layout, exactly like
-            // the pre-cap dashboard did. The settled clamp below re-caps
-            // if the remaining rows still overflow the viewport.
             resetSocialListHeight();
         }
         lastSocialCount = count;
-        // Adopt-then-cap: the wrap_content card hugs few rows; when rows
-        // exceed the remaining viewport the list is capped to it and
-        // scrolls internally, so the screen itself never scrolls.
         capSocialListToViewport();
     }
 
@@ -813,10 +658,10 @@ public class DashboardActivity extends BaseVaultActivity {
         if (socialAccountList == null) {
             return;
         }
-        android.view.ViewGroup.LayoutParams params = socialAccountList.getLayoutParams();
+        ViewGroup.LayoutParams params = socialAccountList.getLayoutParams();
         if (params != null
-                && params.height != android.view.ViewGroup.LayoutParams.WRAP_CONTENT) {
-            params.height = android.view.ViewGroup.LayoutParams.WRAP_CONTENT;
+                && params.height != ViewGroup.LayoutParams.WRAP_CONTENT) {
+            params.height = ViewGroup.LayoutParams.WRAP_CONTENT;
             socialAccountList.setLayoutParams(params);
         }
         socialAccountList.setNestedScrollingEnabled(false);
@@ -841,7 +686,7 @@ public class DashboardActivity extends BaseVaultActivity {
     }
 
     private void runSocialCap(int generation, Runnable retry) {
-        if (generation != socialCapGeneration || isFinishing() || isDestroyed()) {
+        if (generation != socialCapGeneration || !isAlive()) {
             return;
         }
         final View card = socialAccountCard;
@@ -849,10 +694,6 @@ public class DashboardActivity extends BaseVaultActivity {
         if (card == null || list == null) {
             return;
         }
-        // Unsettled list: a running layout/animation, queued adapter updates
-        // not yet consumed by a traversal, or a requested layout not yet run.
-        // Deciding mid-transition would freeze the old height, so re-post
-        // the same runnable until the laid-out geometry below is real.
         if (list.isComputingLayout() || list.isAnimating()
                 || list.hasPendingAdapterUpdates() || list.isLayoutRequested()) {
             list.post(retry);
@@ -863,17 +704,13 @@ public class DashboardActivity extends BaseVaultActivity {
             return;
         }
         if (content.getHeight() <= 0 || list.getWidth() <= 0) {
-            // Pre-layout race: re-post the same runnable instead of deciding
-            // against zeros and missing until the next refresh.
             list.post(retry);
             return;
         }
-        android.view.ViewGroup.LayoutParams params = list.getLayoutParams();
-        boolean capped = params.height != android.view.ViewGroup.LayoutParams.WRAP_CONTENT;
+        ViewGroup.LayoutParams params = list.getLayoutParams();
+        boolean capped = params.height != ViewGroup.LayoutParams.WRAP_CONTENT;
         int viewportBottom = content.getHeight() - content.getPaddingBottom();
         if (!capped) {
-            // Natural height on screen: clamp only when the card truly runs
-            // past the viewport bottom.
             if (card.getBottom() <= viewportBottom) {
                 list.setNestedScrollingEnabled(false);
                 return;
@@ -891,11 +728,6 @@ public class DashboardActivity extends BaseVaultActivity {
             list.setNestedScrollingEnabled(true);
             return;
         }
-        // Still capped from an earlier overflow: rows only grew or held here
-        // (a shrink resets to wrap_content before this check), so keep the
-        // cap, refreshed for the current viewport. A changed viewport means
-        // the old cap is meaningless: re-adopt from wrap_content and let the
-        // re-posted check below re-derive the decision from real geometry.
         int remaining = content.getHeight()
                 - card.getTop()
                 - content.getPaddingBottom()
@@ -912,32 +744,29 @@ public class DashboardActivity extends BaseVaultActivity {
         list.setNestedScrollingEnabled(true);
     }
 
-    /**
-     * Cache-first bind: when the post-auth preload already ran (the common
-     * unlock path), the carousels and search masters bind synchronously
-     * before first draw — no header-only flash. Falls back to async load
-     * on miss; {@link #refreshDashboard()} in {@code onResume} always
-     * revalidates afterward.
-     */
+    /** Cache-first bind: preload snapshot before first draw; onResume revalidates. */
     private void bindCachedSnapshot() {
-        com.akin.wallet.db.VaultWarmCache.Snapshot cached = cache().snapshot();
+        VaultWarmCache.Snapshot cached = cache().snapshot();
         if (cached == null || !cached.hasActive()) {
             return;
         }
-        allIds = new ArrayList<>(cached.activeIds);
-        allCards = new ArrayList<>(cached.activeCards);
-        allAccounts = new ArrayList<>(cached.activeAccounts);
+        bindSnapshot(new ArrayList<>(cached.activeIds),
+                new ArrayList<>(cached.activeCards),
+                new ArrayList<>(cached.activeAccounts));
+    }
+
+    private void bindSnapshot(List<GovernmentIDModel> ids, List<BankCardModel> cards,
+                              List<SocialAccountModel> accounts) {
+        allIds = ids;
+        allCards = cards;
+        allAccounts = accounts;
         refreshIdsCarousel(allIds);
         refreshCardCarousel(allCards);
         refreshSocialAccounts(allAccounts);
-        // Masters changed -> index once so keystrokes scan pre-lowered data.
         rebuildSearchIndex();
     }
 
     private void refreshDashboard() {
-        // Vault reads ride the shared funnel (ordered with warm-up/preload);
-        // only the latest generation binds, so rotation/rapid resume cannot
-        // show stale rows or touch a dead activity.
         final int generation = nextLoadGeneration();
         vaultIo(() -> {
             final List<GovernmentIDModel> ids;
@@ -948,34 +777,13 @@ public class DashboardActivity extends BaseVaultActivity {
                 cards = db().getAllBankCards();
                 accounts = db().getAllSocialAccounts();
             } catch (RuntimeException e) {
-                // Mirror TrashActivity.loadTrash: never leave the screen
-                // blank-and-silent. Keep the previous rows; the next onResume
-                // retries the load.
-                runOnUiThread(() -> {
-                    if (!isCurrentGeneration(generation) || isFinishing() || isDestroyed()) {
-                        return;
-                    }
-                    showError(R.string.err_dashboard_load);
-                });
+                android.util.Log.w("Dashboard", "refresh failed", e);
+                runIfAlive(generation, () -> showMessage(R.string.err_dashboard_load));
                 return;
             }
             cache().publishActive(ids, cards, accounts);
-            runOnUiThread(() -> {
-                if (!isCurrentGeneration(generation) || isFinishing() || isDestroyed()) {
-                    return;
-                }
-                allIds = ids;
-                allCards = cards;
-                allAccounts = accounts;
-
-                refreshIdsCarousel(allIds);
-                refreshCardCarousel(allCards);
-                refreshSocialAccounts(allAccounts);
-
-                // Masters changed -> re-index once; open search re-filters
-                // off fresh masters through the debounced background path.
-                rebuildSearchIndex();
-                // Editors close back here: re-filter open results off fresh masters.
+            runIfAlive(generation, () -> {
+                bindSnapshot(ids, cards, accounts);
                 if (searchShowing) {
                     scheduleSearch();
                 }

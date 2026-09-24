@@ -14,7 +14,6 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
-
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.annotation.Nullable;
@@ -27,50 +26,59 @@ import com.akin.wallet.adapter.GovernmentIdDesignAdapter;
 import com.akin.wallet.model.GovernmentIDModel;
 import com.akin.wallet.util.Ui;
 
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
+
+import androidx.core.os.BundleCompat;
 
 /**
- * Government ID creation/edit screen as a full screen. Add mode when no ID is
- * passed; edit mode otherwise. The type-picker carousel lives in the screen
- * content; dropdowns stay alert dialogs. Callers refresh in onResume;
- * RESULT_OK is set on save.
+ * Government ID create/edit screen. Add mode when no ID passed, edit otherwise.
  */
 public class GovernmentIDActivity extends BaseVaultActivity {
 
     public static final String EXTRA_ID = "extra_id";
 
-    /**
-     * Intent that opens this screen to edit an existing ID. Carries the row id
-     * only — the screen re-queries the vault, so document data never travels
-     * as Intent extras and edits always start current.
-     */
     public static Intent editIntent(@NonNull Context context, @NonNull GovernmentIDModel item) {
         return new Intent(context, GovernmentIDActivity.class)
                 .putExtra(EXTRA_ID, item.getId());
     }
 
-    // Rotation state. Inputs are built programmatically (no view ids), so the
-    // draft + selected type are saved explicitly; bindForm seeds from them.
+    // Rotation state. Inputs are built programmatically (no view ids).
     private static final String KEY_DRAFT = "draft_values";
     private static final String KEY_SELECTED_TYPE = "selected_type";
     private static final String KEY_DIALOG_FIELD = "dialog_field";
-    private static final java.util.regex.Pattern NON_DIGITS =
-            java.util.regex.Pattern.compile("\\D");
-    private static final java.util.regex.Pattern NON_ALNUM =
-            java.util.regex.Pattern.compile("[^A-Za-z0-9]");
-    private static final java.util.regex.Pattern HAS_LETTER =
-            java.util.regex.Pattern.compile(".*[A-Za-z].*");
-    private static final java.util.regex.Pattern DATE_8 =
-            java.util.regex.Pattern.compile("\\d{8}");
+    private static final Pattern NON_DIGITS = Pattern.compile("\\D");
+    private static final Pattern NON_ALNUM = Pattern.compile("[^A-Za-z0-9]");
+    private static final Pattern HAS_LETTER = Pattern.compile(".*[A-Za-z].*");
+    private static final Pattern DATE_8 = Pattern.compile("\\d{8}");
     private Map<String, String> savedDraft;
     private int savedSelectedType;
     private boolean hasSavedState;
     private String pendingDialogField;
-    // Live references for onSaveInstanceState (bindForm owns the locals).
-    private Map<String, String> currentDraft;
-    private int[] currentSelected;
+
+    private boolean isEdit;
+    private GovernmentIDModel editingItem;
+    private int selectedType;
+    private boolean knownType = true;
+    private final Map<String, String> draftValues = new LinkedHashMap<>();
+    private final Map<String, EditText> textInputs = new LinkedHashMap<>();
+    private final Map<String, TextView> dropdownValues = new LinkedHashMap<>();
+    private LinearLayout formContainer;
+    private LinearLayout dotsContainer;
+    private GovernmentIdDesignAdapter designAdapter;
+    private RecyclerView designCarousel;
+    private LinearLayoutManager designLayoutManager;
+    private PagerSnapHelper designSnapHelper;
+    private boolean carouselReady;
+
+    private void refreshPreview() {
+        if (designAdapter != null) {
+            designAdapter.updatePreview(draftValues);
+        }
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -80,7 +88,6 @@ public class GovernmentIDActivity extends BaseVaultActivity {
 
         int id = getIntent().getIntExtra(EXTRA_ID, -1);
         if (savedInstanceState != null) {
-            // Rotation: re-seed below from the user's in-progress draft.
             hasSavedState = true;
             savedSelectedType = savedInstanceState.getInt(KEY_SELECTED_TYPE, 0);
             savedDraft = restoreDraft(savedInstanceState);
@@ -89,13 +96,11 @@ public class GovernmentIDActivity extends BaseVaultActivity {
         if (id == -1) {
             bindForm(null);
         } else {
-            // Single-row decrypt + JSON parse off UI to avoid first-draw jank.
             final int rowId = id;
             final int gen = nextLoadGeneration();
             vaultIo(() -> {
                 final GovernmentIDModel stored = db().getIdCardById(rowId);
-                runOnUiThread(() -> {
-                    if (!isCurrentGeneration(gen) || isFinishing() || isDestroyed()) return;
+                runIfAlive(gen, () -> {
                     if (stored == null) {
                         finish();
                         return;
@@ -109,21 +114,16 @@ public class GovernmentIDActivity extends BaseVaultActivity {
     @Override
     protected void onSaveInstanceState(@NonNull Bundle outState) {
         super.onSaveInstanceState(outState);
-        if (currentDraft != null) {
-            outState.putSerializable(KEY_DRAFT, new LinkedHashMap<>(currentDraft));
-        }
-        if (currentSelected != null) {
-            outState.putInt(KEY_SELECTED_TYPE, currentSelected[0]);
-        }
+        outState.putSerializable(KEY_DRAFT, new LinkedHashMap<>(draftValues));
+        outState.putInt(KEY_SELECTED_TYPE, selectedType);
         if (pendingDialogField != null) {
             outState.putString(KEY_DIALOG_FIELD, pendingDialogField);
         }
     }
 
     private static Map<String, String> restoreDraft(@NonNull Bundle savedState) {
-        java.util.HashMap<?, ?> rawDraft =
-                androidx.core.os.BundleCompat.getSerializable(
-                        savedState, KEY_DRAFT, java.util.HashMap.class);
+        HashMap<?, ?> rawDraft =
+                BundleCompat.getSerializable(savedState, KEY_DRAFT, HashMap.class);
         if (rawDraft == null) {
             return new LinkedHashMap<>();
         }
@@ -141,211 +141,142 @@ public class GovernmentIDActivity extends BaseVaultActivity {
     }
 
     private void bindForm(@Nullable GovernmentIDModel existing) {
-        final boolean isEdit = existing != null;
+        isEdit = existing != null;
+        editingItem = existing;
 
-
-        LinearLayout formContainer = findViewById(R.id.government_id_form_container);
-        // Action row mirrors the bank card screen: form_primary_action is the outline
-        // container, form_primary_action_label carries the Save/Update caption.
+        formContainer = findViewById(R.id.government_id_form_container);
         View btnSave = findViewById(R.id.form_primary_action);
         TextView textSaveLabel = findViewById(R.id.form_primary_action_label);
 
-        // Draft holds EVERY typed value (even for hidden types) so switching
-        // ID type back and forth never loses input; save filters to active spec.
-        final Map<String, String> draftValues = new LinkedHashMap<>();
+        // Draft holds every typed value so switching types never loses input.
+        draftValues.clear();
+        textInputs.clear();
+        dropdownValues.clear();
         if (isEdit) {
             draftValues.putAll(existing.getFields());
         }
-        // Rotation: the user's in-progress draft wins over stored values.
         if (hasSavedState && savedDraft != null) {
             draftValues.putAll(savedDraft);
         }
-        currentDraft = draftValues;
-        final Map<String, EditText> textInputs = new LinkedHashMap<>();
-        // Dropdown value texts, registered for setError like text inputs so a
-        // failed save flags the value itself — same behavior as Date of Birth.
-        final Map<String, TextView> dropdownValues = new LinkedHashMap<>();
 
-        final int[] selectedType = {0};
-        currentSelected = selectedType;
-        final boolean[] knownType = {true};
-
+        selectedType = 0;
+        knownType = true;
         if (isEdit) {
             textSaveLabel.setText(R.string.action_update);
             if (GovernmentIDModel.isKnownType(existing.getIdType())) {
-                selectedType[0] = GovernmentIDModel.indexOf(existing.getIdType());
+                selectedType = GovernmentIDModel.indexOf(existing.getIdType());
             } else {
-                knownType[0] = false;
-                selectedType[0] = 0;
+                knownType = false;
             }
         } else {
-            // Add mode keeps a single full-width Save button, same as the bank
-            // form. The delete view is GONE, so its row margin is dropped to
-            // avoid a trailing 8dp gap.
             textSaveLabel.setText(R.string.action_save);
-            LinearLayout.LayoutParams saveParams =
-                    (LinearLayout.LayoutParams) btnSave.getLayoutParams();
-            saveParams.setMarginEnd(0);
-            btnSave.setLayoutParams(saveParams);
+            Ui.makeSaveButtonFullWidth(btnSave);
         }
-        if (hasSavedState) {
+        if (hasSavedState && knownType) {
             String[] names = GovernmentIDModel.getTypeNames();
-            if (savedSelectedType >= 0 && savedSelectedType < names.length
-                    && knownType[0]) {
-                selectedType[0] = savedSelectedType;
+            if (savedSelectedType >= 0 && savedSelectedType < names.length) {
+                selectedType = savedSelectedType;
             }
         }
 
-        final GovernmentIdDesignAdapter[] adapterRef = new GovernmentIdDesignAdapter[1];
-        final RecyclerView[] carouselRef = new RecyclerView[1];
-        final LinearLayout dotsContainer = findViewById(R.id.government_id_design_indicator);
+        dotsContainer = findViewById(R.id.government_id_design_indicator);
         dotsContainer.setVisibility(View.VISIBLE);
 
-        Runnable refreshPreview = () -> {
-            if (adapterRef[0] != null) {
-                adapterRef[0].updatePreview(draftValues);
-            }
-        };
-
-        // Bank-style picker: each carousel page IS an ID type's authentic face.
-        // Swiping (or tapping) a page selects that type and rebuilds the form.
-        GovernmentIdDesignAdapter designAdapter = new GovernmentIdDesignAdapter(pos -> {
-            if (isEdit && !knownType[0]) {
-                showMessage("ID type is fixed for entries from a newer version");
+        designAdapter = new GovernmentIdDesignAdapter(pos -> {
+            if (isEdit && !knownType) {
+                showMessage(R.string.msg_id_type_fixed);
                 return;
             }
-            if (pos != selectedType[0]) {
-                applyIdTypeSelection(pos, formContainer, draftValues,
-                        textInputs, dropdownValues, refreshPreview, dotsContainer, adapterRef[0],
-                        selectedType);
-            } else if (carouselRef[0] != null) {
-                carouselRef[0].smoothScrollToPosition(pos);
+            if (pos != selectedType) {
+                applyIdTypeSelection(pos);
+            } else if (designCarousel != null) {
+                designCarousel.smoothScrollToPosition(pos);
             }
         });
-        adapterRef[0] = designAdapter;
-        RecyclerView recyclerDesign = findViewById(R.id.government_id_design_carousel);
-        carouselRef[0] = recyclerDesign;
-        LinearLayoutManager layoutManager =
-                new LinearLayoutManager(GovernmentIDActivity.this, LinearLayoutManager.HORIZONTAL, false);
-        recyclerDesign.setLayoutManager(layoutManager);
-        recyclerDesign.setAdapter(designAdapter);
-        // wrap_content height: the carousel can resize with its content, so fixed-size must stay off.
-        recyclerDesign.setHasFixedSize(false);
-        recyclerDesign.setItemViewCacheSize(4);
-        recyclerDesign.addItemDecoration(Ui.carouselGapDecoration(this));
-        PagerSnapHelper snapHelper = new PagerSnapHelper();
-        snapHelper.attachToRecyclerView(recyclerDesign);
+        designCarousel = findViewById(R.id.government_id_design_carousel);
+        designLayoutManager =
+                new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false);
+        designCarousel.setLayoutManager(designLayoutManager);
+        designCarousel.setAdapter(designAdapter);
+        designCarousel.setHasFixedSize(false);
+        designCarousel.setItemViewCacheSize(4);
+        designCarousel.addItemDecoration(Ui.carouselGapDecoration(this));
+        designSnapHelper = new PagerSnapHelper();
+        designSnapHelper.attachToRecyclerView(designCarousel);
 
-        Ui.buildDots(this, dotsContainer, designAdapter.getTypeCount(), selectedType[0]);
+        Ui.buildDots(this, dotsContainer, designAdapter.getTypeCount(), selectedType);
 
-        // Guard: ignore carousel callbacks until the initial scroll to the
-        // edited type has settled. Otherwise, the initial layout at position 0
-        // fires onScrolled and rebuilds the form for the wrong type (empty/
-        // wrong fields until the user swipes).
-        final boolean[] carouselReady = {false};
-        recyclerDesign.addOnScrollListener(new RecyclerView.OnScrollListener() {
+        // Ignore carousel callbacks until the initial scroll settles.
+        carouselReady = false;
+        designCarousel.addOnScrollListener(new RecyclerView.OnScrollListener() {
             @Override
             public void onScrollStateChanged(@NonNull RecyclerView recyclerView, int newState) {
-                if (!carouselReady[0] || !knownType[0]) {
+                if (!carouselReady || !knownType) {
                     return;
                 }
                 if (newState != RecyclerView.SCROLL_STATE_IDLE) {
                     return;
                 }
-                View snapView = snapHelper.findSnapView(layoutManager);
+                View snapView = designSnapHelper.findSnapView(designLayoutManager);
                 if (snapView != null) {
-                    int pos = layoutManager.getPosition(snapView);
-                    if (pos != RecyclerView.NO_POSITION && pos != selectedType[0]) {
-                        applyIdTypeSelection(pos, formContainer, draftValues,
-                                textInputs, dropdownValues, refreshPreview, dotsContainer, adapterRef[0],
-                                selectedType);
+                    int pos = designLayoutManager.getPosition(snapView);
+                    if (pos != RecyclerView.NO_POSITION && pos != selectedType) {
+                        applyIdTypeSelection(pos);
                     }
                 }
             }
         });
-        final int scrollTo = selectedType[0];
+        final int scrollTo = selectedType;
 
-        // Initial form for the selected (or edited) type. The header title is
-        // gone by design — the carousel page itself names the type.
-        rebuildForm(formContainer, currentSpec(selectedType[0], knownType[0],
-                isEdit ? existing : null), draftValues, textInputs, dropdownValues,
-                refreshPreview);
-        refreshPreview.run();
+        rebuildForm(currentSpec());
+        refreshPreview();
 
-        // Position the carousel on the edited type, then enable callbacks.
-        // Nested post ensures the scroll layout pass has run before we listen.
-        recyclerDesign.post(() -> {
+        designCarousel.post(() -> {
             if (scrollTo != 0) {
-                recyclerDesign.scrollToPosition(scrollTo);
+                designCarousel.scrollToPosition(scrollTo);
             }
-            recyclerDesign.post(() -> carouselReady[0] = true);
+            designCarousel.post(() -> carouselReady = true);
         });
 
         btnSave.setOnClickListener(v -> {
-            String typeName = currentTypeName(selectedType[0], knownType[0],
-                    isEdit ? existing.getIdType() : null);
-            GovernmentIDModel.IdType spec = currentSpec(selectedType[0], knownType[0],
-                    isEdit ? existing : null);
+            GovernmentIDModel.IdType spec = currentSpec();
+            String typeName = currentTypeName(spec);
 
-            // Pull latest text (watchers already keep draftValues live; this is a safety net).
             for (Map.Entry<String, EditText> textInput : textInputs.entrySet()) {
                 draftValues.put(textInput.getKey(), textInput.getValue().getText().toString().trim());
             }
-            Map<String, String> filtered = filteredDraft(typeName, draftValues);
+            Map<String, String> filtered = filteredDraft(spec, typeName);
 
-            if (!validate(spec, filtered, textInputs, dropdownValues)) {
+            if (!validate(spec, filtered)) {
                 return;
             }
             btnSave.setEnabled(false);
 
             if (isEdit) {
-                String finalType = knownType[0] ? typeName : existing.getIdType();
+                String finalType = knownType ? typeName : existing.getIdType();
                 final GovernmentIDModel updated = new GovernmentIDModel(
                         existing.getId(), finalType, filtered,
                         existing.getCreatedAt(), 0);
-                vaultIo(() -> {
-                    db().updateIdCard(updated);
-                    cache().invalidate();
-                    runOnUiThread(() -> {
-                        if (isFinishing() || isDestroyed()) return;
-                        app().notifyOnReturn(R.string.msg_updated);
-                        setResult(RESULT_OK);
-                        finish();
-                    });
-                });
+                persistId(updated, R.string.msg_updated, () -> db().updateIdCard(updated));
             } else {
                 final GovernmentIDModel newCard = new GovernmentIDModel(typeName, filtered);
-                vaultIo(() -> {
-                    db().insertIdCard(newCard);
-                    cache().invalidate();
-                    runOnUiThread(() -> {
-                        if (isFinishing() || isDestroyed()) return;
-                        app().notifyOnReturn(R.string.msg_id_saved);
-                        setResult(RESULT_OK);
-                        finish();
-                    });
-                });
+                persistId(newCard, R.string.msg_id_saved, () -> db().insertIdCard(newCard));
             }
         });
 
-        // Delete on this screen (no IDs tab), shown in-row in edit mode
-        // only — same placement and outline-red style as the bank card screen.
-        // Soft-delete behind the scenes: the dialog reads as a normal delete
-        // while the row moves to Trash (Settings). Copy and toasts stay ID-specific.
         View btnDelete = findViewById(R.id.form_destructive_action);
         if (isEdit) {
             btnDelete.setVisibility(View.VISIBLE);
             btnDelete.setOnClickListener(v -> confirmDeleteToTrash(
-                    "Delete ID",
-                    "Are you sure you want to delete this "
-                            + existing.getIdType() + "?",
+                    getString(R.string.confirm_delete_id_title),
+                    getString(R.string.confirm_delete_id_message, existing.getIdType()),
                     () -> {
                         final int rowId = existing.getId();
                         vaultIo(() -> {
                             db().moveIdCardToTrash(rowId);
                             cache().invalidate();
                             runOnUiThread(() -> {
-                                if (isFinishing() || isDestroyed()) return;
+                                if (!isAlive()) return;
                                 setResult(RESULT_OK);
                                 finish();
                                 app().notifyOnReturn(R.string.msg_deleted);
@@ -353,126 +284,113 @@ public class GovernmentIDActivity extends BaseVaultActivity {
                         });
                     }));
         }
-        reopenPendingDropdown(formContainer, draftValues, dropdownValues, refreshPreview);
+        reopenPendingDropdown();
     }
 
-    private String currentTypeName(int selected, boolean known, @Nullable String existingType) {
-        if (!known && existingType != null) {
-            return existingType;
+    private void persistId(GovernmentIDModel model, int doneMessage, Runnable write) {
+        vaultIo(() -> {
+            write.run();
+            cache().invalidate();
+            runOnUiThread(() -> {
+                if (!isAlive()) return;
+                app().notifyOnReturn(doneMessage);
+                setResult(RESULT_OK);
+                finish();
+            });
+        });
+    }
+
+    private String currentTypeName(GovernmentIDModel.IdType spec) {
+        if (!knownType && editingItem != null) {
+            return editingItem.getIdType();
+        }
+        return spec != null ? spec.name : GovernmentIDModel.getTypeNames()[0];
+    }
+
+    private GovernmentIDModel.IdType currentSpec() {
+        if (!knownType && editingItem != null) {
+            return GovernmentIDModel.genericType(editingItem.getIdType(), editingItem.getFields());
         }
         String[] names = GovernmentIDModel.getTypeNames();
-        if (selected < 0 || selected >= names.length) {
-            return names[0];
-        }
-        return names[selected];
+        int pos = selectedType < 0 || selectedType >= names.length ? 0 : selectedType;
+        return GovernmentIDModel.forName(names[pos]);
     }
 
-    private GovernmentIDModel.IdType currentSpec(int selected, boolean known,
-                                          @Nullable GovernmentIDModel existing) {
-        if (!known && existing != null) {
-            return GovernmentIDModel.genericType(existing.getIdType(), existing.getFields());
-        }
-        String[] names = GovernmentIDModel.getTypeNames();
-        if (selected < 0 || selected >= names.length) {
-            selected = 0;
-        }
-        return GovernmentIDModel.forName(names[selected]);
-    }
-
-    private Map<String, String> filteredDraft(String typeName, Map<String, String> draft) {
+    private Map<String, String> filteredDraft(GovernmentIDModel.IdType spec, String typeName) {
         Map<String, String> out = new LinkedHashMap<>();
-        GovernmentIDModel.IdType spec = GovernmentIDModel.isKnownType(typeName)
-                ? GovernmentIDModel.forName(typeName)
-                : GovernmentIDModel.genericType(typeName, draft);
-        for (GovernmentIDModel.IdField specField : spec.fields) {
-            String draftValue = draft.get(specField.key);
+        GovernmentIDModel.IdType use = spec;
+        if (use == null) {
+            use = GovernmentIDModel.isKnownType(typeName)
+                    ? GovernmentIDModel.forName(typeName)
+                    : GovernmentIDModel.genericType(typeName, draftValues);
+        }
+        for (GovernmentIDModel.IdField specField : use.fields) {
+            String draftValue = draftValues.get(specField.key);
             out.put(specField.key, draftValue != null ? draftValue : "");
         }
         return out;
     }
 
-    private void rebuildForm(LinearLayout container, GovernmentIDModel.IdType spec,
-                             Map<String, String> draft, Map<String, EditText> textInputs,
-                             Map<String, TextView> dropdownValues, Runnable onChanged) {
-        container.removeAllViews();
+    private void rebuildForm(GovernmentIDModel.IdType spec) {
+        formContainer.removeAllViews();
         textInputs.clear();
         dropdownValues.clear();
         List<GovernmentIDModel.IdField> fields = spec.fields;
         for (int i = 0; i < fields.size(); i++) {
             GovernmentIDModel.IdField field = fields.get(i);
-            ensureDraftValue(draft, field);
-            // Row pairing, greedy left-to-right: generic short-field pairs
-            // ((date, date), or a date/number/picker followed by a picker)
-            // plus any explicit pairWithNext flag from the spec (custom rows
-            // the generic rules can't infer, for example, two text fields). A flagged
-            // last field has no next and simply stands alone.
+            ensureDraftValue(field);
             GovernmentIDModel.IdField second = i + 1 < fields.size() ? fields.get(i + 1) : null;
-            boolean datePair = isDateField(field) && isDateField(second);
+            boolean datePair = hasInputClass(field, InputType.TYPE_CLASS_DATETIME)
+                    && hasInputClass(second, InputType.TYPE_CLASS_DATETIME);
             boolean shortPair = second != null && second.isDropdown()
-                    && (isDateField(field) || isNumberField(field) || field.isDropdown());
+                    && (hasInputClass(field, InputType.TYPE_CLASS_DATETIME)
+                    || hasInputClass(field, InputType.TYPE_CLASS_NUMBER)
+                    || field.isDropdown());
             boolean flaggedPair = second != null && field.pairWithNext;
             if (datePair || shortPair || flaggedPair) {
-                ensureDraftValue(draft, second);
-                container.addView(buildPairRow(field, second, draft, textInputs, dropdownValues, onChanged));
+                ensureDraftValue(second);
+                formContainer.addView(buildPairRow(field, second));
                 i++;
             } else {
-                container.addView(buildFieldView(field, draft, textInputs, dropdownValues, onChanged));
+                formContainer.addView(buildFieldView(field));
             }
         }
     }
 
     /** Guarantees a draft slot so switching types never loses typed input. */
-    private static void ensureDraftValue(Map<String, String> draft, GovernmentIDModel.IdField field) {
-        if (!draft.containsKey(field.key)) {
-            draft.put(field.key, "");
+    private void ensureDraftValue(GovernmentIDModel.IdField field) {
+        if (!draftValues.containsKey(field.key)) {
+            draftValues.put(field.key, "");
         }
     }
 
-    /** Dispatches to the dropdown or free-text builder for one field. */
-    private View buildFieldView(GovernmentIDModel.IdField field, Map<String, String> draft,
-                                Map<String, EditText> textInputs, Map<String, TextView> dropdownValues,
-                                Runnable onChanged) {
+    private View buildFieldView(GovernmentIDModel.IdField field) {
         if (field.isDropdown()) {
-            return buildDropdownField(field, draft, dropdownValues, onChanged);
+            return buildDropdownField(field);
         }
-        return buildTextField(field, draft, textInputs, onChanged);
+        return buildTextField(field);
     }
 
-    /** Date fields carry the datetime input class (see IdField date). */
-    private static boolean isDateField(GovernmentIDModel.IdField field) {
-        return field != null
-                && (field.inputType & InputType.TYPE_MASK_CLASS) == InputType.TYPE_CLASS_DATETIME;
+    private static boolean hasInputClass(GovernmentIDModel.IdField field, int inputClass) {
+        return field != null && (field.inputType & InputType.TYPE_MASK_CLASS) == inputClass;
     }
 
-    /** Number fields carry the number input class (see IdField number). */
-    private static boolean isNumberField(GovernmentIDModel.IdField field) {
-        return field != null
-                && (field.inputType & InputType.TYPE_MASK_CLASS) == InputType.TYPE_CLASS_NUMBER;
-    }
-
-    /**
-     * Two short fields side by side with equal weight and the bank form's 6dp
-     * middle gap. Reuses the standard field builders, then swaps their
-     * full-width params for weighted row params (replacing, not adding to,
-     * the 16dp top margin the builders set).
-     */
-    private View buildPairRow(GovernmentIDModel.IdField first, GovernmentIDModel.IdField second,
-                              Map<String, String> draft, Map<String, EditText> textInputs,
-                              Map<String, TextView> dropdownValues, Runnable onChanged) {
-        LinearLayout row = new LinearLayout(GovernmentIDActivity.this);
+    /** Two short fields side by side with equal weight and a 6dp middle gap. */
+    private View buildPairRow(GovernmentIDModel.IdField first, GovernmentIDModel.IdField second) {
+        LinearLayout row = new LinearLayout(this);
         row.setOrientation(LinearLayout.HORIZONTAL);
         LinearLayout.LayoutParams rowParams = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         rowParams.topMargin = Ui.dp(this, 16);
         row.setLayoutParams(rowParams);
 
-        View left = buildFieldView(first, draft, textInputs, dropdownValues, onChanged);
+        View left = buildFieldView(first);
         LinearLayout.LayoutParams leftParams = new LinearLayout.LayoutParams(
                 0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
         leftParams.setMarginEnd(Ui.dp(this, 6));
         left.setLayoutParams(leftParams);
 
-        View right = buildFieldView(second, draft, textInputs, dropdownValues, onChanged);
+        View right = buildFieldView(second);
         LinearLayout.LayoutParams rightParams = new LinearLayout.LayoutParams(
                 0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
         rightParams.setMarginStart(Ui.dp(this, 6));
@@ -483,51 +401,66 @@ public class GovernmentIDActivity extends BaseVaultActivity {
         return row;
     }
 
-    private View buildTextField(GovernmentIDModel.IdField field, Map<String, String> draft,
-                                Map<String, EditText> textInputs, Runnable onChanged) {
-        LinearLayout wrap = new LinearLayout(GovernmentIDActivity.this);
+    private LinearLayout makeFieldWrap() {
+        LinearLayout wrap = new LinearLayout(this);
         wrap.setOrientation(LinearLayout.VERTICAL);
         LinearLayout.LayoutParams wrapParams = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         wrapParams.topMargin = Ui.dp(this, 16);
         wrap.setLayoutParams(wrapParams);
+        return wrap;
+    }
 
-        TextView label = new TextView(GovernmentIDActivity.this);
+    private TextView makeFieldLabel(GovernmentIDModel.IdField field) {
+        TextView label = new TextView(this);
         label.setText(field.required ? field.label + " *" : field.label);
         label.setTextColor(getResources().getColor(R.color.dashboard_muted, null));
         label.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
         label.setMaxLines(1);
         label.setEllipsize(android.text.TextUtils.TruncateAt.END);
-        wrap.addView(label);
+        return label;
+    }
 
-        EditText input = new EditText(GovernmentIDActivity.this);
+    private void styleInputBox(View box) {
+        box.setBackgroundResource(R.drawable.bg_dashboard_card);
+        int horizontalPadding = Ui.dp(this, 16);
+        int verticalPadding = Ui.dp(this, 14);
+        box.setPadding(horizontalPadding, verticalPadding, horizontalPadding, verticalPadding);
+    }
+
+    private void styleFieldText(TextView text) {
+        text.setTextColor(getResources().getColor(R.color.text_primary, null));
+        text.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
+        text.setSingleLine(true);
+        text.setEllipsize(android.text.TextUtils.TruncateAt.END);
+    }
+
+    private View buildTextField(GovernmentIDModel.IdField field) {
+        LinearLayout wrap = makeFieldWrap();
+        wrap.addView(makeFieldLabel(field));
+
+        EditText input = new EditText(this);
         LinearLayout.LayoutParams inputParams = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         inputParams.topMargin = Ui.dp(this, 8);
         input.setLayoutParams(inputParams);
-        input.setBackgroundResource(R.drawable.bg_dashboard_card);
+        styleInputBox(input);
         input.setHint(field.hint);
         input.setHintTextColor(getResources().getColor(R.color.hint_text, null));
-        input.setTextColor(getResources().getColor(R.color.text_primary, null));
-        input.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
-        input.setSingleLine(true);
-        input.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        styleFieldText(input);
         input.setInputType(field.inputType);
         if (field.maxLength > 0) {
             input.setFilters(new InputFilter[]{new InputFilter.LengthFilter(field.maxLength)});
         }
-        int horizontalPadding = Ui.dp(this, 16);
-        int verticalPadding = Ui.dp(this, 14);
-        input.setPadding(horizontalPadding, verticalPadding, horizontalPadding, verticalPadding);
-        String current = draft.get(field.key);
+        String current = draftValues.get(field.key);
         if (current != null && !current.isEmpty()) {
             input.setText(current);
         }
         input.addTextChangedListener(new Ui.SimpleTextWatcher() {
             @Override
             public void onTextChanged(CharSequence text, int start, int before, int count) {
-                draft.put(field.key, text.toString());
-                onChanged.run();
+                draftValues.put(field.key, text.toString());
+                refreshPreview();
             }
         });
 
@@ -536,54 +469,32 @@ public class GovernmentIDActivity extends BaseVaultActivity {
         return wrap;
     }
 
-    private View buildDropdownField(GovernmentIDModel.IdField field, Map<String, String> draft,
-                                    Map<String, TextView> dropdownValues, Runnable onChanged) {
-        LinearLayout wrap = new LinearLayout(GovernmentIDActivity.this);
-        wrap.setOrientation(LinearLayout.VERTICAL);
-        LinearLayout.LayoutParams wrapParams = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        wrapParams.topMargin = Ui.dp(this, 16);
-        wrap.setLayoutParams(wrapParams);
+    private View buildDropdownField(GovernmentIDModel.IdField field) {
+        LinearLayout wrap = makeFieldWrap();
+        wrap.addView(makeFieldLabel(field));
 
-        TextView label = new TextView(GovernmentIDActivity.this);
-        label.setText(field.required ? field.label + " *" : field.label);
-        label.setTextColor(getResources().getColor(R.color.dashboard_muted, null));
-        label.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
-        label.setMaxLines(1);
-        label.setEllipsize(android.text.TextUtils.TruncateAt.END);
-        wrap.addView(label);
-
-        LinearLayout row = new LinearLayout(GovernmentIDActivity.this);
+        LinearLayout row = new LinearLayout(this);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(Gravity.CENTER_VERTICAL);
         LinearLayout.LayoutParams rowParams = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         rowParams.topMargin = Ui.dp(this, 8);
         row.setLayoutParams(rowParams);
-        row.setBackgroundResource(R.drawable.bg_dashboard_card);
-        int horizontalPadding = Ui.dp(this, 16);
-        int verticalRowPadding = Ui.dp(this, 14);
-        row.setPadding(horizontalPadding, verticalRowPadding, horizontalPadding, verticalRowPadding);
+        styleInputBox(row);
         row.setClickable(true);
         row.setFocusable(true);
 
-        TextView valueView = new TextView(GovernmentIDActivity.this);
+        TextView valueView = new TextView(this);
         LinearLayout.LayoutParams valueParams = new LinearLayout.LayoutParams(
                 0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
         valueView.setLayoutParams(valueParams);
-        valueView.setSingleLine(true);
+        styleFieldText(valueView);
         valueView.setMaxLines(1);
-        valueView.setEllipsize(android.text.TextUtils.TruncateAt.END);
         valueView.setTag(field.key);
-        valueView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
-        valueView.setTextColor(getResources().getColor(R.color.text_primary, null));
-        // Focusable so a failed save can show the same setError popup a text
-        // field shows — dropdown errors behave exactly like date-of-birth
-        // errors, with no extra label below the field.
         valueView.setFocusable(true);
         valueView.setFocusableInTouchMode(true);
 
-        String current = draft.get(field.key);
+        String current = draftValues.get(field.key);
         if (current == null) {
             current = "";
         }
@@ -595,7 +506,7 @@ public class GovernmentIDActivity extends BaseVaultActivity {
             valueView.setAlpha(1f);
         }
 
-        ImageView chevron = new ImageView(GovernmentIDActivity.this);
+        ImageView chevron = new ImageView(this);
         chevron.setImageResource(R.drawable.ic_dropdown);
         LinearLayout.LayoutParams chevParams = new LinearLayout.LayoutParams(Ui.dp(this, 20), Ui.dp(this, 20));
         chevron.setLayoutParams(chevParams);
@@ -604,37 +515,36 @@ public class GovernmentIDActivity extends BaseVaultActivity {
         row.addView(valueView);
         row.addView(chevron);
 
-        row.setOnClickListener(v -> {
-            int checkedPosition = Ui.indexOfIgnoreCase(field.options, draft.get(field.key));
-            pendingDialogField = field.key;
-            AlertDialog dialog = Ui.singleChoice(GovernmentIDActivity.this,
-                    field.label, field.options, checkedPosition, selectedPosition -> {
-                        pendingDialogField = null;
-                        String picked = field.options[selectedPosition];
-                        draft.put(field.key, picked);
-                        valueView.setText(picked);
-                        valueView.setAlpha(1f);
-                        hideFieldError(dropdownValues, field.key);
-                        onChanged.run();
-                    });
-            dialog.setOnDismissListener(d -> {
-                if (field.key.equals(pendingDialogField)) {
-                    pendingDialogField = null;
-                }
-            });
-            trackDialog(dialog);
-        });
+        row.setOnClickListener(v -> showDropdownDialog(field, valueView));
 
         wrap.addView(row);
 
-        // Registered for setError like a text input — a failed save flags the
-        // value text itself, never a label below the field.
         dropdownValues.put(field.key, valueView);
         return wrap;
     }
 
-    private void reopenPendingDropdown(LinearLayout formContainer, Map<String, String> draft,
-            Map<String, TextView> dropdownValues, Runnable onChanged) {
+    private void showDropdownDialog(GovernmentIDModel.IdField field, TextView valueView) {
+        int checked = Ui.indexOfIgnoreCase(field.options, draftValues.get(field.key));
+        pendingDialogField = field.key;
+        AlertDialog dialog = Ui.singleChoice(this,
+                field.label, field.options, checked, pos -> {
+                    pendingDialogField = null;
+                    String picked = field.options[pos];
+                    draftValues.put(field.key, picked);
+                    valueView.setText(picked);
+                    valueView.setAlpha(1f);
+                    hideFieldError(field.key);
+                    refreshPreview();
+                });
+        dialog.setOnDismissListener(d -> {
+            if (field.key.equals(pendingDialogField)) {
+                pendingDialogField = null;
+            }
+        });
+        trackDialog(dialog);
+    }
+
+    private void reopenPendingDropdown() {
         if (pendingDialogField == null || formContainer == null) {
             return;
         }
@@ -645,47 +555,27 @@ public class GovernmentIDActivity extends BaseVaultActivity {
             return;
         }
         TextView valueView = (TextView) tagged;
-        GovernmentIDModel.IdField target = null;
-        for (GovernmentIDModel.IdType type : GovernmentIDModel.getAllTypes()) {
-            for (GovernmentIDModel.IdField f : type.fields) {
-                if (key.equals(f.key) && f.isDropdown()) {
-                    target = f;
-                    break;
-                }
-            }
-        }
+        GovernmentIDModel.IdField target = findDropdownField(key);
         if (target == null) {
             return;
         }
         final GovernmentIDModel.IdField field = target;
-        formContainer.post(() -> {
-            int checked = Ui.indexOfIgnoreCase(field.options, draft.get(field.key));
-            pendingDialogField = field.key;
-            AlertDialog dialog = Ui.singleChoice(this,
-                    field.label, field.options, checked, pos -> {
-                        pendingDialogField = null;
-                        String picked = field.options[pos];
-                        draft.put(field.key, picked);
-                        valueView.setText(picked);
-                        valueView.setAlpha(1f);
-                        hideFieldError(dropdownValues, field.key);
-                        onChanged.run();
-                    });
-            dialog.setOnDismissListener(d -> {
-                if (field.key.equals(pendingDialogField)) {
-                    pendingDialogField = null;
-                }
-            });
-            trackDialog(dialog);
-        });
+        formContainer.post(() -> showDropdownDialog(field, valueView));
     }
 
-    private boolean validate(GovernmentIDModel.IdType spec, Map<String, String> values,
-                             Map<String, EditText> textInputs, Map<String, TextView> dropdownValues) {
-        // Document-specific contracts run before the generic pass so the user
-        // sees the document rule first: exactly-12-digit numeric TIN / PIN and
-        // numeric date shapes (presence itself is covered by the generic
-        // required check below).
+    private static GovernmentIDModel.IdField findDropdownField(String key) {
+        for (GovernmentIDModel.IdType type : GovernmentIDModel.getAllTypes()) {
+            for (GovernmentIDModel.IdField f : type.fields) {
+                if (key.equals(f.key) && f.isDropdown()) {
+                    return f;
+                }
+            }
+        }
+        return null;
+    }
+
+    private boolean validate(GovernmentIDModel.IdType spec, Map<String, String> values) {
+        // Document rules first so the user sees the document error, then required.
         FieldOffense offense = documentOffense(spec, values);
         if (offense == null) {
             offense = requiredFieldOffense(spec, values);
@@ -693,43 +583,48 @@ public class GovernmentIDActivity extends BaseVaultActivity {
         if (offense == null) {
             return true;
         }
-        flagFieldError(textInputs, dropdownValues, offense.fieldKey, offense.message);
+        flagFieldError(offense.fieldKey, offense.message);
         return false;
     }
 
-    /** Document-specific offense for the active type, null when clean. */
     private static FieldOffense documentOffense(GovernmentIDModel.IdType spec, Map<String, String> values) {
-        if (spec != null && GovernmentIDModel.TYPE_TIN.equalsIgnoreCase(spec.name)) {
+        if (spec == null) {
+            return null;
+        }
+        if (GovernmentIDModel.TYPE_TIN.equalsIgnoreCase(spec.name)) {
             return validateTinFields(values);
-        } else if (spec != null && GovernmentIDModel.TYPE_PHIL_HEALTH.equalsIgnoreCase(spec.name)) {
+        } else if (GovernmentIDModel.TYPE_PHIL_HEALTH.equalsIgnoreCase(spec.name)) {
             return validatePhilHealthFields(values);
-        } else if (spec != null && GovernmentIDModel.TYPE_NATIONAL_ID.equalsIgnoreCase(spec.name)) {
+        } else if (GovernmentIDModel.TYPE_NATIONAL_ID.equalsIgnoreCase(spec.name)) {
             return validateNationalIdFields(values);
-        } else if (spec != null && GovernmentIDModel.TYPE_PASSPORT.equalsIgnoreCase(spec.name)) {
+        } else if (GovernmentIDModel.TYPE_PASSPORT.equalsIgnoreCase(spec.name)) {
             return validatePassportFields(values);
-        } else if (spec != null && GovernmentIDModel.TYPE_DRIVING_LICENSE.equalsIgnoreCase(spec.name)) {
+        } else if (GovernmentIDModel.TYPE_DRIVING_LICENSE.equalsIgnoreCase(spec.name)) {
             return validateDrivingLicenseFields(values);
-        } else if (spec != null && GovernmentIDModel.TYPE_SSS.equalsIgnoreCase(spec.name)) {
+        } else if (GovernmentIDModel.TYPE_SSS.equalsIgnoreCase(spec.name)) {
             return validateSssFields(values);
         }
         return null;
     }
 
-    /** Generic required/sensitive pass over the spec, null when clean. */
+    private static final int MIN_SENSITIVE_ALNUM = 4;
+
+    /** Required/sensitive pass over the spec, null when clean. */
     private static FieldOffense requiredFieldOffense(GovernmentIDModel.IdType spec, Map<String, String> values) {
         for (GovernmentIDModel.IdField specField : spec.fields) {
             String fieldValue = trimmed(values.get(specField.key));
             if (specField.required && fieldValue.isEmpty()) {
                 return new FieldOffense(specField.key, specField.label + " is required");
             }
-            if (specField.sensitive && !fieldValue.isEmpty() && NON_ALNUM.matcher(fieldValue).replaceAll("").length() < 4) {
+            if (specField.sensitive && !fieldValue.isEmpty()
+                    && NON_ALNUM.matcher(fieldValue).replaceAll("").length() < MIN_SENSITIVE_ALNUM) {
                 return new FieldOffense(specField.key, specField.label + " looks too short");
             }
         }
         return null;
     }
 
-    /** One validation failure: which field plus what to tell the user. */
+    /** One validation failure: field plus message. */
     private static final class FieldOffense {
         final String fieldKey;
         final String message;
@@ -740,13 +635,6 @@ public class GovernmentIDActivity extends BaseVaultActivity {
         }
     }
 
-    /**
-     * TIN-specific document rules. Fail-fast in field order (TIN, birth, issue)
-     * so the first offender gets focus, matching the generic pass behavior.
-     *
-     * <p>BIR TINs are exactly 12 digits with no alphabet (digit count is what
-     * matters). Dates are exactly 8 digits (YYYYMMDD) — no calendar computation.
-     */
     private static FieldOffense validateTinFields(Map<String, String> values) {
         String tinError = exactDigitNumberError("TIN", values.get("tinNumber"), 12);
         if (tinError != null) {
@@ -764,11 +652,6 @@ public class GovernmentIDActivity extends BaseVaultActivity {
         return null;
     }
 
-    /**
-     * PhilHealth document rules: 12-digit PhilHealth No. (grouped 3-3-3-3 on
-     * the face, same presentational rule as the TIN) plus the shared numeric
-     * date shape for birth. Fail-fast in field order, matching the TIN pass.
-     */
     private static FieldOffense validatePhilHealthFields(Map<String, String> values) {
         String numberError = exactDigitNumberError("PhilHealth No.", values.get("philHealthNumber"), 12);
         if (numberError != null) {
@@ -782,11 +665,6 @@ public class GovernmentIDActivity extends BaseVaultActivity {
         return null;
     }
 
-    /**
-     * National ID document rules: 16-digit numeric PSN (grouped 4-4-4-4 on
-     * the face) plus the shared 8-digit shapes for birth and issue. Fail-fast
-     * in field order, matching the other passes.
-     */
     private static FieldOffense validateNationalIdFields(Map<String, String> values) {
         String psnError = exactDigitNumberError("PSN", values.get("psn"), 16);
         if (psnError != null) {
@@ -804,11 +682,6 @@ public class GovernmentIDActivity extends BaseVaultActivity {
         return null;
     }
 
-    /**
-     * Passport document rules: the shared 8-digit shapes for birth, issue and
-     * expiry (number presence is covered by the generic required pass).
-     * Fail-fast in field order, matching the other passes.
-     */
     private static FieldOffense validatePassportFields(Map<String, String> values) {
         String dobError = numericDateError("Date of Birth", values.get("birth_date"));
         if (dobError != null) {
@@ -825,11 +698,6 @@ public class GovernmentIDActivity extends BaseVaultActivity {
         return null;
     }
 
-    /**
-     * Driver license document rules: the shared 8-digit shapes for birth and
-     * expiry plus numeric-only serial (number presence is covered by the
-     * generic required pass). Fail-fast in field order, matching the passes.
-     */
     private static FieldOffense validateDrivingLicenseFields(Map<String, String> values) {
         String dobError = numericDateError("Date of Birth", values.get("birth_date"));
         if (dobError != null) {
@@ -845,11 +713,6 @@ public class GovernmentIDActivity extends BaseVaultActivity {
         }
         return null;
     }
-    /**
-     * SSS document rules: 10-digit numeric SS number plus the shared 8-digit
-     * birth shape (other presence is covered by the generic required pass).
-     * Fail-fast in field order, matching the other passes.
-     */
     private static FieldOffense validateSssFields(Map<String, String> values) {
         String ssError = exactDigitNumberError("SS Number", values.get("ss_number"), 10);
         if (ssError != null) {
@@ -862,11 +725,6 @@ public class GovernmentIDActivity extends BaseVaultActivity {
         }
         return null;
     }
-    /**
-     * Shared exact-length document-number rule (16-digit PSN, 12-digit TIN /
-     * PhilHealth No., 10-digit SS number): no alphabet, exactly the expected
-     * digit count. Returns the error message, or null when acceptable.
-     */
     private static String exactDigitNumberError(String label, String rawValue, int digits) {
         String raw = trimmed(rawValue);
         if (raw.isEmpty()) {
@@ -881,41 +739,27 @@ public class GovernmentIDActivity extends BaseVaultActivity {
         return null;
     }
 
-    /**
-     * Numeric date-shape check: exactly 8 digits (YYYYMMDD) — the field caps
-     * at 8 chars so dashes can't be typed. Empty is valid here — presence is
-     * governed by the field's required flag, not format. No calendar math is
-     * computed. Returns the error message, or null when acceptable.
-     */
+    /** Date shape: exactly 8 digits (YYYYMMDD). Empty is valid. */
     private static String numericDateError(String label, String rawValue) {
         String raw = trimmed(rawValue);
         if (raw.isEmpty()) {
             return null;
         }
-        // Exactly 8 digits, nothing else. This single check rejects alphabet,
-        // month names, dashes, and wrong lengths with one message.
         if (!DATE_8.matcher(raw).matches()) {
             return label + " must be 8 digits (YYYYMMDD)";
         }
         return null;
     }
 
-    /**
-     * Flags one field invalid with focus. Text inputs and dropdown
-     * values both use setError plus focus, so every field — including Blood
-     * Type — behaves exactly like Date of Birth. The toast survives only as a
-     * last resort for a key bound to neither, which should never happen while
-     * builders register every field.
-     */
-    private void flagFieldError(Map<String, EditText> textInputs, Map<String, TextView> dropdownValues,
-                                String key, String message) {
+    /** Flags one field invalid with focus. */
+    private void flagFieldError(String key, String message) {
         EditText input = textInputs.get(key);
         if (input != null) {
             input.setError(message);
             input.requestFocus();
             return;
         }
-        TextView value = dropdownValues != null ? dropdownValues.get(key) : null;
+        TextView value = dropdownValues.get(key);
         if (value != null) {
             value.setError(message);
             value.requestFocus();
@@ -924,9 +768,9 @@ public class GovernmentIDActivity extends BaseVaultActivity {
         showMessage(message);
     }
 
-    /** Clears a dropdown's setError once the user picks or clears a value. */
-    private static void hideFieldError(Map<String, TextView> dropdownValues, String key) {
-        TextView value = dropdownValues != null ? dropdownValues.get(key) : null;
+    /** Clears a dropdown's setError once the user picks a value. */
+    private void hideFieldError(String key) {
+        TextView value = dropdownValues.get(key);
         if (value != null) {
             value.setError(null);
         }
@@ -936,21 +780,15 @@ public class GovernmentIDActivity extends BaseVaultActivity {
         return value != null ? value.trim() : "";
     }
 
-    private void applyIdTypeSelection(int pos,
-                                      LinearLayout formContainer,
-                                      Map<String, String> draft, Map<String, EditText> textInputs,
-                                      Map<String, TextView> dropdownValues,
-                                      Runnable refreshPreview, LinearLayout dotsContainer,
-                                      GovernmentIdDesignAdapter designAdapter, int[] selectedType) {
+    private void applyIdTypeSelection(int pos) {
         if (pos < 0 || pos >= GovernmentIDModel.getTypeNames().length) {
             return;
         }
-        selectedType[0] = pos;
-        rebuildForm(formContainer, currentSpec(pos, true, null),
-                draft, textInputs, dropdownValues, refreshPreview);
+        selectedType = pos;
+        rebuildForm(currentSpec());
         if (dotsContainer != null && designAdapter != null) {
             Ui.buildDots(this, dotsContainer, designAdapter.getTypeCount(), pos);
         }
-        refreshPreview.run();
+        refreshPreview();
     }
 }

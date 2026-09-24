@@ -12,22 +12,22 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.akin.wallet.R;
 import com.akin.wallet.adapter.TrashAdapter;
+import com.akin.wallet.db.VaultWarmCache;
 import com.akin.wallet.model.BankCardModel;
 import com.akin.wallet.model.SocialAccountModel;
 import com.akin.wallet.model.GovernmentIDModel;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
 
+import androidx.appcompat.app.AlertDialog;
+
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Function;
 
 /**
- * Trash — restorable soft-deletes as selectable tiles. Deleting a Government
- * ID, Bank Card or Social Account stamps deleted_at (dashboard hides it);
- * this screen groups the trashed rows: one uniform set of tiles (centered
- * icon + title + masked hint, paired two-per-row). Tapping a tile toggles
- * its selection; the toolbar turns contextual (count + select-all) and the
- * bottom bar restores or permanently deletes the selection in bulk.
+ * Trash — restorable soft-deletes as selectable tiles. Tap toggles selection;
+ * toolbar turns contextual, bottom bar restores or deletes in bulk.
  */
 public class TrashActivity extends BaseVaultActivity {
 
@@ -54,8 +54,6 @@ public class TrashActivity extends BaseVaultActivity {
         applyChrome();
 
         toolbar = findViewById(R.id.trash_toolbar);
-        // Select All lives in code, not a menu XML: single always-shown item,
-        // hidden until a selection starts (see updateChrome).
         MenuItem selectAllItem = toolbar.getMenu().add(Menu.NONE, R.id.trash_select_all_action,
                 Menu.NONE, R.string.trash_select_all);
         selectAllItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
@@ -83,8 +81,6 @@ public class TrashActivity extends BaseVaultActivity {
         restoreSelectedButton.setOnClickListener(v -> bulkRestore());
         deleteForeverButton.setOnClickListener(v -> confirmBulkDelete());
 
-        // Idle chrome before the first load lands: without this, Select All
-        // stays at its inflated visibility until bindTrash runs updateChrome.
         updateChrome(0, 0);
 
         if (savedInstanceState != null) {
@@ -106,14 +102,10 @@ public class TrashActivity extends BaseVaultActivity {
         });
     }
 
-    /** Tiles pair two-per-row on phones; three on tablets/wide (sw>=600dp).
-     * Headers always span the full row. Span count is read live so foldables
-     * + multi-window adapt without a layout variant. */
+    /** Tiles pair two-per-row on phones; three on sw>=600dp. */
     private GridLayoutManager createGridLayoutManager() {
         final int spanCount = getResources().getConfiguration().smallestScreenWidthDp >= 600 ? 3 : 2;
         GridLayoutManager grid = new GridLayoutManager(this, spanCount);
-        // Uniform tiles pair up; headers take the full row. Bounds-guarded:
-        // layout can probe positions mid-animation that no longer exist.
         grid.setSpanSizeLookup(new GridLayoutManager.SpanSizeLookup() {
             @Override
             public int getSpanSize(int position) {
@@ -165,31 +157,18 @@ public class TrashActivity extends BaseVaultActivity {
                 cards = db().getTrashedBankCards();
                 accounts = db().getTrashedSocialAccounts();
             } catch (RuntimeException e) {
-                runOnUiThread(() -> {
-                    if (!isCurrentGeneration(generation) || isFinishing() || isDestroyed()) {
-                        return;
-                    }
-                    showError(R.string.err_trash_load);
-                });
+                android.util.Log.w("Trash", "load failed", e);
+                runIfAlive(generation, () -> showMessage(R.string.err_trash_load));
                 return;
             }
             cache().publishTrash(ids, cards, accounts);
-            runOnUiThread(() -> {
-                if (!isCurrentGeneration(generation) || isFinishing() || isDestroyed()) {
-                    return;
-                }
-                bindTrash(ids, cards, accounts);
-            });
+            runIfAlive(generation, () -> bindTrash(ids, cards, accounts));
         });
     }
 
-    /**
-     * Cache-first bind: when the post-auth preload already ran, tiles render
-     * synchronously before first draw. Falls back to async load on miss;
-     * {@link #loadTrash()} in {@code onResume} always revalidates afterward.
-     */
+    /** Cache-first bind: preload snapshot before first draw; onResume revalidates. */
     private void bindCachedSnapshot() {
-        com.akin.wallet.db.VaultWarmCache.Snapshot cached = cache().snapshot();
+        VaultWarmCache.Snapshot cached = cache().snapshot();
         if (cached == null || !cached.hasTrash() || trashAdapter == null) {
             return;
         }
@@ -202,27 +181,9 @@ public class TrashActivity extends BaseVaultActivity {
     private void bindTrash(List<GovernmentIDModel> ids, List<BankCardModel> cards,
                            List<SocialAccountModel> accounts) {
         List<TrashAdapter.Entry> entries = new ArrayList<>();
-        if (ids != null && !ids.isEmpty()) {
-            entries.add(TrashAdapter.Entry.header(
-                    getString(R.string.trash_section_ids), ids.size()));
-            for (GovernmentIDModel item : ids) {
-                entries.add(TrashAdapter.Entry.id(item));
-            }
-        }
-        if (cards != null && !cards.isEmpty()) {
-            entries.add(TrashAdapter.Entry.header(
-                    getString(R.string.trash_section_cards), cards.size()));
-            for (BankCardModel item : cards) {
-                entries.add(TrashAdapter.Entry.card(item));
-            }
-        }
-        if (accounts != null && !accounts.isEmpty()) {
-            entries.add(TrashAdapter.Entry.header(
-                    getString(R.string.trash_section_social), accounts.size()));
-            for (SocialAccountModel item : accounts) {
-                entries.add(TrashAdapter.Entry.social(item));
-            }
-        }
+        addSection(entries, R.string.trash_section_ids, ids, TrashAdapter.Entry::id);
+        addSection(entries, R.string.trash_section_cards, cards, TrashAdapter.Entry::card);
+        addSection(entries, R.string.trash_section_social, accounts, TrashAdapter.Entry::social);
 
         trashAdapter.updateData(entries);
         if (pendingSelection != null) {
@@ -239,10 +200,7 @@ public class TrashActivity extends BaseVaultActivity {
         pendingBulkConfirm = false;
     }
 
-    /**
-     * Contextual chrome: idle shows "Trash" + back; selecting shows the
-     * count + close, the select-all overflow and the bulk action bar.
-     */
+    /** Contextual chrome: idle shows Trash + back; selecting shows count + actions. */
     private void updateChrome(int selected, int total) {
         boolean selecting = selected > 0;
         toolbar.setTitle(selecting
@@ -250,11 +208,9 @@ public class TrashActivity extends BaseVaultActivity {
                 : getString(R.string.trash_title));
         toolbar.setNavigationIcon(selecting
                 ? R.drawable.ic_close : R.drawable.ic_arrow_back);
-        if (toolbar.getMenu() != null) {
-            MenuItem selectAll = toolbar.getMenu().findItem(R.id.trash_select_all_action);
-            if (selectAll != null) {
-                selectAll.setVisible(selecting && selected < total);
-            }
+        MenuItem selectAll = toolbar.getMenu().findItem(R.id.trash_select_all_action);
+        if (selectAll != null) {
+            selectAll.setVisible(selecting && selected < total);
         }
         bulkActionBar.setVisibility(selecting ? View.VISIBLE : View.GONE);
         if (selecting) {
@@ -263,45 +219,71 @@ public class TrashActivity extends BaseVaultActivity {
         }
     }
 
+    private <T> void addSection(List<TrashAdapter.Entry> entries, int titleRes,
+                                List<T> items, Function<T, TrashAdapter.Entry> mapper) {
+        if (items == null || items.isEmpty()) {
+            return;
+        }
+        entries.add(TrashAdapter.Entry.header(getString(titleRes), items.size()));
+        for (T item : items) {
+            entries.add(mapper.apply(item));
+        }
+    }
+
+    private static final class Selection {
+        final List<Integer> ids = new ArrayList<>();
+        final List<Integer> cards = new ArrayList<>();
+        final List<Integer> socials = new ArrayList<>();
+        final int count;
+        Selection(List<TrashAdapter.Entry> selected) {
+            for (TrashAdapter.Entry entry : selected) {
+                switch (entry.kind) {
+                    case TrashAdapter.KIND_ID:
+                        if (entry.idCard != null) {
+                            ids.add(entry.idCard.getId());
+                        }
+                        break;
+                    case TrashAdapter.KIND_CARD:
+                        if (entry.bankCard != null) {
+                            cards.add(entry.bankCard.getId());
+                        }
+                        break;
+                    case TrashAdapter.KIND_SOCIAL:
+                        if (entry.socialAccount != null) {
+                            socials.add(entry.socialAccount.getId());
+                        }
+                        break;
+                    default:
+                        break;
+                }
+            }
+            count = selected.size();
+        }
+    }
+
+    private void runBulkWrite(Selection selection, Runnable write, int doneMessage) {
+        vaultIo(() -> {
+            write.run();
+            cache().invalidate();
+            runIfAlive(() -> {
+                loadTrash();
+                showMessage(doneMessage, selection.count);
+            });
+        });
+    }
+
     /** Restores every selected item to its vault, then reloads. */
     private void bulkRestore() {
         List<TrashAdapter.Entry> selected = trashAdapter.selectedEntries();
         if (selected.isEmpty()) {
             return;
         }
-        List<Integer> ids = new ArrayList<>();
-        List<Integer> cards = new ArrayList<>();
-        List<Integer> socials = new ArrayList<>();
-        splitSelection(selected, ids, cards, socials);
-        final int count = selected.size();
-        vaultIo(() -> {
-            db().restoreIdCards(ids);
-            db().restoreBankCards(cards);
-            db().restoreSocialAccounts(socials);
-            cache().invalidate();
-            runOnUiThread(() -> {
-                if (isFinishing() || isDestroyed()) {
-                    return;
-                }
-                loadTrash();
-                showMessage(getString(R.string.trash_restored_count, count));
-            });
-        });
-    }
-
-    /** Groups selected entries into per-table id lists for batch writes. */
-    private static void splitSelection(List<TrashAdapter.Entry> selected,
-                                       List<Integer> ids, List<Integer> cards,
-                                       List<Integer> socials) {
-        for (TrashAdapter.Entry entry : selected) {
-            if (entry.kind == TrashAdapter.KIND_ID && entry.idCard != null) {
-                ids.add(entry.idCard.getId());
-            } else if (entry.kind == TrashAdapter.KIND_CARD && entry.bankCard != null) {
-                cards.add(entry.bankCard.getId());
-            } else if (entry.kind == TrashAdapter.KIND_SOCIAL && entry.socialAccount != null) {
-                socials.add(entry.socialAccount.getId());
-            }
-        }
+        Selection selection = new Selection(selected);
+        runBulkWrite(selection, () -> {
+            db().restoreIdCards(selection.ids);
+            db().restoreBankCards(selection.cards);
+            db().restoreSocialAccounts(selection.socials);
+        }, R.string.trash_restored_count);
     }
 
     /** Confirms, then permanently deletes every selected item. */
@@ -310,31 +292,19 @@ public class TrashActivity extends BaseVaultActivity {
         if (selected.isEmpty()) {
             return;
         }
-        // Snapshot: deletes mutate the backing rows while the adapter
-        // still holds them; keyed ids survive the reload either way.
-        List<Integer> ids = new ArrayList<>();
-        List<Integer> cards = new ArrayList<>();
-        List<Integer> socials = new ArrayList<>();
-        splitSelection(selected, ids, cards, socials);
-        final int count = selected.size();
+        Selection selection = new Selection(selected);
         pendingBulkConfirm = true;
-        androidx.appcompat.app.AlertDialog dialog = confirmDeleteToTrash(
+        AlertDialog dialog = confirmDeleteToTrash(
                 getString(R.string.trash_delete_forever),
-                getString(R.string.trash_delete_many, count),
-                () -> vaultIo(() -> {
+                getString(R.string.trash_delete_many, selection.count),
+                () -> {
                     pendingBulkConfirm = false;
-                    db().deleteIdCards(ids);
-                    db().deleteBankCards(cards);
-                    db().deleteSocialAccounts(socials);
-                    cache().invalidate();
-                    runOnUiThread(() -> {
-                        if (isFinishing() || isDestroyed()) {
-                            return;
-                        }
-                        loadTrash();
-                        showMessage(getString(R.string.trash_deleted_count, count));
-                    });
-                }));
+                    runBulkWrite(selection, () -> {
+                        db().deleteIdCards(selection.ids);
+                        db().deleteBankCards(selection.cards);
+                        db().deleteSocialAccounts(selection.socials);
+                    }, R.string.trash_deleted_count);
+                });
         dialog.setOnDismissListener(d -> pendingBulkConfirm = false);
     }
 }
