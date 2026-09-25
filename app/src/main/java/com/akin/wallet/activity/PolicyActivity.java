@@ -27,13 +27,9 @@ public class PolicyActivity extends BaseVaultActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_policy);
         applyChrome();
-        MaterialToolbar toolbar = findViewById(R.id.policy_toolbar);
+        MaterialToolbar toolbar = findViewById(R.id.toolbar);
 
         LinearLayout sections = findViewById(R.id.policy_sections);
-        if (sections == null) {
-            finish();
-            return;
-        }
 
         String type = getIntent().getStringExtra(EXTRA_TYPE);
         String body;
@@ -75,33 +71,31 @@ public class PolicyActivity extends BaseVaultActivity {
     }
 
     private TextView makeHeading(String heading, boolean first) {
-        TextView headingView = new TextView(this);
-        headingView.setText(heading);
-        headingView.setTextColor(getColor(R.color.dashboard_active));
-        headingView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
-        headingView.setTypeface(headingView.getTypeface(), Typeface.BOLD);
+        TextView headingView = makeText(heading, R.color.dashboard_active, 13, Typeface.BOLD);
         headingView.setLetterSpacing(0.06f);
-        headingView.setLayoutParams(makeParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT,
-                first ? 0 : Ui.dp(this, 20)));
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        params.topMargin = first ? 0 : Ui.dp(this, 20);
+        headingView.setLayoutParams(params);
         return headingView;
     }
 
     private TextView makeBody(String text) {
-        TextView bodyView = new TextView(this);
-        bodyView.setText(text);
-        bodyView.setTextColor(getColor(R.color.text_subtle_light));
-        bodyView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+        TextView bodyView = makeText(text, R.color.text_subtle_light, 14, Typeface.NORMAL);
         bodyView.setLineSpacing(0, 1.25f);
-        bodyView.setLayoutParams(makeParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT,
-                Ui.dp(this, 6)));
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        params.topMargin = Ui.dp(this, 6);
+        bodyView.setLayoutParams(params);
         return bodyView;
     }
 
-    private LinearLayout.LayoutParams makeParams(int width, int height, int topMargin) {
-        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(width, height);
-        params.topMargin = topMargin;
-        return params;
+    private TextView makeText(String text, int colorRes, float sp, int style) {
+        TextView view = new TextView(this);
+        view.setText(text);
+        view.setTextColor(getColor(colorRes));
+        view.setTextSize(TypedValue.COMPLEX_UNIT_SP, sp);
+        view.setTypeface(view.getTypeface(), style);
+        return view;
     }
 }

@@ -25,7 +25,7 @@
 
 
     <com.google.android.material.appbar.MaterialToolbar
-        android:id="@+id/social_account_toolbar"
+        android:id="@+id/toolbar"
         style="@style/Widget.Akin.Toolbar"
         android:layout_width="match_parent"
         app:title="@string/dialog_social_title" />

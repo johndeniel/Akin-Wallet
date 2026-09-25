@@ -66,13 +66,9 @@ public abstract class BaseVaultActivity extends AppCompatActivity {
         return !isFinishing() && !isDestroyed();
     }
 
-    protected boolean isAlive(int generation) {
-        return isCurrentGeneration(generation) && isAlive();
-    }
-
     protected void runIfAlive(int generation, Runnable action) {
         runOnUiThread(() -> {
-            if (isAlive(generation)) {
+            if (isCurrentGeneration(generation) && isAlive()) {
                 action.run();
             }
         });
@@ -96,23 +92,9 @@ public abstract class BaseVaultActivity extends AppCompatActivity {
         }
     }
 
-    /** Resolves the per-screen toolbar owned by the current layout, or null. */
+    /** Wires the back toolbar owned by the current layout, if it has one. */
     private MaterialToolbar findToolbar() {
-        int[] toolbarIds = {
-                R.id.bank_card_toolbar,
-                R.id.government_id_toolbar,
-                R.id.social_account_toolbar,
-                R.id.trash_toolbar,
-                R.id.settings_toolbar,
-                R.id.policy_toolbar,
-        };
-        for (int id : toolbarIds) {
-            MaterialToolbar toolbar = findViewById(id);
-            if (toolbar != null) {
-                return toolbar;
-            }
-        }
-        return null;
+        return findViewById(R.id.toolbar);
     }
 
     /** Back action. Trash overrides to clear selection first. */
@@ -162,10 +144,6 @@ public abstract class BaseVaultActivity extends AppCompatActivity {
         return dialog;
     }
 
-    protected void showMessage(@StringRes int messageRes) {
-        showSnackbar(getString(messageRes));
-    }
-
     protected void showMessage(@StringRes int messageRes, Object... args) {
         showSnackbar(getString(messageRes, args));
     }
@@ -177,9 +155,7 @@ public abstract class BaseVaultActivity extends AppCompatActivity {
     private void showSnackbar(CharSequence message) {
         View content = findViewById(android.R.id.content);
         if (content != null && isAlive()) {
-            Snackbar bar = Snackbar.make(content, message, Snackbar.LENGTH_SHORT);
-            bar.getView().setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
-            bar.show();
+            Snackbar.make(content, message, Snackbar.LENGTH_SHORT).show();
         }
     }
 }

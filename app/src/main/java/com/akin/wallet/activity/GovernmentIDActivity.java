@@ -26,7 +26,6 @@ import com.akin.wallet.adapter.GovernmentIdDesignAdapter;
 import com.akin.wallet.model.GovernmentIDModel;
 import com.akin.wallet.util.Ui;
 
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -122,17 +121,13 @@ public class GovernmentIDActivity extends BaseVaultActivity {
     }
 
     private static Map<String, String> restoreDraft(@NonNull Bundle savedState) {
-        HashMap<?, ?> rawDraft =
-                BundleCompat.getSerializable(savedState, KEY_DRAFT, HashMap.class);
-        if (rawDraft == null) {
-            return new LinkedHashMap<>();
-        }
-        return castStringMap(rawDraft);
-    }
-
-    private static Map<String, String> castStringMap(Map<?, ?> raw) {
+        LinkedHashMap<?, ?> rawDraft =
+                BundleCompat.getSerializable(savedState, KEY_DRAFT, LinkedHashMap.class);
         Map<String, String> out = new LinkedHashMap<>();
-        for (Map.Entry<?, ?> rawEntry : raw.entrySet()) {
+        if (rawDraft == null) {
+            return out;
+        }
+        for (Map.Entry<?, ?> rawEntry : rawDraft.entrySet()) {
             if (rawEntry.getKey() instanceof String && rawEntry.getValue() instanceof String) {
                 out.put((String) rawEntry.getKey(), (String) rawEntry.getValue());
             }

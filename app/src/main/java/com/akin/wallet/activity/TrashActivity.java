@@ -1,6 +1,7 @@
 package com.akin.wallet.activity;
 
 import android.os.Bundle;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -23,7 +24,6 @@ import androidx.appcompat.app.AlertDialog;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Function;
 
 /**
  * Trash — restorable soft-deletes as selectable tiles. Tap toggles selection;
@@ -53,7 +53,7 @@ public class TrashActivity extends BaseVaultActivity {
         setContentView(R.layout.activity_trash);
         applyChrome();
 
-        toolbar = findViewById(R.id.trash_toolbar);
+        toolbar = findViewById(R.id.toolbar);
         MenuItem selectAllItem = toolbar.getMenu().add(Menu.NONE, R.id.trash_select_all_action,
                 Menu.NONE, R.string.trash_select_all);
         selectAllItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
@@ -110,8 +110,7 @@ public class TrashActivity extends BaseVaultActivity {
             @Override
             public int getSpanSize(int position) {
                 int full = grid.getSpanCount();
-                if (trashAdapter == null
-                        || position < 0 || position >= trashAdapter.getItemCount()) {
+                if (position < 0 || position >= trashAdapter.getItemCount()) {
                     return full;
                 }
                 return trashAdapter.getItemViewType(position)
@@ -157,7 +156,7 @@ public class TrashActivity extends BaseVaultActivity {
                 cards = db().getTrashedBankCards();
                 accounts = db().getTrashedSocialAccounts();
             } catch (RuntimeException e) {
-                android.util.Log.w("Trash", "load failed", e);
+                Log.w("Trash", "load failed", e);
                 runIfAlive(generation, () -> showMessage(R.string.err_trash_load));
                 return;
             }
@@ -181,9 +180,9 @@ public class TrashActivity extends BaseVaultActivity {
     private void bindTrash(List<GovernmentIDModel> ids, List<BankCardModel> cards,
                            List<SocialAccountModel> accounts) {
         List<TrashAdapter.Entry> entries = new ArrayList<>();
-        addSection(entries, R.string.trash_section_ids, ids, TrashAdapter.Entry::id);
-        addSection(entries, R.string.trash_section_cards, cards, TrashAdapter.Entry::card);
-        addSection(entries, R.string.trash_section_social, accounts, TrashAdapter.Entry::social);
+        addIdSection(entries, ids);
+        addCardSection(entries, cards);
+        addSocialSection(entries, accounts);
 
         trashAdapter.updateData(entries);
         if (pendingSelection != null) {
@@ -209,9 +208,7 @@ public class TrashActivity extends BaseVaultActivity {
         toolbar.setNavigationIcon(selecting
                 ? R.drawable.ic_close : R.drawable.ic_arrow_back);
         MenuItem selectAll = toolbar.getMenu().findItem(R.id.trash_select_all_action);
-        if (selectAll != null) {
-            selectAll.setVisible(selecting && selected < total);
-        }
+        selectAll.setVisible(selecting && selected < total);
         bulkActionBar.setVisibility(selecting ? View.VISIBLE : View.GONE);
         if (selecting) {
             restoreSelectedButton.setText(getString(R.string.trash_restore_count, selected));
@@ -219,14 +216,33 @@ public class TrashActivity extends BaseVaultActivity {
         }
     }
 
-    private <T> void addSection(List<TrashAdapter.Entry> entries, int titleRes,
-                                List<T> items, Function<T, TrashAdapter.Entry> mapper) {
+    private void addIdSection(List<TrashAdapter.Entry> entries, List<GovernmentIDModel> items) {
         if (items == null || items.isEmpty()) {
             return;
         }
-        entries.add(TrashAdapter.Entry.header(getString(titleRes), items.size()));
-        for (T item : items) {
-            entries.add(mapper.apply(item));
+        entries.add(TrashAdapter.Entry.header(getString(R.string.trash_section_ids), items.size()));
+        for (GovernmentIDModel item : items) {
+            entries.add(TrashAdapter.Entry.id(item));
+        }
+    }
+
+    private void addCardSection(List<TrashAdapter.Entry> entries, List<BankCardModel> cards) {
+        if (cards == null || cards.isEmpty()) {
+            return;
+        }
+        entries.add(TrashAdapter.Entry.header(getString(R.string.trash_section_cards), cards.size()));
+        for (BankCardModel item : cards) {
+            entries.add(TrashAdapter.Entry.card(item));
+        }
+    }
+
+    private void addSocialSection(List<TrashAdapter.Entry> entries, List<SocialAccountModel> accounts) {
+        if (accounts == null || accounts.isEmpty()) {
+            return;
+        }
+        entries.add(TrashAdapter.Entry.header(getString(R.string.trash_section_social), accounts.size()));
+        for (SocialAccountModel item : accounts) {
+            entries.add(TrashAdapter.Entry.social(item));
         }
     }
 

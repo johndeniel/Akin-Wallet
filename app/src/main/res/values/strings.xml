@@ -136,6 +136,18 @@
     <string name="field_expiry">Valid Thru</string>
     <string name="field_cvv">CVV</string>
 
+    <!-- Bank card validation -->
+    <string name="err_bank_name_required">Bank name is required</string>
+    <string name="err_bank_name_short">Bank name must be at least %1$d characters</string>
+    <string name="err_bank_name_long">Bank name must be under %1$d characters</string>
+    <string name="err_holder_required">Cardholder name is required</string>
+    <string name="err_holder_short">Cardholder name must be at least %1$d characters</string>
+    <string name="err_holder_long">Cardholder name must be under %1$d characters</string>
+    <string name="err_holder_chars">Name can only contain letters, spaces, . \' -</string>
+    <string name="err_card_number">Card number must be %1$d-%2$d digits</string>
+    <string name="err_expiry">Expiry must be exactly 4 digits (MMYY)</string>
+    <string name="err_cvv">CVV must be exactly %1$d digits</string>
+    <string name="err_card_pin">PIN must be %1$d-%2$d digits</string>
     <!-- Input hints and design-time defaults (rebound with real data) -->
     <string name="hint_username">username</string>
     <string name="hint_bank_name">BDO Unibank</string>

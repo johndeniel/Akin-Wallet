@@ -17,7 +17,7 @@
 
     <!-- Contextual toolbar: idle shows Trash, selection shows count. -->
     <com.google.android.material.appbar.MaterialToolbar
-        android:id="@+id/trash_toolbar"
+        android:id="@+id/toolbar"
         style="@style/Widget.Akin.Toolbar"
         android:layout_width="match_parent"
         app:title="@string/trash_title" />

@@ -143,15 +143,14 @@ public class SocialAccountActivity extends BaseVaultActivity {
         if (p != null) outState.putString(KEY_SOCIAL_PASSWORD, p.getText().toString());
         if (n != null) outState.putString(KEY_SOCIAL_PIN, n.getText().toString());
         if (!linkedItems.isEmpty()) {
-            outState.putIntArray(KEY_LINKED_IDS, idsOf(linkedItems));
+            outState.putIntArray(KEY_LINKED_IDS, toIdArray(linkedItems));
         }
     }
 
-    private static int[] idsOf(List<SocialAccountModel> items) {
-        List<Integer> ids = toIdList(items);
-        int[] out = new int[ids.size()];
-        for (int i = 0; i < ids.size(); i++) {
-            out[i] = ids.get(i);
+    private static int[] toIdArray(List<SocialAccountModel> items) {
+        int[] out = new int[items.size()];
+        for (int i = 0; i < items.size(); i++) {
+            out[i] = items.get(i).getId();
         }
         return out;
     }
@@ -305,10 +304,6 @@ public class SocialAccountActivity extends BaseVaultActivity {
     private static void setupSearchList(RecyclerView list,
                                         RecyclerView.Adapter<?> adapter, View empty) {
         list.setAdapter(adapter);
-        observeEmpty(adapter, list, empty);
-    }
-
-    private static void observeEmpty(RecyclerView.Adapter<?> adapter, RecyclerView list, View empty) {
         adapter.registerAdapterDataObserver(new RecyclerView.AdapterDataObserver() {
             @Override
             public void onChanged() {
@@ -482,12 +477,8 @@ public class SocialAccountActivity extends BaseVaultActivity {
 
     /** Outgoing link edges for the save transaction. */
     private List<Integer> collectLinkedIds() {
-        return toIdList(linkedItems);
-    }
-
-    private static List<Integer> toIdList(List<SocialAccountModel> items) {
-        List<Integer> ids = new ArrayList<>(items.size());
-        for (SocialAccountModel item : items) {
+        List<Integer> ids = new ArrayList<>(linkedItems.size());
+        for (SocialAccountModel item : linkedItems) {
             ids.add(item.getId());
         }
         return ids;

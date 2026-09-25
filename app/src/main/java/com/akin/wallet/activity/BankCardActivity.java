@@ -137,26 +137,8 @@ public class BankCardActivity extends BaseVaultActivity {
             bindForm(null);
             return;
         }
-        if (savedInstanceState != null) {
-            final int id = pendingId;
-            final int gen = nextLoadGeneration();
-            vaultIo(() -> {
-                final BankCardModel item = db().getBankCardById(id);
-                runIfAlive(gen, () -> {
-                    if (item == null) {
-                        finish();
-                        return;
-                    }
-                    if (!hasSavedDraft) {
-                        selectedDesign = item.getDesign();
-                    }
-                    clampDesign();
-                    bindForm(item);
-                });
-            });
-            return;
-        }
         final int id = pendingId;
+        final boolean restored = savedInstanceState != null;
         final int gen = nextLoadGeneration();
         vaultIo(() -> {
             final BankCardModel item = db().getBankCardById(id);
@@ -165,11 +147,17 @@ public class BankCardActivity extends BaseVaultActivity {
                     finish();
                     return;
                 }
-                selectedType = sanitizeIndex(Ui.indexOfIgnoreCase(CARD_TYPES, item.getCardType()),
-                        CARD_TYPES.length);
-                selectedNetwork = sanitizeIndex(Ui.indexOfIgnoreCase(CARD_NETWORKS, item.getCardNetwork()),
-                        CARD_NETWORKS.length);
-                selectedDesign = item.getDesign();
+                if (restored) {
+                    if (!hasSavedDraft) {
+                        selectedDesign = item.getDesign();
+                    }
+                } else {
+                    selectedType = sanitizeIndex(Ui.indexOfIgnoreCase(CARD_TYPES, item.getCardType()),
+                            CARD_TYPES.length);
+                    selectedNetwork = sanitizeIndex(Ui.indexOfIgnoreCase(CARD_NETWORKS, item.getCardNetwork()),
+                            CARD_NETWORKS.length);
+                    selectedDesign = item.getDesign();
+                }
                 bindForm(item);
             });
         });
@@ -321,18 +309,12 @@ public class BankCardActivity extends BaseVaultActivity {
     }
 
     private void restoreDraftFields() {
-        setIfPresent(bankNameField, savedBankName);
-        setIfPresent(holderNameField, savedHolderName);
-        setIfPresent(cardNumberField, savedCardNumber);
-        setIfPresent(expiryField, savedExpiry);
-        setIfPresent(cvvField, savedCvv);
-        setIfPresent(cardPinField, savedCardPin);
-    }
-
-    private static void setIfPresent(EditText field, String saved) {
-        if (saved != null) {
-            field.setText(saved);
-        }
+        setOrStored(bankNameField, savedBankName, null);
+        setOrStored(holderNameField, savedHolderName, null);
+        setOrStored(cardNumberField, savedCardNumber, null);
+        setOrStored(expiryField, savedExpiry, null);
+        setOrStored(cvvField, savedCvv, null);
+        setOrStored(cardPinField, savedCardPin, null);
     }
 
     private void setupPreviewBinding() {
@@ -528,13 +510,21 @@ public class BankCardActivity extends BaseVaultActivity {
     // ------------------------------------------------------------------
 
     private boolean validateForm() {
-        View offender = firstInvalid(
-                validateBankName(bankNameField.getText().toString().trim()),
-                validateHolderName(holderNameField.getText().toString().trim()),
-                validateCardNumber(extractDigits(cardNumberField.getText().toString())),
-                validateExpiry(extractDigits(expiryField.getText().toString())),
-                validateCvv(extractDigits(cvvField.getText().toString())),
-                validatePin(extractDigits(cardPinField.getText().toString())));
+        View bankOffender = validateBankName(bankNameField.getText().toString().trim());
+        View holderOffender = validateHolderName(holderNameField.getText().toString().trim());
+        View numberOffender = validateCardNumber(extractDigits(cardNumberField.getText().toString()));
+        View expiryOffender = validateExpiry(extractDigits(expiryField.getText().toString()));
+        View cvvOffender = validateCvv(extractDigits(cvvField.getText().toString()));
+        View pinOffender = validatePin(extractDigits(cardPinField.getText().toString()));
+        View[] offenders = {bankOffender, holderOffender, numberOffender,
+                expiryOffender, cvvOffender, pinOffender};
+        View offender = null;
+        for (View candidate : offenders) {
+            if (candidate != null) {
+                offender = candidate;
+                break;
+            }
+        }
         if (offender != null) {
             offender.requestFocus();
             return false;
@@ -542,24 +532,15 @@ public class BankCardActivity extends BaseVaultActivity {
         return true;
     }
 
-    private static View firstInvalid(View... offenders) {
-        for (View offender : offenders) {
-            if (offender != null) {
-                return offender;
-            }
-        }
-        return null;
-    }
-
     private View validateBankName(String bank) {
         if (bank.isEmpty()) {
-            bankNameField.setError("Bank name is required");
+            bankNameField.setError(getString(R.string.err_bank_name_required));
             return bankNameField;
         } else if (bank.length() < BANK_NAME_MIN_LEN) {
-            bankNameField.setError("Bank name must be at least " + BANK_NAME_MIN_LEN + " characters");
+            bankNameField.setError(getString(R.string.err_bank_name_short, BANK_NAME_MIN_LEN));
             return bankNameField;
         } else if (bank.length() > BANK_NAME_MAX_LEN) {
-            bankNameField.setError("Bank name must be under " + (BANK_NAME_MAX_LEN + 1) + " characters");
+            bankNameField.setError(getString(R.string.err_bank_name_long, BANK_NAME_MAX_LEN + 1));
             return bankNameField;
         }
         return null;
@@ -567,17 +548,17 @@ public class BankCardActivity extends BaseVaultActivity {
 
     private View validateHolderName(String holder) {
         if (holder.isEmpty()) {
-            holderNameField.setError("Cardholder name is required");
+            holderNameField.setError(getString(R.string.err_holder_required));
             return holderNameField;
         } else if (holder.length() < HOLDER_NAME_MIN_LEN) {
-            holderNameField.setError("Cardholder name must be at least " + HOLDER_NAME_MIN_LEN + " characters");
+            holderNameField.setError(getString(R.string.err_holder_short, HOLDER_NAME_MIN_LEN));
             return holderNameField;
         } else if (holder.length() > HOLDER_NAME_MAX_LEN) {
-            holderNameField.setError("Cardholder name must be under " + (HOLDER_NAME_MAX_LEN + 1) + " characters");
+            holderNameField.setError(getString(R.string.err_holder_long, HOLDER_NAME_MAX_LEN + 1));
             return holderNameField;
         } else if (!HOLDER_NAME.matcher(holder).matches()) {
             // Unicode-aware: allows accented names, denies digits/symbols.
-            holderNameField.setError("Name can only contain letters, spaces, . ' -");
+            holderNameField.setError(getString(R.string.err_holder_chars));
             return holderNameField;
         }
         return null;
@@ -586,7 +567,7 @@ public class BankCardActivity extends BaseVaultActivity {
     private View validateCardNumber(String cardDigits) {
         if (cardDigits.length() < CARD_NUMBER_MIN_LEN || cardDigits.length() > CARD_NUMBER_MAX_LEN) {
             cardNumberField.setError(
-                    "Card number must be " + CARD_NUMBER_MIN_LEN + "-" + CARD_NUMBER_MAX_LEN + " digits");
+                    getString(R.string.err_card_number, CARD_NUMBER_MIN_LEN, CARD_NUMBER_MAX_LEN));
             return cardNumberField;
         }
         return null;
@@ -594,7 +575,7 @@ public class BankCardActivity extends BaseVaultActivity {
 
     private View validateExpiry(String expDigits) {
         if (expDigits.length() != EXPIRY_DIGITS_LEN) {
-            expiryField.setError("Expiry must be exactly 4 digits (MMYY)");
+            expiryField.setError(getString(R.string.err_expiry));
             return expiryField;
         }
         return null;
@@ -602,7 +583,7 @@ public class BankCardActivity extends BaseVaultActivity {
 
     private View validateCvv(String cvvDigits) {
         if (cvvDigits.length() != CVV_LEN) {
-            cvvField.setError("CVV must be exactly " + CVV_LEN + " digits");
+            cvvField.setError(getString(R.string.err_cvv, CVV_LEN));
             return cvvField;
         }
         return null;
@@ -610,7 +591,7 @@ public class BankCardActivity extends BaseVaultActivity {
 
     private View validatePin(String pinDigits) {
         if (pinDigits.length() < PIN_MIN_LEN || pinDigits.length() > PIN_MAX_LEN) {
-            cardPinField.setError("PIN must be " + PIN_MIN_LEN + "-" + PIN_MAX_LEN + " digits");
+            cardPinField.setError(getString(R.string.err_card_pin, PIN_MIN_LEN, PIN_MAX_LEN));
             return cardPinField;
         }
         return null;
@@ -681,14 +662,21 @@ public class BankCardActivity extends BaseVaultActivity {
         String kind = pendingDialogKind;
         pendingDialogKind = null;
         if (DIALOG_CARD_TYPE.equals(kind)) {
-            findViewById(R.id.bank_card_type_selector).post(() ->
-                    showChoiceDialog(DIALOG_CARD_TYPE, getString(R.string.field_card_type),
-                            CARD_TYPES, selectedType, this::selectType));
+            reopenPicker(R.id.bank_card_type_selector, DIALOG_CARD_TYPE,
+                    R.string.field_card_type, CARD_TYPES, selectedType, this::selectType);
         } else if (DIALOG_NETWORK.equals(kind)) {
-            findViewById(R.id.bank_card_network_selector).post(() ->
-                    showChoiceDialog(DIALOG_NETWORK, getString(R.string.field_card_network),
-                            CARD_NETWORKS, selectedNetwork, this::selectNetwork));
+            reopenPicker(R.id.bank_card_network_selector, DIALOG_NETWORK,
+                    R.string.field_card_network, CARD_NETWORKS, selectedNetwork, this::selectNetwork);
         }
+    }
+
+    private void reopenPicker(int selectorId, String kind, int titleRes,
+                              String[] options, int checked, Ui.OnChoice setter) {
+        View selector = findViewById(selectorId);
+        if (selector == null) {
+            return;
+        }
+        selector.post(() -> showChoiceDialog(kind, getString(titleRes), options, checked, setter));
     }
 
 }

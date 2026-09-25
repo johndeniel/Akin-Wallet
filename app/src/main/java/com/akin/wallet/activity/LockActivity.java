@@ -1,6 +1,5 @@
 package com.akin.wallet.activity;
 
-import android.animation.ObjectAnimator;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
@@ -225,7 +224,8 @@ public class LockActivity extends AppCompatActivity {
     private void resetEntry() {
         entry.setLength(0);
         submitting = false;
-        showKeypadMode();
+        keypadLayout.setVisibility(View.VISIBLE);
+        pinIndicatorRow.setVisibility(View.VISIBLE);
         renderDots();
     }
 
@@ -274,17 +274,10 @@ public class LockActivity extends AppCompatActivity {
         }
     }
 
-    private void showKeypadMode() {
-        keypadLayout.setVisibility(View.VISIBLE);
-        pinIndicatorRow.setVisibility(View.VISIBLE);
-    }
-
     /** Keypad biometric key left of 0 — INVISIBLE (not GONE) to keep 0 centered. */
     private void setBioKeyVisible(boolean visible) {
         if (biometricKey != null) {
             biometricKey.setVisibility(visible ? View.VISIBLE : View.INVISIBLE);
-            biometricKey.setFocusable(visible);
-            biometricKey.setClickable(visible);
             biometricKey.setImportantForAccessibility(visible
                     ? View.IMPORTANT_FOR_ACCESSIBILITY_YES
                     : View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS);
@@ -394,7 +387,6 @@ public class LockActivity extends AppCompatActivity {
                 firstPin = null;
                 showCreateScreen();
                 showError(getString(R.string.lock_error_mismatch));
-                shakeDots();
                 submitting = false;
                 renderDots();
             }
@@ -412,20 +404,16 @@ public class LockActivity extends AppCompatActivity {
                 return;
             }
             runOnUiAlive(() -> {
-                boolean nowLockedOut = AppLockManager.isLockedOut(LockActivity.this);
-                if (nowLockedOut) {
+                if (AppLockManager.isLockedOut(LockActivity.this)) {
                     showLockout();
+                    submitting = false;
+                    renderDots();
                 } else if (lockedOutAtSample) {
                     // Cooldown expired mid-hash: retry once instead of recording a failure.
                     retryVerify(pin, current);
-                    return;
-                } else if (ok) {
-                    onPinVerified(current);
                 } else {
-                    handleWrongPin();
+                    finishVerify(ok, current);
                 }
-                submitting = false;
-                renderDots();
             });
         });
     }
@@ -440,18 +428,20 @@ public class LockActivity extends AppCompatActivity {
                 runOnUiAlive(this::showPinIoError);
                 return;
             }
-            runOnUiAlive(() -> {
-                if (AppLockManager.isLockedOut(LockActivity.this)) {
-                    showLockout();
-                } else if (retryOk) {
-                    onPinVerified(current);
-                } else {
-                    handleWrongPin();
-                }
-                submitting = false;
-                renderDots();
-            });
+            runOnUiAlive(() -> finishVerify(retryOk, current));
         });
+    }
+
+    private void finishVerify(boolean ok, Screen current) {
+        if (AppLockManager.isLockedOut(LockActivity.this)) {
+            showLockout();
+        } else if (ok) {
+            onPinVerified(current);
+        } else {
+            handleWrongPin();
+        }
+        submitting = false;
+        renderDots();
     }
 
     private void onPinVerified(Screen current) {
@@ -493,7 +483,6 @@ public class LockActivity extends AppCompatActivity {
             }
         } else {
             showError(getString(R.string.lock_error_wrong, left));
-            shakeDots();
         }
     }
 
@@ -632,12 +621,5 @@ public class LockActivity extends AppCompatActivity {
         showError(getString(R.string.lock_error_locked, Math.max(seconds, 1)));
         lockoutHandler.removeCallbacks(lockoutTicker);
         lockoutHandler.postDelayed(lockoutTicker, 1000);
-    }
-
-    private void shakeDots() {
-        ObjectAnimator shake =
-                ObjectAnimator.ofFloat(pinIndicatorRow, View.TRANSLATION_X, 0f, 12f, 0f, -12f, 0f);
-        shake.setDuration(240);
-        shake.start();
     }
 }

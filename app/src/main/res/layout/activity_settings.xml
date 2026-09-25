@@ -16,7 +16,7 @@
     android:paddingBottom="@dimen/screen_padding_bottom">
 
     <com.google.android.material.appbar.MaterialToolbar
-        android:id="@+id/settings_toolbar"
+        android:id="@+id/toolbar"
         style="@style/Widget.Akin.Toolbar"
         android:layout_width="match_parent"
         app:title="@string/settings_title" />

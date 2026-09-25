@@ -22,7 +22,6 @@ public class SettingsActivity extends BaseVaultActivity {
     private TextView biometricStatus;
     private BiometricPrompt confirmPrompt;
     private boolean confirming;
-    private boolean biometricAvailable;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -47,7 +46,7 @@ public class SettingsActivity extends BaseVaultActivity {
                 confirmBiometric();
             } else {
                 AppLockManager.setBiometricEnabled(this, false);
-                refreshBiometricStatus(biometricAvailable, false);
+                refreshBiometric();
             }
         });
 
@@ -84,11 +83,17 @@ public class SettingsActivity extends BaseVaultActivity {
     }
 
     private void refreshBiometric() {
-        biometricAvailable = AppLockManager.isBiometricAvailable(this);
-        boolean enabled = AppLockManager.isBiometricEnabled(this) && biometricAvailable;
+        boolean available = AppLockManager.isBiometricAvailable(this);
+        boolean enabled = available && AppLockManager.isBiometricEnabled(this);
         biometricSwitch.setChecked(enabled);
-        biometricSwitch.setEnabled(biometricAvailable);
-        refreshBiometricStatus(biometricAvailable, enabled);
+        biometricSwitch.setEnabled(available);
+        if (!available) {
+            biometricStatus.setText(R.string.settings_biometric_unavailable);
+        } else if (enabled) {
+            biometricStatus.setText(R.string.settings_biometric_on);
+        } else {
+            biometricStatus.setText(R.string.settings_biometric_off);
+        }
     }
 
     @Override
@@ -101,16 +106,6 @@ public class SettingsActivity extends BaseVaultActivity {
         }
         confirming = false;
         super.onPause();
-    }
-
-    private void refreshBiometricStatus(boolean isAvailable, boolean isEnabled) {
-        if (!isAvailable) {
-            biometricStatus.setText(R.string.settings_biometric_unavailable);
-        } else if (isEnabled) {
-            biometricStatus.setText(R.string.settings_biometric_on);
-        } else {
-            biometricStatus.setText(R.string.settings_biometric_off);
-        }
     }
 
     /** Toggle sticks only when the system prompt succeeds, else it reverts. */
@@ -136,7 +131,7 @@ public class SettingsActivity extends BaseVaultActivity {
                         AppLockManager.setBiometricEnabled(
                                 SettingsActivity.this, true);
                         biometricSwitch.setChecked(true);
-                        refreshBiometricStatus(biometricAvailable, true);
+                        refreshBiometric();
                     }
 
                     @Override
@@ -147,7 +142,7 @@ public class SettingsActivity extends BaseVaultActivity {
                             return;
                         }
                         biometricSwitch.setChecked(false);
-                        refreshBiometricStatus(biometricAvailable, false);
+                        refreshBiometric();
                     }
                 });
         confirmPrompt.authenticate(info);
