@@ -1,5 +1,3 @@
-# Akin Wallet
-
 ![Akin Wallet](banner.png)
 
 An offline-first, encrypted vault for social-account credentials, bank cards, and Philippine
