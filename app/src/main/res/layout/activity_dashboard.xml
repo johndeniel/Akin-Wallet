@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- Dashboard. Fixed content, never scrollable. Inner social list caps to viewport. -->
+<?xml version="1.0" encoding="utf-8"?><!-- Dashboard. Fixed content, never scrollable. Inner social list caps to viewport. -->
 <androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
@@ -9,7 +8,9 @@
     android:fitsSystemWindows="false"
     tools:context=".activity.DashboardActivity">
 
-    <LinearLayout
+    <com.akin.wallet.ui.DashboardContentLayout
+        android:id="@+id/dashboard_content"
+        android:visibility="invisible"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical"
@@ -26,15 +27,40 @@
             android:paddingTop="@dimen/spacing_4dp"
             android:paddingBottom="@dimen/spacing_4dp">
 
-            <com.google.android.material.appbar.MaterialToolbar
+            <LinearLayout
                 android:id="@+id/dashboard_toolbar"
-                style="@style/Widget.Akin.Toolbar"
                 android:layout_width="0dp"
+                android:layout_height="wrap_content"
                 android:layout_weight="1"
-                app:navigationIcon="@null"
-                app:subtitle="@string/header_tagline"
-                app:subtitleTextAppearance="@style/TextAppearance.Akin.ToolbarSubtitle"
-                app:title="@string/app_name" />
+                android:minHeight="@dimen/toolbar_height"
+                android:gravity="center_vertical"
+                android:orientation="vertical"
+                android:paddingStart="@dimen/spacing_12dp"
+                android:paddingEnd="0dp">
+
+                <androidx.appcompat.widget.AppCompatTextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/app_name"
+                    android:textAppearance="@style/TextAppearance.Akin.ToolbarTitle"
+                    android:maxLines="1"
+                    android:autoSizeTextType="uniform"
+                    android:autoSizeMinTextSize="16sp"
+                    android:autoSizeMaxTextSize="20sp"
+                    android:autoSizeStepGranularity="1sp" />
+
+                <androidx.appcompat.widget.AppCompatTextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/header_tagline"
+                    android:textAppearance="@style/TextAppearance.Akin.ToolbarSubtitle"
+                    android:maxLines="1"
+                    android:autoSizeTextType="uniform"
+                    android:autoSizeMinTextSize="8sp"
+                    android:autoSizeMaxTextSize="12sp"
+                    android:autoSizeStepGranularity="1sp" />
+
+            </LinearLayout>
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/dashboard_search_button"
@@ -74,18 +100,17 @@
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
-            <TextView
+            <androidx.appcompat.widget.AppCompatTextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:maxLines="1"
-                android:ellipsize="end"
                 android:text="@string/trash_section_ids"
-                android:textAppearance="@style/TextAppearance.Akin.SectionTitle"
+                style="@style/Widget.Akin.SectionTitle"
                 android:accessibilityHeading="true" />
 
         </LinearLayout>
 
-        <androidx.recyclerview.widget.RecyclerView
+        <com.akin.wallet.ui.PortraitCardCarousel
             android:id="@+id/dashboard_government_id_carousel"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -104,29 +129,27 @@
             android:focusable="false"
             android:visibility="gone">
 
-            <LinearLayout
+            <com.akin.wallet.ui.DashboardEmptyStateLayout
                 style="@style/Widget.Akin.EmptyStateContent"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content">
 
-                <TextView
+                <androidx.appcompat.widget.AppCompatTextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:gravity="center"
                     android:text="@string/empty_ids_title"
-                    android:textAppearance="@style/TextAppearance.Akin.CardTitle" 
-                    android:maxLines="2"
-                    android:ellipsize="end" />
+                    style="@style/Widget.Akin.CompactCardTitle"
+                    android:maxLines="2" />
 
-                <TextView
+                <androidx.appcompat.widget.AppCompatTextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="@dimen/spacing_4dp"
                     android:gravity="center"
                     android:text="@string/empty_ids_sub"
-                    android:textAppearance="@style/TextAppearance.Akin.BodyMuted" 
-                    android:maxLines="2"
-                    android:ellipsize="end" />
+                    style="@style/Widget.Akin.CompactBodyMuted"
+                    android:maxLines="2" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/dashboard_government_id_empty_action"
@@ -143,7 +166,7 @@
                     app:iconSize="16dp"
                     app:iconTint="@color/text_primary" />
 
-            </LinearLayout>
+            </com.akin.wallet.ui.DashboardEmptyStateLayout>
 
         </com.google.android.material.card.MaterialCardView>
 
@@ -155,18 +178,17 @@
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
-            <TextView
+            <androidx.appcompat.widget.AppCompatTextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:maxLines="1"
-                android:ellipsize="end"
                 android:text="@string/trash_section_cards"
-                android:textAppearance="@style/TextAppearance.Akin.SectionTitle"
+                style="@style/Widget.Akin.SectionTitle"
                 android:accessibilityHeading="true" />
 
         </LinearLayout>
 
-        <androidx.recyclerview.widget.RecyclerView
+        <com.akin.wallet.ui.PortraitCardCarousel
             android:id="@+id/dashboard_bank_card_carousel"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -185,29 +207,27 @@
             android:focusable="false"
             android:visibility="gone">
 
-            <LinearLayout
+            <com.akin.wallet.ui.DashboardEmptyStateLayout
                 style="@style/Widget.Akin.EmptyStateContent"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content">
 
-                <TextView
+                <androidx.appcompat.widget.AppCompatTextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:gravity="center"
                     android:text="@string/empty_cards_title"
-                    android:textAppearance="@style/TextAppearance.Akin.CardTitle" 
-                    android:maxLines="2"
-                    android:ellipsize="end" />
+                    style="@style/Widget.Akin.CompactCardTitle"
+                    android:maxLines="2" />
 
-                <TextView
+                <androidx.appcompat.widget.AppCompatTextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="@dimen/spacing_4dp"
                     android:gravity="center"
                     android:text="@string/empty_cards_sub"
-                    android:textAppearance="@style/TextAppearance.Akin.BodyMuted" 
-                    android:maxLines="2"
-                    android:ellipsize="end" />
+                    style="@style/Widget.Akin.CompactBodyMuted"
+                    android:maxLines="2" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/dashboard_bank_card_empty_action"
@@ -224,7 +244,7 @@
                     app:iconSize="16dp"
                     app:iconTint="@color/text_primary" />
 
-            </LinearLayout>
+            </com.akin.wallet.ui.DashboardEmptyStateLayout>
 
         </com.google.android.material.card.MaterialCardView>
 
@@ -236,19 +256,19 @@
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
-            <TextView
+            <androidx.appcompat.widget.AppCompatTextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:maxLines="1"
-                android:ellipsize="end"
                 android:text="@string/trash_section_social"
-                android:textAppearance="@style/TextAppearance.Akin.SectionTitle"
+                style="@style/Widget.Akin.SectionTitle"
                 android:accessibilityHeading="true" />
 
         </LinearLayout>
 
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/dashboard_social_account_card"
+            android:visibility="gone"
             style="@style/Widget.Akin.DashboardCard"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -278,29 +298,27 @@
             android:focusable="false"
             android:visibility="gone">
 
-            <LinearLayout
+            <com.akin.wallet.ui.DashboardEmptyStateLayout
                 style="@style/Widget.Akin.EmptyStateContent"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent">
 
-                <TextView
+                <androidx.appcompat.widget.AppCompatTextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:gravity="center"
                     android:text="@string/empty_social_title"
-                    android:textAppearance="@style/TextAppearance.Akin.CardTitle" 
-                    android:maxLines="2"
-                    android:ellipsize="end" />
+                    style="@style/Widget.Akin.CompactCardTitle"
+                    android:maxLines="2" />
 
-                <TextView
+                <androidx.appcompat.widget.AppCompatTextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="@dimen/spacing_4dp"
                     android:gravity="center"
                     android:text="@string/empty_social_sub"
-                    android:textAppearance="@style/TextAppearance.Akin.BodyMuted" 
-                    android:maxLines="2"
-                    android:ellipsize="end" />
+                    style="@style/Widget.Akin.CompactBodyMuted"
+                    android:maxLines="2" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/dashboard_social_account_empty_action"
@@ -317,11 +335,11 @@
                     app:iconSize="16dp"
                     app:iconTint="@color/text_primary" />
 
-            </LinearLayout>
+            </com.akin.wallet.ui.DashboardEmptyStateLayout>
 
         </com.google.android.material.card.MaterialCardView>
 
-    </LinearLayout>
+    </com.akin.wallet.ui.DashboardContentLayout>
 
     <View
         android:id="@+id/dashboard_quick_add_scrim"
@@ -386,7 +404,7 @@
         android:theme="@style/ThemeOverlay.Material3.Dark"
         app:backgroundTint="@color/dashboard_bg_start">
 
-        <LinearLayout
+        <com.akin.wallet.ui.DashboardContentLayout
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:orientation="vertical"
@@ -404,18 +422,17 @@
                 android:orientation="horizontal"
                 android:visibility="gone">
 
-                <TextView
+                <androidx.appcompat.widget.AppCompatTextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:maxLines="1"
-                    android:ellipsize="end"
                     android:text="@string/trash_section_ids"
-                    android:textAppearance="@style/TextAppearance.Akin.SectionTitle"
-                android:accessibilityHeading="true" />
+                    style="@style/Widget.Akin.SectionTitle"
+                    android:accessibilityHeading="true" />
 
             </LinearLayout>
 
-            <androidx.recyclerview.widget.RecyclerView
+            <com.akin.wallet.ui.PortraitCardCarousel
                 android:id="@+id/dashboard_search_government_id_list"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -434,18 +451,17 @@
                 android:orientation="horizontal"
                 android:visibility="gone">
 
-                <TextView
+                <androidx.appcompat.widget.AppCompatTextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:maxLines="1"
-                    android:ellipsize="end"
                     android:text="@string/trash_section_cards"
-                    android:textAppearance="@style/TextAppearance.Akin.SectionTitle"
-                android:accessibilityHeading="true" />
+                    style="@style/Widget.Akin.SectionTitle"
+                    android:accessibilityHeading="true" />
 
             </LinearLayout>
 
-            <androidx.recyclerview.widget.RecyclerView
+            <com.akin.wallet.ui.PortraitCardCarousel
                 android:id="@+id/dashboard_search_bank_card_list"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -464,14 +480,13 @@
                 android:orientation="horizontal"
                 android:visibility="gone">
 
-                <TextView
+                <androidx.appcompat.widget.AppCompatTextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:maxLines="1"
-                    android:ellipsize="end"
                     android:text="@string/trash_section_social"
-                    android:textAppearance="@style/TextAppearance.Akin.SectionTitle"
-                android:accessibilityHeading="true" />
+                    style="@style/Widget.Akin.SectionTitle"
+                    android:accessibilityHeading="true" />
 
             </LinearLayout>
 
@@ -509,32 +524,30 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content">
 
-                    <TextView
+                    <androidx.appcompat.widget.AppCompatTextView
                         android:id="@+id/dashboard_search_empty_title"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:gravity="center"
                         android:text="@string/search_empty_title"
-                        android:textAppearance="@style/TextAppearance.Akin.CardTitle" 
-                    android:maxLines="2"
-                    android:ellipsize="end" />
+                        style="@style/Widget.Akin.CompactCardTitle"
+                        android:maxLines="2" />
 
-                    <TextView
+                    <androidx.appcompat.widget.AppCompatTextView
                         android:id="@+id/dashboard_search_empty_subtitle"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="@dimen/spacing_4dp"
                         android:gravity="center"
                         android:text="@string/search_empty_sub"
-                        android:textAppearance="@style/TextAppearance.Akin.BodyMuted" 
-                    android:maxLines="2"
-                    android:ellipsize="end" />
+                        style="@style/Widget.Akin.CompactBodyMuted"
+                        android:maxLines="2" />
 
                 </LinearLayout>
 
             </com.google.android.material.card.MaterialCardView>
 
-        </LinearLayout>
+        </com.akin.wallet.ui.DashboardContentLayout>
 
     </com.google.android.material.search.SearchView>
 

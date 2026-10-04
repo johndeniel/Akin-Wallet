@@ -13,7 +13,6 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.akin.wallet.R;
 import com.akin.wallet.adapter.TrashAdapter;
-import com.akin.wallet.db.VaultWarmCache;
 import com.akin.wallet.model.BankCardModel;
 import com.akin.wallet.model.SocialAccountModel;
 import com.akin.wallet.model.GovernmentIDModel;
@@ -42,9 +41,13 @@ public class TrashActivity extends BaseVaultActivity {
     private static final String KEY_SELECTION = "trash_selection";
     private static final String KEY_BULK_CONFIRM = "trash_bulk_confirm";
 
-    /** Selection restored once after the first post-rotation load. */
+    /**
+     * Selection restored once after the first post-rotation load.
+     */
     private ArrayList<String> pendingSelection;
-    /** Bulk-delete confirm re-shown after rotation if open when destroyed. */
+    /**
+     * Bulk-delete confirm re-shown after rotation if open when destroyed.
+     */
     private boolean pendingBulkConfirm;
 
     @Override
@@ -87,7 +90,6 @@ public class TrashActivity extends BaseVaultActivity {
             pendingSelection = savedInstanceState.getStringArrayList(KEY_SELECTION);
             pendingBulkConfirm = savedInstanceState.getBoolean(KEY_BULK_CONFIRM, false);
         }
-        bindCachedSnapshot();
 
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
             @Override
@@ -102,7 +104,9 @@ public class TrashActivity extends BaseVaultActivity {
         });
     }
 
-    /** Tiles pair two-per-row on phones; three on sw>=600dp. */
+    /**
+     * Tiles pair two-per-row on phones; three on sw>=600dp.
+     */
     private GridLayoutManager createGridLayoutManager() {
         final int spanCount = getResources().getConfiguration().smallestScreenWidthDp >= 600 ? 3 : 2;
         GridLayoutManager grid = new GridLayoutManager(this, spanCount);
@@ -130,12 +134,20 @@ public class TrashActivity extends BaseVaultActivity {
     }
 
     @Override
+    protected void onVaultLocked() {
+        super.onVaultLocked();
+        if (trashAdapter != null) trashAdapter.updateData(java.util.Collections.emptyList());
+    }
+
+    @Override
     protected void onResume() {
         super.onResume();
         loadTrash();
     }
 
-    /** Back/close: clears an active selection first, finishes otherwise. */
+    /**
+     * Back/close: clears an active selection first, finishes otherwise.
+     */
     @Override
     protected void onNavigateBack() {
         if (trashAdapter != null && trashAdapter.getSelectedCount() > 0) {
@@ -156,50 +168,43 @@ public class TrashActivity extends BaseVaultActivity {
                 cards = db().getTrashedBankCards();
                 accounts = db().getTrashedSocialAccounts();
             } catch (RuntimeException e) {
-                Log.w("Trash", "load failed", e);
+                if (com.akin.wallet.BuildConfig.DEBUG) Log.w("Trash", "load failed", e);
                 runIfAlive(generation, () -> showMessage(R.string.err_trash_load));
                 return;
             }
-            cache().publishTrash(ids, cards, accounts);
-            runIfAlive(generation, () -> bindTrash(ids, cards, accounts));
+            List<TrashAdapter.Entry> entries = new ArrayList<>();
+            addIdSection(entries, ids);
+            addCardSection(entries, cards);
+            addSocialSection(entries, accounts);
+            runIfAlive(generation, () -> bindTrash(entries));
         });
     }
 
-    /** Cache-first bind: preload snapshot before first draw; onResume revalidates. */
-    private void bindCachedSnapshot() {
-        VaultWarmCache.Snapshot cached = cache().snapshot();
-        if (cached == null || !cached.hasTrash() || trashAdapter == null) {
-            return;
-        }
-        bindTrash(new ArrayList<>(cached.trashedIds),
-                new ArrayList<>(cached.trashedCards),
-                new ArrayList<>(cached.trashedAccounts));
+
+    /**
+     * Binds one loaded snapshot on the UI thread (adapter + chrome).
+     */
+    private void bindTrash(List<TrashAdapter.Entry> entries) {
+        trashAdapter.updateData(entries, () -> {
+            if (!isAlive()) return;
+            if (pendingSelection != null) {
+                trashAdapter.restoreSelection(pendingSelection);
+                pendingSelection = null;
+            }
+            boolean allEmpty = entries.isEmpty();
+            trashEmptyState.setVisibility(allEmpty ? View.VISIBLE : View.GONE);
+            trashGrid.setVisibility(allEmpty ? View.GONE : View.VISIBLE);
+            updateChrome(trashAdapter.getSelectedCount(), trashAdapter.getSelectableCount());
+            if (pendingBulkConfirm && trashAdapter.getSelectedCount() > 0) {
+                trashGrid.post(this::confirmBulkDelete);
+            }
+            pendingBulkConfirm = false;
+        });
     }
 
-    /** Binds one loaded snapshot on the UI thread (adapter + chrome). */
-    private void bindTrash(List<GovernmentIDModel> ids, List<BankCardModel> cards,
-                           List<SocialAccountModel> accounts) {
-        List<TrashAdapter.Entry> entries = new ArrayList<>();
-        addIdSection(entries, ids);
-        addCardSection(entries, cards);
-        addSocialSection(entries, accounts);
-
-        trashAdapter.updateData(entries);
-        if (pendingSelection != null) {
-            trashAdapter.restoreSelection(pendingSelection);
-            pendingSelection = null;
-        }
-        boolean allEmpty = entries.isEmpty();
-        trashEmptyState.setVisibility(allEmpty ? View.VISIBLE : View.GONE);
-        trashGrid.setVisibility(allEmpty ? View.GONE : View.VISIBLE);
-        updateChrome(trashAdapter.getSelectedCount(), trashAdapter.getSelectableCount());
-        if (pendingBulkConfirm && trashAdapter.getSelectedCount() > 0) {
-            trashGrid.post(this::confirmBulkDelete);
-        }
-        pendingBulkConfirm = false;
-    }
-
-    /** Contextual chrome: idle shows Trash + back; selecting shows count + actions. */
+    /**
+     * Contextual chrome: idle shows Trash + back; selecting shows count + actions.
+     */
     private void updateChrome(int selected, int total) {
         boolean selecting = selected > 0;
         toolbar.setTitle(selecting
@@ -247,10 +252,11 @@ public class TrashActivity extends BaseVaultActivity {
     }
 
     private static final class Selection {
-        final List<Integer> ids = new ArrayList<>();
-        final List<Integer> cards = new ArrayList<>();
-        final List<Integer> socials = new ArrayList<>();
+        final List<Long> ids = new ArrayList<>();
+        final List<Long> cards = new ArrayList<>();
+        final List<Long> socials = new ArrayList<>();
         final int count;
+
         Selection(List<TrashAdapter.Entry> selected) {
             for (TrashAdapter.Entry entry : selected) {
                 switch (entry.kind) {
@@ -280,7 +286,7 @@ public class TrashActivity extends BaseVaultActivity {
     private void runBulkWrite(Selection selection, Runnable write, int doneMessage) {
         vaultIo(() -> {
             write.run();
-            cache().invalidate();
+            store().invalidate();
             runIfAlive(() -> {
                 loadTrash();
                 showMessage(doneMessage, selection.count);
@@ -288,7 +294,9 @@ public class TrashActivity extends BaseVaultActivity {
         });
     }
 
-    /** Restores every selected item to its vault, then reloads. */
+    /**
+     * Restores every selected item to its vault, then reloads.
+     */
     private void bulkRestore() {
         List<TrashAdapter.Entry> selected = trashAdapter.selectedEntries();
         if (selected.isEmpty()) {
@@ -296,13 +304,13 @@ public class TrashActivity extends BaseVaultActivity {
         }
         Selection selection = new Selection(selected);
         runBulkWrite(selection, () -> {
-            db().restoreIdCards(selection.ids);
-            db().restoreBankCards(selection.cards);
-            db().restoreSocialAccounts(selection.socials);
+            db().restoreSelection(selection.ids, selection.cards, selection.socials);
         }, R.string.trash_restored_count);
     }
 
-    /** Confirms, then permanently deletes every selected item. */
+    /**
+     * Confirms, then permanently deletes every selected item.
+     */
     private void confirmBulkDelete() {
         List<TrashAdapter.Entry> selected = trashAdapter.selectedEntries();
         if (selected.isEmpty()) {
@@ -316,9 +324,7 @@ public class TrashActivity extends BaseVaultActivity {
                 () -> {
                     pendingBulkConfirm = false;
                     runBulkWrite(selection, () -> {
-                        db().deleteIdCards(selection.ids);
-                        db().deleteBankCards(selection.cards);
-                        db().deleteSocialAccounts(selection.socials);
+                        db().deleteSelection(selection.ids, selection.cards, selection.socials);
                     }, R.string.trash_deleted_count);
                 });
         dialog.setOnDismissListener(d -> pendingBulkConfirm = false);

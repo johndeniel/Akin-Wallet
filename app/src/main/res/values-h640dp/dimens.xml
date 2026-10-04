@@ -22,4 +22,5 @@
     <dimen name="lock_dot_size">22dp</dimen>
     <dimen name="lock_error_height">24dp</dimen>
     <dimen name="carousel_dots_gap_top">16dp</dimen>
+    <dimen name="card_content_padding">16dp</dimen>
 </resources>

@@ -22,6 +22,7 @@ public class SettingsActivity extends BaseVaultActivity {
     private TextView biometricStatus;
     private BiometricPrompt confirmPrompt;
     private boolean confirming;
+    private boolean updatingSwitch;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -39,14 +40,13 @@ public class SettingsActivity extends BaseVaultActivity {
         refreshBiometric();
 
         biometricSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            if (!buttonView.isPressed()) {
+            if (updatingSwitch) {
                 return;
             }
             if (isChecked) {
                 confirmBiometric();
             } else {
-                AppLockManager.setBiometricEnabled(this, false);
-                refreshBiometric();
+                saveBiometricPreference(false);
             }
         });
 
@@ -70,6 +70,26 @@ public class SettingsActivity extends BaseVaultActivity {
                         .putExtra(PolicyActivity.EXTRA_TYPE, PolicyActivity.TYPE_ABOUT)));
     }
 
+    private void saveBiometricPreference(boolean enabled) {
+        long token = app().getSession().generation();
+        biometricSwitch.setEnabled(false);
+        AppLockManager.execute(() -> {
+            try {
+                AppLockManager.setBiometricEnabled(getApplicationContext(), enabled);
+                runOnUiThread(() -> {
+                    if (isAlive() && app().getSession().isCurrent(token)) refreshBiometric();
+                });
+            } catch (RuntimeException failure) {
+                runOnUiThread(() -> {
+                    if (isAlive() && app().getSession().isCurrent(token)) {
+                        refreshBiometric();
+                        showMessage(R.string.err_vault_operation);
+                    }
+                });
+            }
+        });
+    }
+
     private void bindRow(int rowId, Runnable action) {
         findViewById(rowId).setOnClickListener(v -> action.run());
     }
@@ -85,7 +105,9 @@ public class SettingsActivity extends BaseVaultActivity {
     private void refreshBiometric() {
         boolean available = AppLockManager.isBiometricAvailable(this);
         boolean enabled = available && AppLockManager.isBiometricEnabled(this);
+        updatingSwitch = true;
         biometricSwitch.setChecked(enabled);
+        updatingSwitch = false;
         biometricSwitch.setEnabled(available);
         if (!available) {
             biometricStatus.setText(R.string.settings_biometric_unavailable);
@@ -108,13 +130,16 @@ public class SettingsActivity extends BaseVaultActivity {
         super.onPause();
     }
 
-    /** Toggle sticks only when the system prompt succeeds, else it reverts. */
+    /**
+     * Toggle sticks only when the system prompt succeeds, else it reverts.
+     */
     private void confirmBiometric() {
         if (confirming) {
             return;
         }
         confirming = true;
         BiometricPrompt.PromptInfo info = new BiometricPrompt.PromptInfo.Builder()
+                .setAllowedAuthenticators(androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG)
                 .setTitle(getString(R.string.settings_biometric))
                 .setSubtitle(getString(R.string.lock_touch_sensor))
                 .setNegativeButtonText(getString(android.R.string.cancel))
@@ -124,24 +149,16 @@ public class SettingsActivity extends BaseVaultActivity {
                     @Override
                     public void onAuthenticationSucceeded(
                             @NonNull BiometricPrompt.AuthenticationResult result) {
+                        if (!confirming || !isAuthenticatedAndResumed()) return;
                         confirming = false;
-                        if (!isAlive()) {
-                            return;
-                        }
-                        AppLockManager.setBiometricEnabled(
-                                SettingsActivity.this, true);
-                        biometricSwitch.setChecked(true);
-                        refreshBiometric();
+                        saveBiometricPreference(true);
                     }
 
                     @Override
                     public void onAuthenticationError(
                             int errorCode, @NonNull CharSequence errString) {
+                        if (!confirming || !isAuthenticatedAndResumed()) return;
                         confirming = false;
-                        if (!isAlive()) {
-                            return;
-                        }
-                        biometricSwitch.setChecked(false);
                         refreshBiometric();
                     }
                 });

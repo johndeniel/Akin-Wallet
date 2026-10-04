@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- View-tag key for the pending empty-state measure runnable. -->
-    <item name="tag_empty_state_measure" type="id" />
     <!-- View-tag key for applyAdaptiveInsets initial padding. -->
     <item name="tag_window_insets_initial" type="id" />
     <!-- View-tag key for the last applied network logo (icon + height). -->
@@ -11,4 +10,5 @@
     <item name="tag_card_face_metrics" type="id" />
     <!-- Programmatic toolbar item: Trash Select All (no menu XML). -->
     <item name="trash_select_all_action" type="id" />
+    <item name="platform_icon_request" type="id" />
 </resources>

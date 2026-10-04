@@ -1,15 +1,8 @@
-<?xml version="1.0" encoding="utf-8"?><!--
-   Akin Wallet backup rules. The vault database is SQLCipher-encrypted with
-   a Keystore-wrapped key that never leaves this device, so a restored copy
-   could never be opened again — exclude it (and the wrapped key) rather
-   than back up data the user could never read. See
-   https://developer.android.com/guide/topics/data/autobackup
-   for details.
--->
+<?xml version="1.0" encoding="utf-8"?>
 <full-backup-content>
-    <exclude domain="database" path="akin_wallet.db" />
-    <exclude domain="sharedpref" path="akin_vault_key.xml" />
-    <!-- PIN hash/salt + lockout counters: restoring them without the vault
-         leaves a PIN-locked empty install. Force clean setup on restore. -->
-    <exclude domain="sharedpref" path="akin_app_lock.xml" />
+        <exclude domain="root" path="." />
+        <exclude domain="file" path="." />
+        <exclude domain="database" path="." />
+        <exclude domain="sharedpref" path="." />
+        <exclude domain="external" path="." />
 </full-backup-content>

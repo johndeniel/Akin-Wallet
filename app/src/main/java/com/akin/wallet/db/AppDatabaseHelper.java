@@ -3,845 +3,360 @@ package com.akin.wallet.db;
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
-
-import androidx.annotation.NonNull;
+import android.database.sqlite.SQLiteException;
 
 import com.akin.wallet.model.BankCardModel;
-import com.akin.wallet.model.SocialAccountModel;
 import com.akin.wallet.model.GovernmentIDModel;
+import com.akin.wallet.model.SocialAccountModel;
+import com.akin.wallet.model.SocialPlatformModel;
 import com.akin.wallet.security.DbKeyManager;
+
 import net.zetetic.database.sqlcipher.SQLiteDatabase;
 import net.zetetic.database.sqlcipher.SQLiteOpenHelper;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
-
+import java.util.function.Function;
 
 /**
- * Process-shared vault connection, owned by {@code VaultWarmCache}: exactly
- * one instance lives with the process, so no method here may close the
- * {@code SQLiteDatabase} — only {@code Cursor}s close per call. All vault
- * I/O is funneled through one serialized executor (see
- * {@code VaultWarmCache.executeVaultIo}), so reads and write transactions
- * never interleave on the shared connection.
+ * Authoritative encrypted V1 schema. Access exclusively through VaultStore's I/O thread.
  */
-@SuppressWarnings("SpellCheckingInspection")
 public final class AppDatabaseHelper extends SQLiteOpenHelper {
-
-    private static final String DATABASE_NAME = "akin_wallet.db";
-    // v1 schema: SQLCipher-encrypted vault (AES-256) with a Keystore-wrapped
-    // random key, audit timestamp columns on every table, and indexes for
-    // the dashboard/trash ordering plus the account-links join.
-    // Encrypted-only: plaintext databases are not opened or converted, and
-    // no older schema version is supported (development stage).
-    private static final int DATABASE_VERSION = 1;
-
-    private static final String TABLE_SOCIAL_ACCOUNTS = "social_accounts";
-    private static final String COL_ID = "id";
-    private static final String COL_PLATFORM = "platform";
-    private static final String COL_USERNAME = "username";
-    private static final String COL_PASSWORD = "password";
-    private static final String COL_PIN = "pin";
-    private static final String COL_ICON_RES = "icon_res";
-
-    private static final String TABLE_ACCOUNT_LINKS = "account_links";
-    private static final String COL_ACCOUNT_ID = "account_id";
-    private static final String COL_LINKED_ACCOUNT_ID = "linked_account_id";
-
-    private static final String TABLE_BANK_CARDS = "bank_cards";
-    private static final String COL_CARD_ID = "id";
-    private static final String COL_CARD_TYPE = "card_type";
-    private static final String COL_CARD_NETWORK = "card_network";
-    private static final String COL_BANK_NAME = "bank_name";
-    private static final String COL_HOLDER_NAME = "holder_name";
-    private static final String COL_CARD_NUMBER = "card_number";
-    private static final String COL_EXPIRY = "expiry";
-    private static final String COL_CVV = "cvv";
-    private static final String COL_CARD_PIN = "pin";
-    private static final String COL_DESIGN = "design";
-    // Epoch millis (INTEGER): recency ordering, newest-first.
-    private static final String COL_CREATED_AT = "created_at";
-    private static final String COL_UPDATED_AT = "updated_at";
-    // Soft-delete stamp (INTEGER epoch millis). 0/NULL = active, >0 = in Trash.
-    private static final String COL_DELETED_AT = "deleted_at";
-
-    private static final String TABLE_ID_CARDS = "id_cards";
-    private static final String COL_ID_CARD_ID = "id";
-    private static final String COL_ID_TYPE = "id_type";
-    private static final String COL_ID_FIELDS_JSON = "fields_json";
-
-    public AppDatabaseHelper(Context context) {
-        super(context.getApplicationContext(), DATABASE_NAME,
-                toPassword(context.getApplicationContext()),
-                null, DATABASE_VERSION, 0, null, null, false);
-    }
+    private static final String NAME = "akin_wallet.db";
+    private static final int VERSION = 1;
+    private static final int APPLICATION_ID = 1095456305;
+    private static final String SOCIAL = "social_accounts";
+    private static final String CARDS = "bank_cards";
+    private static final String IDS = "id_cards";
+    private static final String LINKS = "account_links";
+    private static final String SOCIAL_DETAIL = "id,platform,username,password,pin,created_at,updated_at";
+    private static final String SOCIAL_OVERVIEW = "id,platform,username,'' AS password,'' AS pin,created_at,updated_at";
+    private static final String CARD_DETAIL = "id,card_type,card_network,bank_name,holder_name,card_number,expiry,cvv,pin,design,created_at,updated_at";
+    private static final String CARD_OVERVIEW = "id,card_type,card_network,bank_name,holder_name,card_number,expiry,'' AS cvv,'' AS pin,design,created_at,updated_at";
+    private static final String ID_PROJECTION = "id,id_type,fields_json,created_at,updated_at";
+    private final byte[] passphrase;
+    private final Context context;
 
     static {
         System.loadLibrary("sqlcipher");
     }
 
-    /** Vault passphrase as a String; the char[] copy is zeroed immediately. */
-    private static String toPassword(Context appContext) {
-        char[] passphrase = DbKeyManager.getPassphrase(appContext);
+    public AppDatabaseHelper(Context context) {
+        this(context.getApplicationContext(), DbKeyManager.getPassphraseBytes(context));
+    }
+
+    private AppDatabaseHelper(Context context, byte[] passphrase) {
+        this(context, NAME, passphrase);
+    }
+
+    AppDatabaseHelper(Context context, String databaseName, byte[] passphrase) {
+        super(context, databaseName, passphrase, null, VERSION, 0,
+                (database, error) -> {
+                    throw new SQLiteException("Vault is unreadable; data was preserved", error);
+                },
+                null, false);
+        this.passphrase = passphrase;
+        this.context = context.getApplicationContext();
+    }
+
+    @Override
+    public synchronized void close() {
         try {
-            return new String(passphrase);
+            super.close();
         } finally {
-            Arrays.fill(passphrase, '\0');
+            Arrays.fill(passphrase, (byte) 0);
         }
     }
 
-    // No-arg getters are overrides here: the vault key is fixed at
-    // construction, so every open below reuses it.
-    @NonNull
     @Override
-    public SQLiteDatabase getWritableDatabase() {
-        return super.getWritableDatabase();
-    }
-
-    @NonNull
-    @Override
-    public SQLiteDatabase getReadableDatabase() {
-        return super.getReadableDatabase();
+    public void onConfigure(SQLiteDatabase db) {
+        db.setForeignKeyConstraintsEnabled(true);
+        try (Cursor cursor = db.rawQuery("PRAGMA secure_delete=ON", null)) {
+            if (!cursor.moveToFirst() || cursor.getInt(0) != 1) {
+                throw new SQLiteException("Secure deletion unavailable");
+            }
+        }
     }
 
     @Override
     public void onCreate(SQLiteDatabase db) {
-        createAllTables(db);
-        createIndexes(db);
+        try (java.io.BufferedReader reader = new java.io.BufferedReader(
+                new java.io.InputStreamReader(context.getResources().openRawResource(
+                        com.akin.wallet.R.raw.vault_schema_v1), java.nio.charset.StandardCharsets.UTF_8))) {
+            StringBuilder schema = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) schema.append(line).append('\n');
+            for (String statement : schema.toString().split(";")) {
+                if (!statement.trim().isEmpty()) db.execSQL(statement);
+            }
+        } catch (java.io.IOException failure) {
+            throw new SQLiteException("Unable to initialize schema V1", failure);
+        }
     }
 
-    /** Full v1 schema. Shared by onCreate and onUpgrade so both land identical. */
-    private static void createAllTables(SQLiteDatabase db) {
-        db.execSQL("CREATE TABLE IF NOT EXISTS " + TABLE_SOCIAL_ACCOUNTS + " ("
-                + COL_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
-                + COL_PLATFORM + " TEXT, "
-                + COL_USERNAME + " TEXT, "
-                + COL_PASSWORD + " TEXT, "
-                + COL_PIN + " TEXT, "
-                + COL_ICON_RES + " INTEGER, "
-                + COL_CREATED_AT + " INTEGER DEFAULT 0, "
-                + COL_UPDATED_AT + " INTEGER DEFAULT 0, "
-                + COL_DELETED_AT + " INTEGER DEFAULT 0)");
-        db.execSQL("CREATE TABLE IF NOT EXISTS " + TABLE_ACCOUNT_LINKS + " ("
-                + COL_ACCOUNT_ID + " INTEGER, "
-                + COL_LINKED_ACCOUNT_ID + " INTEGER, "
-                + "PRIMARY KEY (" + COL_ACCOUNT_ID + ", " + COL_LINKED_ACCOUNT_ID + "))");
-        db.execSQL("CREATE TABLE IF NOT EXISTS " + TABLE_BANK_CARDS + " ("
-                + COL_CARD_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
-                + COL_CARD_TYPE + " TEXT, "
-                + COL_CARD_NETWORK + " TEXT, "
-                + COL_BANK_NAME + " TEXT, "
-                + COL_HOLDER_NAME + " TEXT, "
-                + COL_CARD_NUMBER + " TEXT, "
-                + COL_EXPIRY + " TEXT, "
-                + COL_CVV + " TEXT, "
-                + COL_CARD_PIN + " TEXT, "
-                + COL_DESIGN + " INTEGER, "
-                + COL_CREATED_AT + " INTEGER DEFAULT 0, "
-                + COL_UPDATED_AT + " INTEGER DEFAULT 0, "
-                + COL_DELETED_AT + " INTEGER DEFAULT 0)");
-        // Audit columns live beside the row identity (id), never inside
-        // fields_json-- — the JSON blob carries only per-type document data.
-        db.execSQL("CREATE TABLE IF NOT EXISTS " + TABLE_ID_CARDS + " ("
-                + COL_ID_CARD_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
-                + COL_ID_TYPE + " TEXT, "
-                + COL_ID_FIELDS_JSON + " TEXT, "
-                + COL_CREATED_AT + " INTEGER DEFAULT 0, "
-                + COL_UPDATED_AT + " INTEGER DEFAULT 0, "
-                + COL_DELETED_AT + " INTEGER DEFAULT 0)");
-    }
-
-    /** v1: indexes for the dashboard/trash ordering and account-links joins. */
-    private static void createIndexes(SQLiteDatabase db) {
-        db.execSQL("CREATE INDEX IF NOT EXISTS idx_social_accounts_active ON " + TABLE_SOCIAL_ACCOUNTS
-                + " (" + COL_DELETED_AT + ", " + COL_UPDATED_AT + " DESC, " + COL_ID + " DESC)");
-        db.execSQL("CREATE INDEX IF NOT EXISTS idx_bank_cards_active ON " + TABLE_BANK_CARDS
-                + " (" + COL_DELETED_AT + ", " + COL_UPDATED_AT + " DESC, " + COL_CARD_ID + " DESC)");
-        db.execSQL("CREATE INDEX IF NOT EXISTS idx_id_cards_active ON " + TABLE_ID_CARDS
-                + " (" + COL_DELETED_AT + ", " + COL_UPDATED_AT + " DESC, " + COL_ID_CARD_ID + " DESC)");
-        db.execSQL("CREATE INDEX IF NOT EXISTS idx_account_links_account ON " + TABLE_ACCOUNT_LINKS
-                + " (" + COL_ACCOUNT_ID + ")");
-        db.execSQL("CREATE INDEX IF NOT EXISTS idx_account_links_linked ON " + TABLE_ACCOUNT_LINKS
-                + " (" + COL_LINKED_ACCOUNT_ID + ")");
+    @Override
+    public void onOpen(SQLiteDatabase db) {
+        try (Cursor cursor = db.rawQuery("PRAGMA application_id", null)) {
+            if (!cursor.moveToFirst() || cursor.getInt(0) != APPLICATION_ID) {
+                throw new SQLiteException("Unsupported development schema; data was preserved");
+            }
+        }
     }
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-        // v1 only: no per-version migrations. Any older database is brought
-        // to the exact current schema (missing tables created, indexes
-        // ensured), never patched column-by-column.
-        createAllTables(db);
-        createIndexes(db);
+        throw new SQLiteException("Only schema V1 is supported");
     }
 
     @Override
     public void onDowngrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-        // Development stage, v1 only: no versioned migrations are supported.
-        // The current schema is ensured unconditionally.
-        createAllTables(db);
-        createIndexes(db);
+        throw new SQLiteException("Only schema V1 is supported");
     }
 
-    // ---- Shared row mapping (single definition per table) ----
-
-    private static SocialAccountModel mapSocialAccount(Cursor cursor) {
-        return new SocialAccountModel(
-                cursor.getInt(cursor.getColumnIndexOrThrow(COL_ID)),
-                cursor.getString(cursor.getColumnIndexOrThrow(COL_PLATFORM)),
-                cursor.getString(cursor.getColumnIndexOrThrow(COL_USERNAME)),
-                cursor.getString(cursor.getColumnIndexOrThrow(COL_PASSWORD)),
-                cursor.getString(cursor.getColumnIndexOrThrow(COL_PIN)),
-                cursor.getInt(cursor.getColumnIndexOrThrow(COL_ICON_RES)),
-                cursor.getLong(cursor.getColumnIndexOrThrow(COL_CREATED_AT)),
-                cursor.getLong(cursor.getColumnIndexOrThrow(COL_UPDATED_AT)));
+    private static SocialAccountModel social(Cursor c) {
+        String platform = c.getString(1);
+        return new SocialAccountModel(c.getLong(0), platform, c.getString(2), c.getString(3),
+                c.getString(4), SocialPlatformModel.iconFor(platform), c.getLong(5), c.getLong(6));
     }
 
-    private static BankCardModel mapBankCard(Cursor cursor) {
-        return new BankCardModel(
-                cursor.getInt(cursor.getColumnIndexOrThrow(COL_CARD_ID)),
-                cursor.getString(cursor.getColumnIndexOrThrow(COL_CARD_TYPE)),
-                cursor.getString(cursor.getColumnIndexOrThrow(COL_CARD_NETWORK)),
-                cursor.getString(cursor.getColumnIndexOrThrow(COL_BANK_NAME)),
-                cursor.getString(cursor.getColumnIndexOrThrow(COL_HOLDER_NAME)),
-                cursor.getString(cursor.getColumnIndexOrThrow(COL_CARD_NUMBER)),
-                cursor.getString(cursor.getColumnIndexOrThrow(COL_EXPIRY)),
-                cursor.getString(cursor.getColumnIndexOrThrow(COL_CVV)),
-                cursor.getString(cursor.getColumnIndexOrThrow(COL_CARD_PIN)),
-                cursor.getInt(cursor.getColumnIndexOrThrow(COL_DESIGN)),
-                cursor.getLong(cursor.getColumnIndexOrThrow(COL_CREATED_AT)),
-                cursor.getLong(cursor.getColumnIndexOrThrow(COL_UPDATED_AT)));
+    private static BankCardModel card(Cursor c) {
+        return new BankCardModel(c.getLong(0), c.getString(1), c.getString(2), c.getString(3),
+                c.getString(4), c.getString(5), c.getString(6), c.getString(7), c.getString(8),
+                c.getInt(9), c.getLong(10), c.getLong(11));
     }
 
-    private static GovernmentIDModel mapIdCard(Cursor cursor) {
-        return new GovernmentIDModel(
-                cursor.getInt(cursor.getColumnIndexOrThrow(COL_ID_CARD_ID)),
-                cursor.getString(cursor.getColumnIndexOrThrow(COL_ID_TYPE)),
-                GovernmentIDModel.parseFieldsJson(
-                        cursor.getString(cursor.getColumnIndexOrThrow(COL_ID_FIELDS_JSON))),
-                cursor.getLong(cursor.getColumnIndexOrThrow(COL_CREATED_AT)),
-                cursor.getLong(cursor.getColumnIndexOrThrow(COL_UPDATED_AT)));
+    private static GovernmentIDModel governmentId(Cursor c) {
+        return new GovernmentIDModel(c.getLong(0), c.getString(1),
+                GovernmentIDModel.parseFieldsJson(c.getString(2)), c.getLong(3), c.getLong(4));
     }
 
-    private static final String ACTIVE_SOCIAL_ACCOUNTS_WHERE =
-            "(" + COL_DELETED_AT + " IS NULL OR " + COL_DELETED_AT + "=0)";
-    private static final String TRASHED_WHERE =
-            COL_DELETED_AT + " IS NOT NULL AND " + COL_DELETED_AT + " != 0";
-
-    /** Honors a caller-supplied audit stamp when present, otherwise stamps now. */
-    private static long stampOrNow(long stamp, long now) {
-        return stamp > 0 ? stamp : now;
-    }
-
-    // ---- Social accounts ----
-
-    private static ContentValues socialAccountValues(SocialAccountModel item, long now, boolean fresh) {
-        ContentValues cv = new ContentValues();
-        cv.put(COL_PLATFORM, item.getPlatform());
-        cv.put(COL_USERNAME, item.getUsername());
-        cv.put(COL_PASSWORD, item.getPassword());
-        cv.put(COL_PIN, item.getPin());
-        cv.put(COL_ICON_RES, item.getIconRes());
-        if (fresh) {
-            // Fresh rows are both created and updated now; honor
-            // caller-supplied values when present.
-            cv.put(COL_CREATED_AT, stampOrNow(item.getCreatedAt(), now));
-            cv.put(COL_UPDATED_AT, stampOrNow(item.getUpdatedAt(), now));
-            cv.put(COL_DELETED_AT, 0);
-        } else {
-            // created_at is immutable; every edit bumps updated_at.
-            cv.put(COL_UPDATED_AT,
-                    stampOrNow(item.getUpdatedAt(), now));
+    private <T> List<T> overview(String table, String projection, boolean trash, Function<Cursor, T> mapper) {
+        List<T> rows = new ArrayList<>();
+        String where = trash ? "deleted_at>0" : "deleted_at=0";
+        String order = trash ? "deleted_at DESC,id DESC" : "updated_at DESC,id DESC";
+        try (Cursor c = getReadableDatabase().rawQuery("SELECT " + projection + " FROM " + table
+                + " WHERE " + where + " ORDER BY " + order, null)) {
+            while (c.moveToNext()) rows.add(mapper.apply(c));
         }
-        return cv;
+        return List.copyOf(rows);
     }
 
-    private static long insertSocialAccount(SQLiteDatabase db, SocialAccountModel item) {
-        return db.insert(TABLE_SOCIAL_ACCOUNTS, null,
-                socialAccountValues(item, System.currentTimeMillis(), true));
-    }
-
-    /**
-     * In-place update: preserves row id, created_at and every reverse link
-     * pointing at this account.
-     */
-    private static void updateSocialAccount(SQLiteDatabase db, SocialAccountModel item) {
-        db.update(TABLE_SOCIAL_ACCOUNTS,
-                socialAccountValues(item, System.currentTimeMillis(), false),
-                COL_ID + "=?", new String[]{String.valueOf(item.getId())});
-    }
-
-    /**
-     * Atomic save: insert-or-update the row plus its forward links in one
-     * transaction on one connection. Reverse links from other accounts are
-     * untouched (only this row's outgoing edges are replaced).
-     *
-     * @return the row id (existing id for edits, new id for adds).
-     */
-    public long saveSocialAccountWithLinks(SocialAccountModel item, List<Integer> linkedIds) {
-        // Shared process connection (VaultWarmCache): never closed per call.
-        // The block scopes the write; transactions still end in finally.
-        SQLiteDatabase db = this.getWritableDatabase();
-        {
-            db.beginTransaction();
-            try {
-                long id;
-                if (item.getId() > 0) {
-                    updateSocialAccount(db, item);
-                    id = item.getId();
-                } else {
-                    id = insertSocialAccount(db, item);
-                    if (id < 0) {
-                        return -1;
-                    }
-                }
-                String[] args = {String.valueOf(id)};
-                db.delete(TABLE_ACCOUNT_LINKS, COL_ACCOUNT_ID + "=?", args);
-                if (linkedIds != null) {
-                    for (Integer linkedId : linkedIds) {
-                        if (linkedId == null || linkedId == id) {
-                            continue;
-                        }
-                        ContentValues cv = new ContentValues();
-                        cv.put(COL_ACCOUNT_ID, id);
-                        cv.put(COL_LINKED_ACCOUNT_ID, linkedId);
-                        db.insert(TABLE_ACCOUNT_LINKS, null, cv);
-                    }
-                }
-                db.setTransactionSuccessful();
-                return id;
-            } finally {
-                db.endTransaction();
-            }
-        }
-    }
-
-    public SocialAccountModel getSocialAccountById(int id) {
-        // Shared process connection (VaultWarmCache): the Cursor closes per
-        // query, the database itself never closes.
-        SQLiteDatabase db = this.getReadableDatabase();
-        try (Cursor cursor = db.rawQuery("SELECT * FROM " + TABLE_SOCIAL_ACCOUNTS
-                + " WHERE " + COL_ID + "=?", new String[]{String.valueOf(id)})) {
-            if (cursor.moveToFirst()) {
-                return mapSocialAccount(cursor);
-            }
-            return null;
+    private <T> T byId(String table, String projection, long id, Function<Cursor, T> mapper) {
+        try (Cursor c = getReadableDatabase().rawQuery("SELECT " + projection + " FROM " + table
+                + " WHERE id=? AND deleted_at=0", new String[]{Long.toString(id)})) {
+            return c.moveToFirst() ? mapper.apply(c) : null;
         }
     }
 
     public List<SocialAccountModel> getAllSocialAccounts() {
-        List<SocialAccountModel> list = new ArrayList<>();
-        // Active rows only: trashed rows live in Trash (Settings).
-        // Newest-first by recency; id breaks ties on equal stamps.
-        // Shared process connection (VaultWarmCache): the Cursor closes per
-        // query, the database itself never closes.
-        SQLiteDatabase db = this.getReadableDatabase();
-        try (Cursor cursor = db.rawQuery("SELECT * FROM " + TABLE_SOCIAL_ACCOUNTS
-                + " WHERE " + ACTIVE_SOCIAL_ACCOUNTS_WHERE
-                + " ORDER BY " + COL_UPDATED_AT + " DESC, " + COL_ID + " DESC", null)) {
-            if (cursor.moveToFirst()) {
-                do {
-                    list.add(mapSocialAccount(cursor));
-                } while (cursor.moveToNext());
-            }
-            return list;
-        }
+        return overview(SOCIAL, SOCIAL_OVERVIEW, false, AppDatabaseHelper::social);
     }
 
-    /** Permanent delete for a set of ids in one transaction. */
-    public void deleteSocialAccounts(List<Integer> ids) {
-        if (ids == null || ids.isEmpty()) {
-            return;
-        }
-        // Shared process connection (VaultWarmCache): never closed per call.
-        // The block scopes the write; transactions still end in finally.
-        SQLiteDatabase db = this.getWritableDatabase();
-        {
-            db.beginTransaction();
-            try {
-                for (Integer id : ids) {
-                    if (id == null) {
-                        continue;
-                    }
-                    String[] both = {String.valueOf(id), String.valueOf(id)};
-                    db.delete(TABLE_ACCOUNT_LINKS,
-                            COL_ACCOUNT_ID + "=? OR " + COL_LINKED_ACCOUNT_ID + "=?", both);
-                    db.delete(TABLE_SOCIAL_ACCOUNTS, COL_ID + "=?",
-                            new String[]{String.valueOf(id)});
-                }
-                db.setTransactionSuccessful();
-            } finally {
-                db.endTransaction();
-            }
-            // Reclaim ciphertext pages so purged secrets don't linger on flash.
-            try {
-                db.execSQL("VACUUM");
-            } catch (RuntimeException ignored) {
-            }
-        }
-    }
-
-    /**
-     * Soft-delete: stamps deleted_at so the account disappears from the
-     * dashboard and appears in Settings > Trash. Links are kept so a
-     * restore brings links back; permanent delete cleans them up.
-     */
-    public void moveSocialAccountToTrash(int id) {
-        // Shared process connection (VaultWarmCache): never closed per call.
-        // The block scopes the write; transactions still end in finally.
-        SQLiteDatabase db = this.getWritableDatabase();
-        {
-            ContentValues cv = new ContentValues();
-            cv.put(COL_DELETED_AT, System.currentTimeMillis());
-            db.update(TABLE_SOCIAL_ACCOUNTS, cv, COL_ID + "=?",
-                    new String[]{String.valueOf(id)});
-        }
-    }
-
-    /** Restores trashed accounts back to the dashboard (deleted_at = 0). */
-    public void restoreSocialAccounts(List<Integer> ids) {
-        if (ids == null || ids.isEmpty()) {
-            return;
-        }
-        // Shared process connection (VaultWarmCache): never closed per call.
-        // The block scopes the write; transactions still end in finally.
-        SQLiteDatabase db = this.getWritableDatabase();
-        {
-            db.beginTransaction();
-            try {
-                ContentValues cv = new ContentValues();
-                cv.put(COL_DELETED_AT, 0);
-                for (Integer id : ids) {
-                    if (id == null) {
-                        continue;
-                    }
-                    db.update(TABLE_SOCIAL_ACCOUNTS, cv, COL_ID + "=?",
-                            new String[]{String.valueOf(id)});
-                }
-                db.setTransactionSuccessful();
-            } finally {
-                db.endTransaction();
-            }
-        }
-    }
-
-    /** Trashed social accounts, newest-deleted first. */
     public List<SocialAccountModel> getTrashedSocialAccounts() {
-        List<SocialAccountModel> list = new ArrayList<>();
-        // Shared process connection (VaultWarmCache): the Cursor closes per
-        // query, the database itself never closes.
-        SQLiteDatabase db = this.getReadableDatabase();
-        try (Cursor cursor = db.rawQuery("SELECT * FROM " + TABLE_SOCIAL_ACCOUNTS
-                + " WHERE " + TRASHED_WHERE
-                + " ORDER BY " + COL_DELETED_AT + " DESC, " + COL_ID + " DESC", null)) {
-            if (cursor.moveToFirst()) {
-                do {
-                    list.add(mapSocialAccount(cursor));
-                } while (cursor.moveToNext());
-            }
-            return list;
-        }
-    }
-
-    /**
-     * Marks an account as recently used without touching its data: bumps only
-     * updated_at to now so newest-first ordering picks it up. Called when the
-     * account is opened for editing; the list re-sorts on the next refresh.
-     */
-    public void touchSocialAccountUpdatedAt(int id) {
-        // Shared process connection (VaultWarmCache): never closed per call.
-        // The block scopes the write; transactions still end in finally.
-        SQLiteDatabase db = this.getWritableDatabase();
-        {
-            ContentValues cv = new ContentValues();
-            cv.put(COL_UPDATED_AT, System.currentTimeMillis());
-            db.update(TABLE_SOCIAL_ACCOUNTS, cv, COL_ID + "=?",
-                    new String[]{String.valueOf(id)});
-        }
-    }
-
-    // ---- Bank cards ----
-
-    private static ContentValues bankCardValues(BankCardModel item, long now, boolean fresh) {
-        ContentValues cv = new ContentValues();
-        cv.put(COL_CARD_TYPE, item.getCardType());
-        cv.put(COL_CARD_NETWORK, item.getCardNetwork());
-        cv.put(COL_BANK_NAME, item.getBankName());
-        cv.put(COL_HOLDER_NAME, item.getHolderName());
-        cv.put(COL_CARD_NUMBER, item.getCardNumber());
-        cv.put(COL_EXPIRY, item.getExpiry());
-        cv.put(COL_CVV, item.getCvv());
-        cv.put(COL_CARD_PIN, item.getPin());
-        cv.put(COL_DESIGN, item.getDesign());
-        if (fresh) {
-            // Fresh rows are both created and updated now; honor
-            // caller-supplied values (e.g. imports) when present.
-            cv.put(COL_CREATED_AT, stampOrNow(item.getCreatedAt(), now));
-            cv.put(COL_UPDATED_AT, stampOrNow(item.getUpdatedAt(), now));
-            cv.put(COL_DELETED_AT, 0);
-        } else {
-            // created_at is immutable: never overwritten.
-            cv.put(COL_UPDATED_AT,
-                    stampOrNow(item.getUpdatedAt(), now));
-        }
-        return cv;
-    }
-
-    public void insertBankCard(BankCardModel item) {
-        // Shared process connection (VaultWarmCache): never closed per call.
-        // The block scopes the write; transactions still end in finally.
-        SQLiteDatabase db = this.getWritableDatabase();
-        {
-            db.insert(TABLE_BANK_CARDS, null,
-                    bankCardValues(item, System.currentTimeMillis(), true));
-        }
-    }
-
-    public BankCardModel getBankCardById(int id) {
-        // Shared process connection (VaultWarmCache): the Cursor closes per
-        // query, the database itself never closes.
-        SQLiteDatabase db = this.getReadableDatabase();
-        try (Cursor cursor = db.rawQuery("SELECT * FROM " + TABLE_BANK_CARDS
-                + " WHERE " + COL_CARD_ID + "=?", new String[]{String.valueOf(id)})) {
-            if (cursor.moveToFirst()) {
-                return mapBankCard(cursor);
-            }
-            return null;
-        }
+        return overview(SOCIAL, SOCIAL_OVERVIEW, true, AppDatabaseHelper::social);
     }
 
     public List<BankCardModel> getAllBankCards() {
-        List<BankCardModel> list = new ArrayList<>();
-        // Active rows only; trashed cards live in Trash.
-        // Newest-first by recency; id breaks ties on equal stamps.
-        // Shared process connection (VaultWarmCache): the Cursor closes per
-        // query, the database itself never closes.
-        SQLiteDatabase db = this.getReadableDatabase();
-        try (Cursor cursor = db.rawQuery("SELECT * FROM " + TABLE_BANK_CARDS
-                + " WHERE " + ACTIVE_SOCIAL_ACCOUNTS_WHERE
-                + " ORDER BY " + COL_UPDATED_AT + " DESC, " + COL_CARD_ID + " DESC", null)) {
-            if (cursor.moveToFirst()) {
-                do {
-                    list.add(mapBankCard(cursor));
-                } while (cursor.moveToNext());
-            }
-            return list;
-        }
+        return overview(CARDS, CARD_OVERVIEW, false, AppDatabaseHelper::card);
     }
 
-    public void updateBankCard(BankCardModel item) {
-        // Shared process connection (VaultWarmCache): never closed per call.
-        // The block scopes the write; transactions still end in finally.
-        SQLiteDatabase db = this.getWritableDatabase();
-        {
-            db.update(TABLE_BANK_CARDS,
-                    bankCardValues(item, System.currentTimeMillis(), false),
-                    COL_CARD_ID + "=?", new String[]{String.valueOf(item.getId())});
-        }
-    }
-
-    /** Permanent delete for a set of ids in one transaction. */
-    public void deleteBankCards(List<Integer> ids) {
-        if (ids == null || ids.isEmpty()) {
-            return;
-        }
-        // Shared process connection (VaultWarmCache): never closed per call.
-        // The block scopes the write; transactions still end in finally.
-        SQLiteDatabase db = this.getWritableDatabase();
-        {
-            db.beginTransaction();
-            try {
-                for (Integer id : ids) {
-                    if (id == null) {
-                        continue;
-                    }
-                    db.delete(TABLE_BANK_CARDS, COL_CARD_ID + "=?",
-                            new String[]{String.valueOf(id)});
-                }
-                db.setTransactionSuccessful();
-            } finally {
-                db.endTransaction();
-            }
-            try {
-                db.execSQL("VACUUM");
-            } catch (RuntimeException ignored) {
-            }
-        }
-    }
-
-    /**
-     * Soft-delete: moves the card to Trash (Settings). The dashboard hides it
-     * until restored or permanently deleted.
-     */
-    public void moveBankCardToTrash(int id) {
-        // Shared process connection (VaultWarmCache): never closed per call.
-        // The block scopes the write; transactions still end in finally.
-        SQLiteDatabase db = this.getWritableDatabase();
-        {
-            ContentValues cv = new ContentValues();
-            cv.put(COL_DELETED_AT, System.currentTimeMillis());
-            db.update(TABLE_BANK_CARDS, cv, COL_CARD_ID + "=?",
-                    new String[]{String.valueOf(id)});
-        }
-    }
-
-    /** Restores trashed cards back to the dashboard. */
-    public void restoreBankCards(List<Integer> ids) {
-        if (ids == null || ids.isEmpty()) {
-            return;
-        }
-        // Shared process connection (VaultWarmCache): never closed per call.
-        // The block scopes the write; transactions still end in finally.
-        SQLiteDatabase db = this.getWritableDatabase();
-        {
-            db.beginTransaction();
-            try {
-                ContentValues cv = new ContentValues();
-                cv.put(COL_DELETED_AT, 0);
-                for (Integer id : ids) {
-                    if (id == null) {
-                        continue;
-                    }
-                    db.update(TABLE_BANK_CARDS, cv, COL_CARD_ID + "=?",
-                            new String[]{String.valueOf(id)});
-                }
-                db.setTransactionSuccessful();
-            } finally {
-                db.endTransaction();
-            }
-        }
-    }
-
-    /** Trashed bank cards, newest-deleted first. */
     public List<BankCardModel> getTrashedBankCards() {
-        List<BankCardModel> list = new ArrayList<>();
-        // Shared process connection (VaultWarmCache): the Cursor closes per
-        // query, the database itself never closes.
-        SQLiteDatabase db = this.getReadableDatabase();
-        try (Cursor cursor = db.rawQuery("SELECT * FROM " + TABLE_BANK_CARDS
-                + " WHERE " + TRASHED_WHERE
-                + " ORDER BY " + COL_DELETED_AT + " DESC, " + COL_CARD_ID + " DESC", null)) {
-            if (cursor.moveToFirst()) {
-                do {
-                    list.add(mapBankCard(cursor));
-                } while (cursor.moveToNext());
-            }
-            return list;
-        }
-    }
-
-    /**
-     * Marks a card as recently used without touching its data: bumps only
-     * updated_at to now so newest-first ordering picks it up. Called on
-     * dashboard tap; the list re-sorts on the next refresh.
-     */
-    public void touchBankCardUpdatedAt(int id) {
-        // Shared process connection (VaultWarmCache): never closed per call.
-        // The block scopes the write; transactions still end in finally.
-        SQLiteDatabase db = this.getWritableDatabase();
-        {
-            ContentValues cv = new ContentValues();
-            cv.put(COL_UPDATED_AT, System.currentTimeMillis());
-            db.update(TABLE_BANK_CARDS, cv, COL_CARD_ID + "=?",
-                    new String[]{String.valueOf(id)});
-        }
-    }
-
-    // ---- ID cards ----
-
-    private static ContentValues idCardValues(GovernmentIDModel item, long now, boolean fresh) {
-        ContentValues cv = new ContentValues();
-        cv.put(COL_ID_TYPE, item.getIdType());
-        cv.put(COL_ID_FIELDS_JSON, item.getFieldsJson());
-        if (fresh) {
-            // Honor caller-supplied values (e.g. imports) when present.
-            // The JSON blob is untouched — stamps live in their own columns.
-            cv.put(COL_CREATED_AT, stampOrNow(item.getCreatedAt(), now));
-            cv.put(COL_UPDATED_AT, stampOrNow(item.getUpdatedAt(), now));
-            cv.put(COL_DELETED_AT, 0);
-        } else {
-            // created_at is immutable: never overwritten.
-            cv.put(COL_UPDATED_AT,
-                    stampOrNow(item.getUpdatedAt(), now));
-        }
-        return cv;
-    }
-
-    public void insertIdCard(GovernmentIDModel item) {
-        // Shared process connection (VaultWarmCache): never closed per call.
-        // The block scopes the write; transactions still end in finally.
-        SQLiteDatabase db = this.getWritableDatabase();
-        {
-            db.insert(TABLE_ID_CARDS, null,
-                    idCardValues(item, System.currentTimeMillis(), true));
-        }
-    }
-
-    public GovernmentIDModel getIdCardById(int id) {
-        // Shared process connection (VaultWarmCache): the Cursor closes per
-        // query, the database itself never closes.
-        SQLiteDatabase db = this.getReadableDatabase();
-        try (Cursor cursor = db.rawQuery("SELECT * FROM " + TABLE_ID_CARDS
-                + " WHERE " + COL_ID_CARD_ID + "=?", new String[]{String.valueOf(id)})) {
-            if (cursor.moveToFirst()) {
-                return mapIdCard(cursor);
-            }
-            return null;
-        }
+        return overview(CARDS, CARD_OVERVIEW, true, AppDatabaseHelper::card);
     }
 
     public List<GovernmentIDModel> getAllIdCards() {
-        List<GovernmentIDModel> list = new ArrayList<>();
-        // Active rows only; trashed IDs live in Trash.
-        // Newest-first by recency, matching bank cards and social accounts;
-        // id breaks ties on equal stamps.
-        // Shared process connection (VaultWarmCache): the Cursor closes per
-        // query, the database itself never closes.
-        SQLiteDatabase db = this.getReadableDatabase();
-        try (Cursor cursor = db.rawQuery("SELECT * FROM " + TABLE_ID_CARDS
-                + " WHERE " + ACTIVE_SOCIAL_ACCOUNTS_WHERE
-                + " ORDER BY " + COL_UPDATED_AT + " DESC, " + COL_ID_CARD_ID + " DESC", null)) {
-            if (cursor.moveToFirst()) {
-                do {
-                    list.add(mapIdCard(cursor));
-                } while (cursor.moveToNext());
-            }
-            return list;
+        return overview(IDS, ID_PROJECTION, false, AppDatabaseHelper::governmentId);
+    }
+
+    public List<GovernmentIDModel> getTrashedIdCards() {
+        return overview(IDS, ID_PROJECTION, true, AppDatabaseHelper::governmentId);
+    }
+
+    public SocialAccountModel getSocialAccountById(long id) {
+        return byId(SOCIAL, SOCIAL_DETAIL, id, AppDatabaseHelper::social);
+    }
+
+    public BankCardModel getBankCardById(long id) {
+        return byId(CARDS, CARD_DETAIL, id, AppDatabaseHelper::card);
+    }
+
+    public GovernmentIDModel getIdCardById(long id) {
+        return byId(IDS, ID_PROJECTION, id, AppDatabaseHelper::governmentId);
+    }
+
+    private static String text(String value) {
+        return value == null ? "" : value;
+    }
+
+    private static void audit(ContentValues values, long created, boolean fresh) {
+        long now = System.currentTimeMillis();
+        if (fresh) {
+            values.put("created_at", created > 0 ? created : now);
+            values.put("deleted_at", 0);
         }
+        values.put("updated_at", now);
+    }
+
+    private static ContentValues socialValues(SocialAccountModel item, boolean fresh) {
+        ContentValues v = new ContentValues();
+        v.put("platform", text(item.getPlatform()));
+        v.put("username", text(item.getUsername()));
+        v.put("password", text(item.getPassword()));
+        v.put("pin", text(item.getPin()));
+        audit(v, item.getCreatedAt(), fresh);
+        return v;
+    }
+
+    private static ContentValues cardValues(BankCardModel item, boolean fresh) {
+        if (!BankCardModel.isValidCardNumber(item.getCardNumber())) {
+            throw new IllegalArgumentException("Card number must contain exactly 16 digits");
+        }
+        ContentValues v = new ContentValues();
+        v.put("card_type", item.getCardType());
+        v.put("card_network", item.getCardNetwork());
+        v.put("bank_name", item.getBankName());
+        v.put("holder_name", item.getHolderName());
+        v.put("card_number", item.getCardNumber());
+        v.put("expiry", item.getExpiry());
+        v.put("cvv", item.getCvv());
+        v.put("pin", item.getPin());
+        v.put("design", item.getDesign());
+        audit(v, item.getCreatedAt(), fresh);
+        return v;
+    }
+
+    private static ContentValues idValues(GovernmentIDModel item, boolean fresh) {
+        ContentValues v = new ContentValues();
+        v.put("id_type", item.getIdType());
+        v.put("fields_json", item.getFieldsJson());
+        audit(v, item.getCreatedAt(), fresh);
+        return v;
+    }
+
+    private static void one(int count) {
+        if (count != 1) throw new SQLiteException("Record not available");
+    }
+
+    private static void update(SQLiteDatabase db, String table, long id, ContentValues values, String predicate) {
+        one(db.update(table, values, "id=? AND " + predicate, new String[]{Long.toString(id)}));
+    }
+
+    public long insertBankCard(BankCardModel item) {
+        return getWritableDatabase().insertOrThrow(CARDS, null, cardValues(item, true));
+    }
+
+    public long insertIdCard(GovernmentIDModel item) {
+        return getWritableDatabase().insertOrThrow(IDS, null, idValues(item, true));
+    }
+
+    public void updateBankCard(BankCardModel item) {
+        update(getWritableDatabase(), CARDS, item.getId(), cardValues(item, false), "deleted_at=0");
     }
 
     public void updateIdCard(GovernmentIDModel item) {
-        // Shared process connection (VaultWarmCache): never closed per call.
-        // The block scopes the write; transactions still end in finally.
-        SQLiteDatabase db = this.getWritableDatabase();
-        {
-            db.update(TABLE_ID_CARDS,
-                    idCardValues(item, System.currentTimeMillis(), false),
-                    COL_ID_CARD_ID + "=?", new String[]{String.valueOf(item.getId())});
-        }
+        update(getWritableDatabase(), IDS, item.getId(), idValues(item, false), "deleted_at=0");
     }
 
-    /**
-     * Marks an ID as recently used without touching its data: bumps only
-     * updated_at to now so newest-first ordering picks it up. Called on
-     * dashboard tap, mirroring the bank-card and social-account touch helpers;
-     * list re-sorts on the next refresh.
-     */
-    public void touchIdCardUpdatedAt(int id) {
-        // Shared process connection (VaultWarmCache): never closed per call.
-        // The block scopes the write; transactions still end in finally.
-        SQLiteDatabase db = this.getWritableDatabase();
-        {
-            ContentValues cv = new ContentValues();
-            cv.put(COL_UPDATED_AT, System.currentTimeMillis());
-            db.update(TABLE_ID_CARDS, cv, COL_ID_CARD_ID + "=?",
-                    new String[]{String.valueOf(id)});
-        }
-    }
-
-    /** Permanent delete for a set of ids in one transaction. */
-    public void deleteIdCards(List<Integer> ids) {
-        if (ids == null || ids.isEmpty()) {
-            return;
-        }
-        // Shared process connection (VaultWarmCache): never closed per call.
-        // The block scopes the write; transactions still end in finally.
-        SQLiteDatabase db = this.getWritableDatabase();
-        {
-            db.beginTransaction();
-            try {
-                for (Integer id : ids) {
-                    if (id == null) {
-                        continue;
-                    }
-                    db.delete(TABLE_ID_CARDS, COL_ID_CARD_ID + "=?",
-                            new String[]{String.valueOf(id)});
-                }
-                db.setTransactionSuccessful();
-            } finally {
-                db.endTransaction();
+    public long saveSocialAccountWithLinks(SocialAccountModel item, List<Long> linkedIds) {
+        SQLiteDatabase db = getWritableDatabase();
+        db.beginTransaction();
+        try {
+            long id = item.getId();
+            if (id > 0) update(db, SOCIAL, id, socialValues(item, false), "deleted_at=0");
+            else id = db.insertOrThrow(SOCIAL, null, socialValues(item, true));
+            // Invisible trashed relationships remain available after restore.
+            db.delete(LINKS, "account_id=? AND linked_account_id IN (SELECT id FROM "
+                    + SOCIAL + " WHERE deleted_at=0)", new String[]{Long.toString(id)});
+            if (linkedIds != null) for (Long linked : new HashSet<>(linkedIds)) {
+                if (linked == null || linked == id)
+                    throw new SQLiteException("Invalid account relationship");
+                ContentValues v = new ContentValues();
+                v.put("account_id", id);
+                v.put("linked_account_id", linked);
+                db.insertOrThrow(LINKS, null, v);
             }
-            try {
-                db.execSQL("VACUUM");
-            } catch (RuntimeException ignored) {
-            }
+            db.setTransactionSuccessful();
+            return id;
+        } finally {
+            db.endTransaction();
         }
     }
 
-    /**
-     * Soft-delete: moves the ID to Trash (Settings). The dashboard hides it
-     * until restored or permanently deleted.
-     */
-    public void moveIdCardToTrash(int id) {
-        // Shared process connection (VaultWarmCache): never closed per call.
-        // The block scopes the write; transactions still end in finally.
-        SQLiteDatabase db = this.getWritableDatabase();
-        {
-            ContentValues cv = new ContentValues();
-            cv.put(COL_DELETED_AT, System.currentTimeMillis());
-            db.update(TABLE_ID_CARDS, cv, COL_ID_CARD_ID + "=?",
-                    new String[]{String.valueOf(id)});
+    public List<Long> getLinkedAccountIds(long id) {
+        List<Long> links = new ArrayList<>();
+        try (Cursor c = getReadableDatabase().rawQuery("SELECT linked_account_id FROM " + LINKS
+                + " WHERE account_id=? ORDER BY linked_account_id", new String[]{Long.toString(id)})) {
+            while (c.moveToNext()) links.add(c.getLong(0));
+        }
+        return links;
+    }
+
+    private void stamp(String table, long id, String column, long value) {
+        ContentValues v = new ContentValues();
+        v.put(column, value);
+        update(getWritableDatabase(), table, id, v, "deleted_at=0");
+    }
+
+    public void touchSocialAccountUpdatedAt(long id) {
+        stamp(SOCIAL, id, "updated_at", System.currentTimeMillis());
+    }
+
+    public void touchBankCardUpdatedAt(long id) {
+        stamp(CARDS, id, "updated_at", System.currentTimeMillis());
+    }
+
+    public void touchIdCardUpdatedAt(long id) {
+        stamp(IDS, id, "updated_at", System.currentTimeMillis());
+    }
+
+    public void moveSocialAccountToTrash(long id) {
+        stamp(SOCIAL, id, "deleted_at", System.currentTimeMillis());
+    }
+
+    public void moveBankCardToTrash(long id) {
+        stamp(CARDS, id, "deleted_at", System.currentTimeMillis());
+    }
+
+    public void moveIdCardToTrash(long id) {
+        stamp(IDS, id, "deleted_at", System.currentTimeMillis());
+    }
+
+    private static void selected(SQLiteDatabase db, String table, List<Long> ids, boolean delete) {
+        ContentValues v = new ContentValues();
+        v.put("deleted_at", 0);
+        for (Long id : new HashSet<>(ids)) {
+            if (id == null) throw new SQLiteException("Invalid selection");
+            if (delete)
+                one(db.delete(table, "id=? AND deleted_at>0", new String[]{Long.toString(id)}));
+            else update(db, table, id, v, "deleted_at>0");
         }
     }
 
-    /** Restores trashed IDs back to the dashboard. */
-    public void restoreIdCards(List<Integer> ids) {
-        if (ids == null || ids.isEmpty()) {
-            return;
+    private void selection(List<Long> ids, List<Long> cards, List<Long> accounts, boolean delete) {
+        SQLiteDatabase db = getWritableDatabase();
+        db.beginTransaction();
+        try {
+            selected(db, IDS, ids, delete);
+            selected(db, CARDS, cards, delete);
+            selected(db, SOCIAL, accounts, delete);
+            db.setTransactionSuccessful();
+        } finally {
+            db.endTransaction();
         }
-        // Shared process connection (VaultWarmCache): never closed per call.
-        // The block scopes the write; transactions still end in finally.
-        SQLiteDatabase db = this.getWritableDatabase();
-        {
-            db.beginTransaction();
-            try {
-                ContentValues cv = new ContentValues();
-                cv.put(COL_DELETED_AT, 0);
-                for (Integer id : ids) {
-                    if (id == null) {
-                        continue;
-                    }
-                    db.update(TABLE_ID_CARDS, cv, COL_ID_CARD_ID + "=?",
-                            new String[]{String.valueOf(id)});
-                }
-                db.setTransactionSuccessful();
-            } finally {
-                db.endTransaction();
-            }
+        // Compaction is maintenance, not part of the committed deletion result.
+        if (delete) try {
+            db.execSQL("VACUUM");
+        } catch (SQLiteException ignored) {
         }
     }
 
-    /** Trashed government IDs, newest-deleted first. */
-    public List<GovernmentIDModel> getTrashedIdCards() {
-        List<GovernmentIDModel> list = new ArrayList<>();
-        // Shared process connection (VaultWarmCache): the Cursor closes per
-        // query, the database itself never closes.
-        SQLiteDatabase db = this.getReadableDatabase();
-        try (Cursor cursor = db.rawQuery("SELECT * FROM " + TABLE_ID_CARDS
-                + " WHERE " + TRASHED_WHERE
-                + " ORDER BY " + COL_DELETED_AT + " DESC, " + COL_ID_CARD_ID + " DESC", null)) {
-            if (cursor.moveToFirst()) {
-                do {
-                    list.add(mapIdCard(cursor));
-                } while (cursor.moveToNext());
-            }
-            return list;
-        }
+    public void restoreSelection(List<Long> ids, List<Long> cards, List<Long> accounts) {
+        selection(ids, cards, accounts, false);
     }
 
-    public List<Integer> getLinkedAccountIds(long accountId) {
-        List<Integer> list = new ArrayList<>();
-        // Shared process connection (VaultWarmCache): the Cursor closes per
-        // query, the database itself never closes.
-        SQLiteDatabase db = this.getReadableDatabase();
-        try (Cursor cursor = db.rawQuery("SELECT " + COL_LINKED_ACCOUNT_ID + " FROM " + TABLE_ACCOUNT_LINKS
-                + " WHERE " + COL_ACCOUNT_ID + "=?", new String[]{String.valueOf(accountId)})) {
-            if (cursor.moveToFirst()) {
-                do {
-                    list.add(cursor.getInt(0));
-                } while (cursor.moveToNext());
-            }
-            return list;
-        }
+    public void deleteSelection(List<Long> ids, List<Long> cards, List<Long> accounts) {
+        selection(ids, cards, accounts, true);
     }
 }

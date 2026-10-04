@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- Bank card face, 1.586:1. -->
+<?xml version="1.0" encoding="utf-8"?><!-- Bank card face, 1.586:1. -->
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
@@ -39,7 +38,7 @@
                     android:orientation="vertical"
                     android:paddingEnd="12dp">
 
-                    <TextView
+                    <androidx.appcompat.widget.AppCompatTextView
                         android:id="@+id/bank_card_preview_bank_name"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -52,10 +51,13 @@
                         android:shadowDx="1"
                         android:shadowDy="1"
                         android:shadowRadius="2"
-                        android:singleLine="true"
-                        android:ellipsize="end" />
+                        android:maxLines="2"
+                        android:autoSizeTextType="uniform"
+                        android:autoSizeMinTextSize="4sp"
+                        android:autoSizeMaxTextSize="15sp"
+                        android:autoSizeStepGranularity="1sp" />
 
-                    <TextView
+                    <androidx.appcompat.widget.AppCompatTextView
                         android:id="@+id/bank_card_preview_type"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
@@ -66,7 +68,10 @@
                         android:letterSpacing="0.2"
                         android:layout_marginTop="2dp"
                         android:singleLine="true"
-                        android:ellipsize="end" />
+                        android:autoSizeTextType="uniform"
+                        android:autoSizeMinTextSize="6sp"
+                        android:autoSizeMaxTextSize="9sp"
+                        android:autoSizeStepGranularity="1sp" />
 
                 </LinearLayout>
 
@@ -104,11 +109,14 @@
                 android:fontFamily="monospace"
                 android:letterSpacing="0.04"
                 android:singleLine="true"
-                android:ellipsize="end"
                 android:shadowColor="@color/text_shadow"
                 android:shadowDx="1"
                 android:shadowDy="1"
-                android:shadowRadius="2" />
+                android:shadowRadius="2"
+                android:autoSizeTextType="uniform"
+                android:autoSizeMinTextSize="6sp"
+                android:autoSizeMaxTextSize="12sp"
+                android:autoSizeStepGranularity="1sp" />
 
             <Space
                 android:layout_width="match_parent"
@@ -128,16 +136,20 @@
                     android:orientation="vertical"
                     android:paddingEnd="12dp">
 
-                    <TextView
+                    <androidx.appcompat.widget.AppCompatTextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/preview_holder_label"
                         android:textColor="@color/text_faint_light"
                         android:textSize="8sp"
                         android:textStyle="bold"
-                        android:letterSpacing="0.2" />
+                        android:letterSpacing="0.2"
+                        android:autoSizeTextType="uniform"
+                        android:autoSizeMinTextSize="4sp"
+                        android:autoSizeMaxTextSize="8sp"
+                        android:autoSizeStepGranularity="1sp" />
 
-                    <TextView
+                    <androidx.appcompat.widget.AppCompatTextView
                         android:id="@+id/bank_card_preview_holder_name"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -151,8 +163,11 @@
                         android:shadowDx="1"
                         android:shadowDy="1"
                         android:shadowRadius="2"
-                        android:singleLine="true"
-                        android:ellipsize="end" />
+                        android:maxLines="2"
+                        android:autoSizeTextType="uniform"
+                        android:autoSizeMinTextSize="4sp"
+                        android:autoSizeMaxTextSize="10sp"
+                        android:autoSizeStepGranularity="1sp" />
 
                 </LinearLayout>
 
@@ -162,16 +177,20 @@
                     android:orientation="vertical"
                     android:gravity="end">
 
-                    <TextView
+                    <androidx.appcompat.widget.AppCompatTextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/preview_expiry_label"
                         android:textColor="@color/text_faint_light"
                         android:textSize="8sp"
                         android:textStyle="bold"
-                        android:letterSpacing="0.2" />
+                        android:letterSpacing="0.2"
+                        android:autoSizeTextType="uniform"
+                        android:autoSizeMinTextSize="4sp"
+                        android:autoSizeMaxTextSize="8sp"
+                        android:autoSizeStepGranularity="1sp" />
 
-                    <TextView
+                    <androidx.appcompat.widget.AppCompatTextView
                         android:id="@+id/bank_card_preview_expiry"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
@@ -186,7 +205,10 @@
                         android:shadowDy="1"
                         android:shadowRadius="2"
                         android:singleLine="true"
-                        android:ellipsize="end" />
+                        android:autoSizeTextType="uniform"
+                        android:autoSizeMinTextSize="6sp"
+                        android:autoSizeMaxTextSize="10sp"
+                        android:autoSizeStepGranularity="1sp" />
 
                 </LinearLayout>
 

@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- Government ID face, 1.586:1. -->
+<?xml version="1.0" encoding="utf-8"?><!-- Government ID face, 1.586:1. -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
@@ -31,30 +30,39 @@
                 android:paddingTop="14dp"
                 android:paddingBottom="12dp">
 
-                <TextView
+                <androidx.appcompat.widget.AppCompatTextView
                     android:id="@+id/government_id_eyebrow"
                     style="@style/IdFaceEyebrow"
                     android:text="@string/preview_republic"
                     android:textColor="@color/national_muted"
                     android:visibility="gone"
                     android:maxLines="1"
-                    android:ellipsize="end" />
+                    android:autoSizeTextType="uniform"
+                    android:autoSizeMinTextSize="4sp"
+                    android:autoSizeMaxTextSize="7sp"
+                    android:autoSizeStepGranularity="1sp" />
 
-                <TextView
+                <androidx.appcompat.widget.AppCompatTextView
                     android:id="@+id/government_id_title"
                     style="@style/IdFaceTitle"
                     android:text="@string/preview_government_id"
                     android:textColor="@color/national_ink"
                     android:maxLines="1"
-                    android:ellipsize="end" />
+                    android:autoSizeTextType="uniform"
+                    android:autoSizeMinTextSize="6sp"
+                    android:autoSizeMaxTextSize="12sp"
+                    android:autoSizeStepGranularity="1sp" />
 
-                <TextView
+                <androidx.appcompat.widget.AppCompatTextView
                     android:id="@+id/government_id_subtitle"
                     style="@style/IdFaceSubtitle"
                     android:text="@string/preview_government_id"
                     android:textColor="@color/national_muted"
                     android:maxLines="1"
-                    android:ellipsize="end" />
+                    android:autoSizeTextType="uniform"
+                    android:autoSizeMinTextSize="4sp"
+                    android:autoSizeMaxTextSize="7sp"
+                    android:autoSizeStepGranularity="1sp" />
 
                 <View
                     android:id="@+id/government_id_rule"
@@ -114,7 +122,7 @@
                         android:layout_weight="1"
                         android:orientation="vertical">
 
-                        <TextView
+                        <androidx.appcompat.widget.AppCompatTextView
                             android:id="@+id/government_id_holder_label"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
@@ -124,9 +132,12 @@
                             android:textStyle="bold"
                             android:letterSpacing="0.26"
                             android:singleLine="true"
-                            android:ellipsize="end" />
+                            android:autoSizeTextType="uniform"
+                            android:autoSizeMinTextSize="4sp"
+                            android:autoSizeMaxTextSize="6sp"
+                            android:autoSizeStepGranularity="1sp" />
 
-                        <TextView
+                        <androidx.appcompat.widget.AppCompatTextView
                             android:id="@+id/government_id_holder"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
@@ -136,8 +147,11 @@
                             android:textSize="12sp"
                             android:textStyle="bold"
                             android:letterSpacing="0.02"
-                            android:singleLine="true"
-                            android:ellipsize="end" />
+                            android:maxLines="3"
+                            android:autoSizeTextType="uniform"
+                            android:autoSizeMinTextSize="4sp"
+                            android:autoSizeMaxTextSize="10sp"
+                            android:autoSizeStepGranularity="1sp" />
 
                         <LinearLayout
                             android:id="@+id/government_id_dates_row"
@@ -155,7 +169,7 @@
                                 android:orientation="vertical"
                                 android:paddingEnd="8dp">
 
-                                <TextView
+                                <androidx.appcompat.widget.AppCompatTextView
                                     android:id="@+id/government_id_dob_label"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
@@ -165,9 +179,12 @@
                                     android:textStyle="bold"
                                     android:letterSpacing="0.26"
                                     android:singleLine="true"
-                                    android:ellipsize="end" />
+                                    android:autoSizeTextType="uniform"
+                                    android:autoSizeMinTextSize="4sp"
+                                    android:autoSizeMaxTextSize="6sp"
+                                    android:autoSizeStepGranularity="1sp" />
 
-                                <TextView
+                                <androidx.appcompat.widget.AppCompatTextView
                                     android:id="@+id/government_id_dob"
                                     android:layout_width="match_parent"
                                     android:layout_height="wrap_content"
@@ -178,7 +195,10 @@
                                     android:textStyle="bold"
                                     android:letterSpacing="0.04"
                                     android:maxLines="1"
-                                    android:ellipsize="end" />
+                                    android:autoSizeTextType="uniform"
+                                    android:autoSizeMinTextSize="6sp"
+                                    android:autoSizeMaxTextSize="9sp"
+                                    android:autoSizeStepGranularity="1sp" />
 
                             </LinearLayout>
 
@@ -189,7 +209,7 @@
                                 android:layout_weight="1"
                                 android:orientation="vertical">
 
-                                <TextView
+                                <androidx.appcompat.widget.AppCompatTextView
                                     android:id="@+id/government_id_expiry_label"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
@@ -199,9 +219,12 @@
                                     android:textStyle="bold"
                                     android:letterSpacing="0.26"
                                     android:singleLine="true"
-                                    android:ellipsize="end" />
+                                    android:autoSizeTextType="uniform"
+                                    android:autoSizeMinTextSize="4sp"
+                                    android:autoSizeMaxTextSize="6sp"
+                                    android:autoSizeStepGranularity="1sp" />
 
-                                <TextView
+                                <androidx.appcompat.widget.AppCompatTextView
                                     android:id="@+id/government_id_expiry"
                                     android:layout_width="match_parent"
                                     android:layout_height="wrap_content"
@@ -212,13 +235,16 @@
                                     android:textStyle="bold"
                                     android:letterSpacing="0.04"
                                     android:maxLines="1"
-                                    android:ellipsize="end" />
+                                    android:autoSizeTextType="uniform"
+                                    android:autoSizeMinTextSize="6sp"
+                                    android:autoSizeMaxTextSize="9sp"
+                                    android:autoSizeStepGranularity="1sp" />
 
                             </LinearLayout>
 
                         </LinearLayout>
 
-                        <TextView
+                        <androidx.appcompat.widget.AppCompatTextView
                             android:id="@+id/government_id_number_label"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
@@ -229,9 +255,12 @@
                             android:textStyle="bold"
                             android:letterSpacing="0.26"
                             android:singleLine="true"
-                            android:ellipsize="end" />
+                            android:autoSizeTextType="uniform"
+                            android:autoSizeMinTextSize="4sp"
+                            android:autoSizeMaxTextSize="6sp"
+                            android:autoSizeStepGranularity="1sp" />
 
-                        <TextView
+                        <androidx.appcompat.widget.AppCompatTextView
                             android:id="@+id/government_id_number"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
@@ -243,7 +272,10 @@
                             android:fontFamily="monospace"
                             android:letterSpacing="0.04"
                             android:singleLine="true"
-                            android:ellipsize="end" />
+                            android:autoSizeTextType="uniform"
+                            android:autoSizeMinTextSize="6sp"
+                            android:autoSizeMaxTextSize="9sp"
+                            android:autoSizeStepGranularity="1sp" />
 
                     </LinearLayout>
 

@@ -11,11 +11,24 @@ import java.util.Objects;
  * on insert.
  */
 public final class BankCardModel {
+    public static final int CARD_NUMBER_DIGITS = 16;
 
-    /** Row id for drafts that have never been persisted. */
+    /** Stored card numbers contain exactly 16 ASCII digits, including leading zeros. */
+    public static boolean isValidCardNumber(String cardNumber) {
+        if (cardNumber == null || cardNumber.length() != CARD_NUMBER_DIGITS) return false;
+        for (int index = 0; index < cardNumber.length(); index++) {
+            char digit = cardNumber.charAt(index);
+            if (digit < '0' || digit > '9') return false;
+        }
+        return true;
+    }
+
+    /**
+     * Row id for drafts that have never been persisted.
+     */
     public static final int UNSET_ID = -1;
 
-    private final int id;
+    private final long id;
     private final String cardType;
     private final String cardNetwork;
     private final String bankName;
@@ -28,19 +41,23 @@ public final class BankCardModel {
     private final long createdAt;
     private final long updatedAt;
 
-    /** Unsaved draft; the database assigns the id and timestamps on insert. */
+    /**
+     * Unsaved draft; the database assigns the id and timestamps on insert.
+     */
     public BankCardModel(String cardType, String cardNetwork, String bankName, String holderName,
-                        String cardNumber, String expiry, String cvv, String pin,
-                        int design) {
+                         String cardNumber, String expiry, String cvv, String pin,
+                         int design) {
         this(UNSET_ID, cardType, cardNetwork, bankName, holderName, cardNumber,
                 expiry, cvv, pin, design, 0, 0);
     }
 
-    /** Stored row with its database identity and audit timestamps. */
-    public BankCardModel(int id, String cardType, String cardNetwork, String bankName,
-                        String holderName, String cardNumber, String expiry,
-                        String cvv, String pin, int design,
-                        long createdAt, long updatedAt) {
+    /**
+     * Stored row with its database identity and audit timestamps.
+     */
+    public BankCardModel(long id, String cardType, String cardNetwork, String bankName,
+                         String holderName, String cardNumber, String expiry,
+                         String cvv, String pin, int design,
+                         long createdAt, long updatedAt) {
         this.id = id;
         this.cardType = cardType;
         this.cardNetwork = cardNetwork;
@@ -55,7 +72,7 @@ public final class BankCardModel {
         this.updatedAt = updatedAt;
     }
 
-    public int getId() {
+    public long getId() {
         return id;
     }
 
@@ -103,7 +120,9 @@ public final class BankCardModel {
         return updatedAt;
     }
 
-    /** Value equality across every column (backs DiffUtil content checks). */
+    /**
+     * Value equality across every column (backs DiffUtil content checks).
+     */
     @Override
     public boolean equals(Object o) {
         if (this == o) {

@@ -36,9 +36,7 @@ public class BankCardActivity extends BaseVaultActivity {
     private static final String[] CARD_TYPES = {"Debit", "Credit", "Prepaid"};
     private static final String[] CARD_NETWORKS = {"Visa", "MasterCard"};
 
-    // ISO/IEC 7812 card range is 13-19 digits; only Visa/MasterCard offered so CVV is 3.
-    private static final int CARD_NUMBER_MIN_LEN = 16;
-    private static final int CARD_NUMBER_MAX_LEN = 19;
+    private static final int CARD_NUMBER_LEN = BankCardModel.CARD_NUMBER_DIGITS;
     private static final int EXPIRY_DIGITS_LEN = 4;
     private static final int CVV_LEN = 3;
     private static final int PIN_MIN_LEN = 4;
@@ -71,7 +69,9 @@ public class BankCardActivity extends BaseVaultActivity {
     private int selectedType;
     private int selectedNetwork;
     private int selectedDesign;
-    /** True on rotation: saved draft wins over vault values in prefill. */
+    /**
+     * True on rotation: saved draft wins over vault values in prefill.
+     */
     private boolean hasSavedDraft;
     private String savedBankName;
     private String savedHolderName;
@@ -100,7 +100,9 @@ public class BankCardActivity extends BaseVaultActivity {
     private LinearLayoutManager designLayoutManager;
     private PagerSnapHelper designSnapHelper;
     private LinearLayout dotsContainer;
-    /** True once the initial scroll settles; earlier scrolls are layout noise. */
+    /**
+     * True once the initial scroll settles; earlier scrolls are layout noise.
+     */
     private boolean carouselSettled;
 
     // Guards: setText inside afterTextChanged would recurse without these.
@@ -108,8 +110,9 @@ public class BankCardActivity extends BaseVaultActivity {
     private boolean isFormattingExpiry;
 
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
+    protected void onCreate(Bundle instanceState) {
+        super.onCreate(instanceState);
+        final Bundle savedInstanceState = restoredDraft();
         setContentView(R.layout.activity_bank_card);
         applyChrome();
 
@@ -132,12 +135,12 @@ public class BankCardActivity extends BaseVaultActivity {
             pendingDialogKind = savedInstanceState.getString(KEY_DIALOG_KIND, null);
         }
 
-        int pendingId = getIntent().getIntExtra(EXTRA_ID, -1);
+        long pendingId = getIntent().getLongExtra(EXTRA_ID, -1);
         if (pendingId == -1) {
             bindForm(null);
             return;
         }
-        final int id = pendingId;
+        final long id = pendingId;
         final boolean restored = savedInstanceState != null;
         final int gen = nextLoadGeneration();
         vaultIo(() -> {
@@ -170,8 +173,10 @@ public class BankCardActivity extends BaseVaultActivity {
     }
 
     @Override
-    protected void onSaveInstanceState(@NonNull Bundle outState) {
-        super.onSaveInstanceState(outState);
+    protected void captureDraft() {
+        if (!(bankNameField != null)) return;
+        Bundle outState = draftState();
+        outState.clear();
         outState.putInt(KEY_SELECTED_TYPE, selectedType);
         outState.putInt(KEY_SELECTED_NETWORK, selectedNetwork);
         outState.putInt(KEY_SELECTED_DESIGN, selectedDesign);
@@ -231,7 +236,9 @@ public class BankCardActivity extends BaseVaultActivity {
         dotsContainer = findViewById(R.id.bank_card_design_indicator);
     }
 
-    /** Horizontal snap carousel for the card designs. */
+    /**
+     * Horizontal snap carousel for the card designs.
+     */
     private void setupDesignCarousel() {
         designAdapter = new BankCardDesignAdapter();
         designLayoutManager = new LinearLayoutManager(
@@ -267,7 +274,9 @@ public class BankCardActivity extends BaseVaultActivity {
         });
     }
 
-    /** Fills every field: rotation draft wins, else stored card. */
+    /**
+     * Fills every field: rotation draft wins, else stored card.
+     */
     private void prefillEditMode(@NonNull BankCardModel existing) {
         primaryActionLabel.setText(R.string.action_update);
         cardTypeLabel.setText(CARD_TYPES[selectedType]);
@@ -297,13 +306,19 @@ public class BankCardActivity extends BaseVaultActivity {
         }
     }
 
-    /** Add mode keeps a single full-width Save button. */
+    /**
+     * Add mode keeps a single full-width Save button.
+     */
     private void applyAddModeLayout() {
         primaryActionLabel.setText(R.string.action_save);
         Ui.makeSaveButtonFullWidth(primaryAction);
         if (hasSavedDraft) {
             restoreDraftFields();
         }
+        cardTypeLabel.setText(CARD_TYPES[selectedType]);
+        cardNetworkLabel.setText(CARD_NETWORKS[selectedNetwork]);
+        designCarousel.scrollToPosition(selectedDesign);
+        Ui.updateDots(dotsContainer, selectedDesign);
         designCarousel.post(() -> carouselSettled = true);
         restorePendingDialog();
     }
@@ -319,7 +334,8 @@ public class BankCardActivity extends BaseVaultActivity {
 
     private void setupPreviewBinding() {
         Ui.SimpleTextWatcher previewWatcher = new Ui.SimpleTextWatcher() {
-            @Override public void onTextChanged(CharSequence text, int start, int before, int count) {
+            @Override
+            public void onTextChanged(CharSequence text, int start, int before, int count) {
                 refreshPreview();
             }
         };
@@ -354,7 +370,8 @@ public class BankCardActivity extends BaseVaultActivity {
 
     private void setupInputFormatting() {
         cardNumberField.addTextChangedListener(new Ui.SimpleTextWatcher() {
-            @Override public void afterTextChanged(Editable text) {
+            @Override
+            public void afterTextChanged(Editable text) {
                 if (isFormattingNumber) {
                     return;
                 }
@@ -363,8 +380,8 @@ public class BankCardActivity extends BaseVaultActivity {
                     int cursor = cardNumberField.getSelectionStart();
                     int beforeLen = text.length();
                     String digits = extractDigits(text.toString());
-                    if (digits.length() > CARD_NUMBER_MAX_LEN) {
-                        digits = digits.substring(0, CARD_NUMBER_MAX_LEN);
+                    if (digits.length() > CARD_NUMBER_LEN) {
+                        digits = digits.substring(0, CARD_NUMBER_LEN);
                     }
                     text.replace(0, text.length(), groupInFours(digits));
                     cardNumberField.setSelection(clampCursor(cursor + (text.length() - beforeLen), text.length()));
@@ -375,7 +392,8 @@ public class BankCardActivity extends BaseVaultActivity {
         });
 
         expiryField.addTextChangedListener(new Ui.SimpleTextWatcher() {
-            @Override public void afterTextChanged(Editable text) {
+            @Override
+            public void afterTextChanged(Editable text) {
                 if (isFormattingExpiry) {
                     return;
                 }
@@ -424,12 +442,14 @@ public class BankCardActivity extends BaseVaultActivity {
         refreshPreview();
     }
 
-    /** Eye icons flip the transformation method without losing cursor. */
+    /**
+     * Eye icons flip the transformation method without losing cursor.
+     */
     private void setupVisibilityToggles() {
         findViewById(R.id.bank_card_cvv_visibility_toggle).setOnClickListener(v ->
-                Ui.togglePasswordVisibility(cvvField));
+                Ui.togglePasswordVisibility(cvvField, v, R.string.cd_show_cvv, R.string.cd_hide_cvv));
         findViewById(R.id.bank_card_pin_visibility_toggle).setOnClickListener(v ->
-                Ui.togglePasswordVisibility(cardPinField));
+                Ui.togglePasswordVisibility(cardPinField, v, R.string.cd_show_pin, R.string.cd_hide_pin));
     }
 
     private void setupSaveAction() {
@@ -469,19 +489,12 @@ public class BankCardActivity extends BaseVaultActivity {
     }
 
     private void persistCard(BankCardModel model, int doneMessage, Runnable write) {
-        vaultIo(() -> {
-            write.run();
-            cache().invalidate();
-            runOnUiThread(() -> {
-                if (!isAlive()) return;
-                app().notifyOnReturn(doneMessage);
-                setResult(RESULT_OK);
-                finish();
-            });
-        });
+        commitWrite(write, doneMessage, com.akin.wallet.db.VaultStore.Section.BANK_CARDS);
     }
 
-    /** Edit mode only. Soft-deletes to Trash behind a delete dialog. */
+    /**
+     * Edit mode only. Soft-deletes to Trash behind a delete dialog.
+     */
     private void setupDeleteAction() {
         if (!isEdit) {
             return;
@@ -491,17 +504,9 @@ public class BankCardActivity extends BaseVaultActivity {
                 getString(R.string.confirm_delete_card_title),
                 getString(R.string.confirm_delete_card_message),
                 () -> {
-                    final int id = editingItem.getId();
-                    vaultIo(() -> {
-                        db().moveBankCardToTrash(id);
-                        cache().invalidate();
-                        runOnUiThread(() -> {
-                            if (!isAlive()) return;
-                            setResult(RESULT_OK);
-                            finish();
-                            app().notifyOnReturn(R.string.msg_deleted);
-                        });
-                    });
+                    final long id = editingItem.getId();
+                    commitWrite(() -> db().moveBankCardToTrash(id), R.string.msg_deleted,
+                            com.akin.wallet.db.VaultStore.Section.BANK_CARDS);
                 }));
     }
 
@@ -565,9 +570,9 @@ public class BankCardActivity extends BaseVaultActivity {
     }
 
     private View validateCardNumber(String cardDigits) {
-        if (cardDigits.length() < CARD_NUMBER_MIN_LEN || cardDigits.length() > CARD_NUMBER_MAX_LEN) {
+        if (!BankCardModel.isValidCardNumber(cardDigits)) {
             cardNumberField.setError(
-                    getString(R.string.err_card_number, CARD_NUMBER_MIN_LEN, CARD_NUMBER_MAX_LEN));
+                    getString(R.string.err_card_number, CARD_NUMBER_LEN));
             return cardNumberField;
         }
         return null;
@@ -599,7 +604,8 @@ public class BankCardActivity extends BaseVaultActivity {
 
     private static void clearErrorOnChange(EditText input) {
         input.addTextChangedListener(new Ui.SimpleTextWatcher() {
-            @Override public void onTextChanged(CharSequence text, int start, int before, int count) {
+            @Override
+            public void onTextChanged(CharSequence text, int start, int before, int count) {
                 if (input.getError() != null) {
                     input.setError(null);
                 }
@@ -654,7 +660,9 @@ public class BankCardActivity extends BaseVaultActivity {
         trackDialog(dialog);
     }
 
-    /** Re-shows the picker that was open across rotation. */
+    /**
+     * Re-shows the picker that was open across rotation.
+     */
     private void restorePendingDialog() {
         if (pendingDialogKind == null) {
             return;

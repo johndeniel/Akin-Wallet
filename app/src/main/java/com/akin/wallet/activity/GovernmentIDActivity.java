@@ -1,5 +1,8 @@
 package com.akin.wallet.activity;
 
+import com.akin.wallet.model.GovernmentIdTypes;
+import com.akin.wallet.util.GovernmentIdFaceText;
+
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
@@ -80,12 +83,13 @@ public class GovernmentIDActivity extends BaseVaultActivity {
     }
 
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
+    protected void onCreate(Bundle instanceState) {
+        super.onCreate(instanceState);
+        final Bundle savedInstanceState = restoredDraft();
         setContentView(R.layout.activity_government_id);
         applyChrome();
 
-        int id = getIntent().getIntExtra(EXTRA_ID, -1);
+        long id = getIntent().getLongExtra(EXTRA_ID, -1);
         if (savedInstanceState != null) {
             hasSavedState = true;
             savedSelectedType = savedInstanceState.getInt(KEY_SELECTED_TYPE, 0);
@@ -95,7 +99,7 @@ public class GovernmentIDActivity extends BaseVaultActivity {
         if (id == -1) {
             bindForm(null);
         } else {
-            final int rowId = id;
+            final long rowId = id;
             final int gen = nextLoadGeneration();
             vaultIo(() -> {
                 final GovernmentIDModel stored = db().getIdCardById(rowId);
@@ -111,8 +115,10 @@ public class GovernmentIDActivity extends BaseVaultActivity {
     }
 
     @Override
-    protected void onSaveInstanceState(@NonNull Bundle outState) {
-        super.onSaveInstanceState(outState);
+    protected void captureDraft() {
+        if (!(formContainer != null)) return;
+        Bundle outState = draftState();
+        outState.clear();
         outState.putSerializable(KEY_DRAFT, new LinkedHashMap<>(draftValues));
         outState.putInt(KEY_SELECTED_TYPE, selectedType);
         if (pendingDialogField != null) {
@@ -158,8 +164,8 @@ public class GovernmentIDActivity extends BaseVaultActivity {
         knownType = true;
         if (isEdit) {
             textSaveLabel.setText(R.string.action_update);
-            if (GovernmentIDModel.isKnownType(existing.getIdType())) {
-                selectedType = GovernmentIDModel.indexOf(existing.getIdType());
+            if (GovernmentIdTypes.isKnownType(existing.getIdType())) {
+                selectedType = GovernmentIdTypes.indexOf(existing.getIdType());
             } else {
                 knownType = false;
             }
@@ -168,7 +174,7 @@ public class GovernmentIDActivity extends BaseVaultActivity {
             Ui.makeSaveButtonFullWidth(btnSave);
         }
         if (hasSavedState && knownType) {
-            String[] names = GovernmentIDModel.getTypeNames();
+            String[] names = GovernmentIdTypes.getTypeNames();
             if (savedSelectedType >= 0 && savedSelectedType < names.length) {
                 selectedType = savedSelectedType;
             }
@@ -234,7 +240,7 @@ public class GovernmentIDActivity extends BaseVaultActivity {
         });
 
         btnSave.setOnClickListener(v -> {
-            GovernmentIDModel.IdType spec = currentSpec();
+            GovernmentIdTypes.IdType spec = currentSpec();
             String typeName = currentTypeName(spec);
 
             for (Map.Entry<String, EditText> textInput : textInputs.entrySet()) {
@@ -266,75 +272,58 @@ public class GovernmentIDActivity extends BaseVaultActivity {
                     getString(R.string.confirm_delete_id_title),
                     getString(R.string.confirm_delete_id_message, existing.getIdType()),
                     () -> {
-                        final int rowId = existing.getId();
-                        vaultIo(() -> {
-                            db().moveIdCardToTrash(rowId);
-                            cache().invalidate();
-                            runOnUiThread(() -> {
-                                if (!isAlive()) return;
-                                setResult(RESULT_OK);
-                                finish();
-                                app().notifyOnReturn(R.string.msg_deleted);
-                            });
-                        });
+                        final long rowId = existing.getId();
+                        commitWrite(() -> db().moveIdCardToTrash(rowId), R.string.msg_deleted,
+                                com.akin.wallet.db.VaultStore.Section.GOVERNMENT_IDS);
                     }));
         }
         reopenPendingDropdown();
     }
 
     private void persistId(GovernmentIDModel model, int doneMessage, Runnable write) {
-        vaultIo(() -> {
-            write.run();
-            cache().invalidate();
-            runOnUiThread(() -> {
-                if (!isAlive()) return;
-                app().notifyOnReturn(doneMessage);
-                setResult(RESULT_OK);
-                finish();
-            });
-        });
+        commitWrite(write, doneMessage, com.akin.wallet.db.VaultStore.Section.GOVERNMENT_IDS);
     }
 
-    private String currentTypeName(GovernmentIDModel.IdType spec) {
+    private String currentTypeName(GovernmentIdTypes.IdType spec) {
         if (!knownType && editingItem != null) {
             return editingItem.getIdType();
         }
-        return spec != null ? spec.name : GovernmentIDModel.getTypeNames()[0];
+        return spec != null ? spec.name : GovernmentIdTypes.getTypeNames()[0];
     }
 
-    private GovernmentIDModel.IdType currentSpec() {
+    private GovernmentIdTypes.IdType currentSpec() {
         if (!knownType && editingItem != null) {
-            return GovernmentIDModel.genericType(editingItem.getIdType(), editingItem.getFields());
+            return GovernmentIdTypes.genericType(editingItem.getIdType(), editingItem.getFields());
         }
-        String[] names = GovernmentIDModel.getTypeNames();
+        String[] names = GovernmentIdTypes.getTypeNames();
         int pos = selectedType < 0 || selectedType >= names.length ? 0 : selectedType;
-        return GovernmentIDModel.forName(names[pos]);
+        return GovernmentIdTypes.forName(names[pos]);
     }
 
-    private Map<String, String> filteredDraft(GovernmentIDModel.IdType spec, String typeName) {
+    private Map<String, String> filteredDraft(GovernmentIdTypes.IdType spec, String typeName) {
         Map<String, String> out = new LinkedHashMap<>();
-        GovernmentIDModel.IdType use = spec;
+        GovernmentIdTypes.IdType use = spec;
         if (use == null) {
-            use = GovernmentIDModel.isKnownType(typeName)
-                    ? GovernmentIDModel.forName(typeName)
-                    : GovernmentIDModel.genericType(typeName, draftValues);
+            use = GovernmentIdTypes.isKnownType(typeName)
+                    ? GovernmentIdTypes.forName(typeName)
+                    : GovernmentIdTypes.genericType(typeName, draftValues);
         }
-        for (GovernmentIDModel.IdField specField : use.fields) {
+        for (GovernmentIdTypes.IdField specField : use.fields) {
             String draftValue = draftValues.get(specField.key);
             out.put(specField.key, draftValue != null ? draftValue : "");
         }
         return out;
     }
 
-    private void rebuildForm(GovernmentIDModel.IdType spec) {
+    private void rebuildForm(GovernmentIdTypes.IdType spec) {
         formContainer.removeAllViews();
         textInputs.clear();
         dropdownValues.clear();
-        List<GovernmentIDModel.IdField> fields = spec.fields;
+        List<GovernmentIdTypes.IdField> fields = spec.fields;
         for (int i = 0; i < fields.size(); i++) {
-            GovernmentIDModel.IdField field = fields.get(i);
+            GovernmentIdTypes.IdField field = fields.get(i);
             ensureDraftValue(field);
-            GovernmentIDModel.IdField second = i + 1 < fields.size() ? fields.get(i + 1) : null;
+            GovernmentIdTypes.IdField second = i + 1 < fields.size() ? fields.get(i + 1) : null;
             boolean datePair = hasInputClass(field, InputType.TYPE_CLASS_DATETIME)
                     && hasInputClass(second, InputType.TYPE_CLASS_DATETIME);
             boolean shortPair = second != null && second.isDropdown()
@@ -352,26 +341,30 @@ public class GovernmentIDActivity extends BaseVaultActivity {
         }
     }
 
-    /** Guarantees a draft slot so switching types never loses typed input. */
-    private void ensureDraftValue(GovernmentIDModel.IdField field) {
+    /**
+     * Guarantees a draft slot so switching types never loses typed input.
+     */
+    private void ensureDraftValue(GovernmentIdTypes.IdField field) {
         if (!draftValues.containsKey(field.key)) {
             draftValues.put(field.key, "");
         }
     }
 
-    private View buildFieldView(GovernmentIDModel.IdField field) {
+    private View buildFieldView(GovernmentIdTypes.IdField field) {
         if (field.isDropdown()) {
             return buildDropdownField(field);
         }
         return buildTextField(field);
     }
 
-    private static boolean hasInputClass(GovernmentIDModel.IdField field, int inputClass) {
+    private static boolean hasInputClass(GovernmentIdTypes.IdField field, int inputClass) {
         return field != null && (field.inputType & InputType.TYPE_MASK_CLASS) == inputClass;
     }
 
-    /** Two short fields side by side with equal weight and a 6dp middle gap. */
-    private View buildPairRow(GovernmentIDModel.IdField first, GovernmentIDModel.IdField second) {
+    /**
+     * Two short fields side by side with equal weight and a 6dp middle gap.
+     */
+    private View buildPairRow(GovernmentIdTypes.IdField first, GovernmentIdTypes.IdField second) {
         LinearLayout row = new LinearLayout(this);
         row.setOrientation(LinearLayout.HORIZONTAL);
         LinearLayout.LayoutParams rowParams = new LinearLayout.LayoutParams(
@@ -406,9 +399,9 @@ public class GovernmentIDActivity extends BaseVaultActivity {
         return wrap;
     }
 
-    private TextView makeFieldLabel(GovernmentIDModel.IdField field) {
+    private TextView makeFieldLabel(GovernmentIdTypes.IdField field) {
         TextView label = new TextView(this);
-        label.setText(field.required ? field.label + " *" : field.label);
+        label.setText(field.required ? getString(R.string.required_field_label, field.label(this)) : field.label(this));
         label.setTextColor(getResources().getColor(R.color.dashboard_muted, null));
         label.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
         label.setMaxLines(1);
@@ -430,20 +423,17 @@ public class GovernmentIDActivity extends BaseVaultActivity {
         text.setEllipsize(android.text.TextUtils.TruncateAt.END);
     }
 
-    private View buildTextField(GovernmentIDModel.IdField field) {
-        LinearLayout wrap = makeFieldWrap();
-        wrap.addView(makeFieldLabel(field));
-
-        EditText input = new EditText(this);
-        LinearLayout.LayoutParams inputParams = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        inputParams.topMargin = Ui.dp(this, 8);
-        input.setLayoutParams(inputParams);
-        styleInputBox(input);
-        input.setHint(field.hint);
-        input.setHintTextColor(getResources().getColor(R.color.hint_text, null));
-        styleFieldText(input);
+    private View buildTextField(GovernmentIdTypes.IdField field) {
+        LinearLayout wrap = (LinearLayout) getLayoutInflater().inflate(
+                R.layout.item_government_id_field, formContainer, false);
+        TextView label = wrap.findViewById(R.id.government_form_label);
+        label.setText(field.required ? getString(R.string.required_field_label, field.label(this)) : field.label(this));
+        EditText input = wrap.findViewById(R.id.government_form_input);
+        input.setId(View.generateViewId());
+        label.setLabelFor(input.getId());
+        input.setHint(field.hint(this));
         input.setInputType(field.inputType);
+        Ui.protectViewTree(input);
         if (field.maxLength > 0) {
             input.setFilters(new InputFilter[]{new InputFilter.LengthFilter(field.maxLength)});
         }
@@ -459,12 +449,11 @@ public class GovernmentIDActivity extends BaseVaultActivity {
             }
         });
 
-        wrap.addView(input);
         textInputs.put(field.key, input);
         return wrap;
     }
 
-    private View buildDropdownField(GovernmentIDModel.IdField field) {
+    private View buildDropdownField(GovernmentIdTypes.IdField field) {
         LinearLayout wrap = makeFieldWrap();
         wrap.addView(makeFieldLabel(field));
 
@@ -505,7 +494,7 @@ public class GovernmentIDActivity extends BaseVaultActivity {
         chevron.setImageResource(R.drawable.ic_dropdown);
         LinearLayout.LayoutParams chevParams = new LinearLayout.LayoutParams(Ui.dp(this, 20), Ui.dp(this, 20));
         chevron.setLayoutParams(chevParams);
-        chevron.setContentDescription(getString(R.string.cd_select_field, field.label));
+        chevron.setContentDescription(getString(R.string.cd_select_field, field.label(this)));
 
         row.addView(valueView);
         row.addView(chevron);
@@ -518,11 +507,11 @@ public class GovernmentIDActivity extends BaseVaultActivity {
         return wrap;
     }
 
-    private void showDropdownDialog(GovernmentIDModel.IdField field, TextView valueView) {
+    private void showDropdownDialog(GovernmentIdTypes.IdField field, TextView valueView) {
         int checked = Ui.indexOfIgnoreCase(field.options, draftValues.get(field.key));
         pendingDialogField = field.key;
         AlertDialog dialog = Ui.singleChoice(this,
-                field.label, field.options, checked, pos -> {
+                field.label(this), field.options, checked, pos -> {
                     pendingDialogField = null;
                     String picked = field.options[pos];
                     draftValues.put(field.key, picked);
@@ -550,17 +539,17 @@ public class GovernmentIDActivity extends BaseVaultActivity {
             return;
         }
         TextView valueView = (TextView) tagged;
-        GovernmentIDModel.IdField target = findDropdownField(key);
+        GovernmentIdTypes.IdField target = findDropdownField(key);
         if (target == null) {
             return;
         }
-        final GovernmentIDModel.IdField field = target;
+        final GovernmentIdTypes.IdField field = target;
         formContainer.post(() -> showDropdownDialog(field, valueView));
     }
 
-    private static GovernmentIDModel.IdField findDropdownField(String key) {
-        for (GovernmentIDModel.IdType type : GovernmentIDModel.getAllTypes()) {
-            for (GovernmentIDModel.IdField f : type.fields) {
+    private static GovernmentIdTypes.IdField findDropdownField(String key) {
+        for (GovernmentIdTypes.IdType type : GovernmentIdTypes.getAllTypes()) {
+            for (GovernmentIdTypes.IdField f : type.fields) {
                 if (key.equals(f.key) && f.isDropdown()) {
                     return f;
                 }
@@ -569,7 +558,7 @@ public class GovernmentIDActivity extends BaseVaultActivity {
         return null;
     }
 
-    private boolean validate(GovernmentIDModel.IdType spec, Map<String, String> values) {
+    private boolean validate(GovernmentIdTypes.IdType spec, Map<String, String> values) {
         // Document rules first so the user sees the document error, then required.
         FieldOffense offense = documentOffense(spec, values);
         if (offense == null) {
@@ -582,21 +571,21 @@ public class GovernmentIDActivity extends BaseVaultActivity {
         return false;
     }
 
-    private static FieldOffense documentOffense(GovernmentIDModel.IdType spec, Map<String, String> values) {
+    private static FieldOffense documentOffense(GovernmentIdTypes.IdType spec, Map<String, String> values) {
         if (spec == null) {
             return null;
         }
-        if (GovernmentIDModel.TYPE_TIN.equalsIgnoreCase(spec.name)) {
+        if (GovernmentIdTypes.TYPE_TIN.equalsIgnoreCase(spec.name)) {
             return validateTinFields(values);
-        } else if (GovernmentIDModel.TYPE_PHIL_HEALTH.equalsIgnoreCase(spec.name)) {
+        } else if (GovernmentIdTypes.TYPE_PHIL_HEALTH.equalsIgnoreCase(spec.name)) {
             return validatePhilHealthFields(values);
-        } else if (GovernmentIDModel.TYPE_NATIONAL_ID.equalsIgnoreCase(spec.name)) {
+        } else if (GovernmentIdTypes.TYPE_NATIONAL_ID.equalsIgnoreCase(spec.name)) {
             return validateNationalIdFields(values);
-        } else if (GovernmentIDModel.TYPE_PASSPORT.equalsIgnoreCase(spec.name)) {
+        } else if (GovernmentIdTypes.TYPE_PASSPORT.equalsIgnoreCase(spec.name)) {
             return validatePassportFields(values);
-        } else if (GovernmentIDModel.TYPE_DRIVING_LICENSE.equalsIgnoreCase(spec.name)) {
+        } else if (GovernmentIdTypes.TYPE_DRIVING_LICENSE.equalsIgnoreCase(spec.name)) {
             return validateDrivingLicenseFields(values);
-        } else if (GovernmentIDModel.TYPE_SSS.equalsIgnoreCase(spec.name)) {
+        } else if (GovernmentIdTypes.TYPE_SSS.equalsIgnoreCase(spec.name)) {
             return validateSssFields(values);
         }
         return null;
@@ -604,22 +593,26 @@ public class GovernmentIDActivity extends BaseVaultActivity {
 
     private static final int MIN_SENSITIVE_ALNUM = 4;
 
-    /** Required/sensitive pass over the spec, null when clean. */
-    private static FieldOffense requiredFieldOffense(GovernmentIDModel.IdType spec, Map<String, String> values) {
-        for (GovernmentIDModel.IdField specField : spec.fields) {
+    /**
+     * Required/sensitive pass over the spec, null when clean.
+     */
+    private FieldOffense requiredFieldOffense(GovernmentIdTypes.IdType spec, Map<String, String> values) {
+        for (GovernmentIdTypes.IdField specField : spec.fields) {
             String fieldValue = trimmed(values.get(specField.key));
             if (specField.required && fieldValue.isEmpty()) {
-                return new FieldOffense(specField.key, specField.label + " is required");
+                return new FieldOffense(specField.key, getString(R.string.id_field_required, specField.label(this)));
             }
             if (specField.sensitive && !fieldValue.isEmpty()
                     && NON_ALNUM.matcher(fieldValue).replaceAll("").length() < MIN_SENSITIVE_ALNUM) {
-                return new FieldOffense(specField.key, specField.label + " looks too short");
+                return new FieldOffense(specField.key, getString(R.string.id_field_short, specField.label(this)));
             }
         }
         return null;
     }
 
-    /** One validation failure: field plus message. */
+    /**
+     * One validation failure: field plus message.
+     */
     private static final class FieldOffense {
         final String fieldKey;
         final String message;
@@ -708,6 +701,7 @@ public class GovernmentIDActivity extends BaseVaultActivity {
         }
         return null;
     }
+
     private static FieldOffense validateSssFields(Map<String, String> values) {
         String ssError = exactDigitNumberError("SS Number", values.get("ss_number"), 10);
         if (ssError != null) {
@@ -720,6 +714,7 @@ public class GovernmentIDActivity extends BaseVaultActivity {
         }
         return null;
     }
+
     private static String exactDigitNumberError(String label, String rawValue, int digits) {
         String raw = trimmed(rawValue);
         if (raw.isEmpty()) {
@@ -734,7 +729,9 @@ public class GovernmentIDActivity extends BaseVaultActivity {
         return null;
     }
 
-    /** Date shape: exactly 8 digits (YYYYMMDD). Empty is valid. */
+    /**
+     * Date shape: exactly 8 digits (YYYYMMDD). Empty is valid.
+     */
     private static String numericDateError(String label, String rawValue) {
         String raw = trimmed(rawValue);
         if (raw.isEmpty()) {
@@ -746,7 +743,9 @@ public class GovernmentIDActivity extends BaseVaultActivity {
         return null;
     }
 
-    /** Flags one field invalid with focus. */
+    /**
+     * Flags one field invalid with focus.
+     */
     private void flagFieldError(String key, String message) {
         EditText input = textInputs.get(key);
         if (input != null) {
@@ -763,7 +762,9 @@ public class GovernmentIDActivity extends BaseVaultActivity {
         showMessage(message);
     }
 
-    /** Clears a dropdown's setError once the user picks a value. */
+    /**
+     * Clears a dropdown's setError once the user picks a value.
+     */
     private void hideFieldError(String key) {
         TextView value = dropdownValues.get(key);
         if (value != null) {
@@ -776,7 +777,7 @@ public class GovernmentIDActivity extends BaseVaultActivity {
     }
 
     private void applyIdTypeSelection(int pos) {
-        if (pos < 0 || pos >= GovernmentIDModel.getTypeNames().length) {
+        if (pos < 0 || pos >= GovernmentIdTypes.getTypeNames().length) {
             return;
         }
         selectedType = pos;

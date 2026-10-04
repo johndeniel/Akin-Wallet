@@ -1,5 +1,8 @@
 package com.akin.wallet.util;
 
+import com.akin.wallet.model.GovernmentIdTypes;
+import com.akin.wallet.util.GovernmentIdFaceText;
+
 import android.content.res.Resources;
 import android.view.View;
 import android.view.ViewGroup;
@@ -27,7 +30,9 @@ public final class GovernmentIdFaceRenderer {
     private GovernmentIdFaceRenderer() {
     }
 
-    /** Cached face views — bound once per ViewHolder, never per bind. */
+    /**
+     * Cached face views — bound once per ViewHolder, never per bind.
+     */
     public static final class FaceViews {
         public final View cardRoot;
         public final TextView title;
@@ -75,17 +80,17 @@ public final class GovernmentIdFaceRenderer {
     /**
      * Paints one ID face with the single unified metrics.
      *
-     * @param f       cached face views
-     * @param spec    resolved type spec (sizing + field keys)
+     * @param f        cached face views
+     * @param spec     resolved type spec (sizing + field keys)
      * @param typeName raw type name for scheme/subtitle/number lookups
-     * @param title   header title (uppercased here)
-     * @param fields  field values to render
+     * @param title    header title (uppercased here)
+     * @param fields   field values to render
      */
-    public static void render(@NonNull FaceViews f, @NonNull GovernmentIDModel.IdType spec,
+    public static void render(@NonNull FaceViews f, @NonNull GovernmentIdTypes.IdType spec,
                               @NonNull String typeName, @NonNull String title,
                               @NonNull Map<String, String> fields) {
         Ui.applyCardOutline(f.cardRoot);
-        GovernmentIDModel.FaceScheme scheme = GovernmentIDModel.faceScheme(typeName);
+        GovernmentIdFaceText.FaceScheme scheme = GovernmentIdFaceText.faceScheme(typeName);
         // Avoid redundant background swaps while scrolling: framework caches
         // drawables but setBackgroundResource still triggers invalidate.
         Object bgTag = f.cardRoot.getTag(com.akin.wallet.R.id.tag_card_face_background);
@@ -96,19 +101,19 @@ public final class GovernmentIdFaceRenderer {
 
         // Primary number resolves through the spec so the face stays free of
         // per-type key branches.
-        String number = GovernmentIDModel.displayNumber(spec, fields);
+        String number = GovernmentIdFaceText.displayNumber(spec, fields);
         f.title.setText(title.toUpperCase(java.util.Locale.ROOT));
         f.title.setTextColor(colorOf(f, scheme.titleColorRes));
         f.title.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 12);
-        f.subtitle.setText(GovernmentIDModel.previewSubtitle(typeName));
+        f.subtitle.setText(GovernmentIdFaceText.previewSubtitle(typeName));
         f.subtitle.setTextColor(colorOf(f, scheme.subtitleColorRes));
         f.subtitle.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 7);
         f.rule.setBackgroundColor(colorOf(f, scheme.ruleColorRes));
         f.holderLabel.setTextColor(colorOf(f, scheme.numberLabelColorRes));
-        f.holder.setText(GovernmentIDModel.displayName(fields));
+        f.holder.setText(GovernmentIdFaceText.displayName(fields));
         f.holder.setTextColor(colorOf(f, scheme.holderColorRes));
         f.holder.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 10);
-        f.numberLabel.setText(GovernmentIDModel.numberLabel(typeName));
+        f.numberLabel.setText(GovernmentIdFaceText.numberLabel(typeName));
         f.numberLabel.setTextColor(colorOf(f, scheme.numberLabelColorRes));
         f.number.setText(number != null && !number.trim().isEmpty()
                 ? number.trim() : f.res.getString(R.string.empty_value));
@@ -120,8 +125,8 @@ public final class GovernmentIdFaceRenderer {
 
         // Birth key varies by type ("dateOfBirth" on TIN/PhilHealth,
         // "birth_date" elsewhere); first non-blank wins, always YYYY-MM-DD.
-        String birth = GovernmentIDModel.displayDate(
-                GovernmentIDModel.firstNonEmpty(fields.get("dateOfBirth"), fields.get("birth_date")));
+        String birth = GovernmentIdFaceText.displayDate(
+                GovernmentIdFaceText.firstNonEmpty(fields.get("dateOfBirth"), fields.get("birth_date")));
         if (f.dob != null) {
             f.dob.setText(birth != null && !birth.trim().isEmpty() ? birth.trim() : "—");
             f.dob.setTextColor(colorOf(f, scheme.numberColorRes));
@@ -130,7 +135,7 @@ public final class GovernmentIdFaceRenderer {
         if (f.dobLabel != null) {
             f.dobLabel.setTextColor(colorOf(f, scheme.numberLabelColorRes));
         }
-        GovernmentIDModel.FaceExtra extra = GovernmentIDModel.faceExtra(typeName, fields);
+        GovernmentIdFaceText.FaceExtra extra = GovernmentIdFaceText.faceExtra(typeName, fields);
         if (f.expiryLabel != null) {
             f.expiryLabel.setText(extra.label);
             f.expiryLabel.setTextColor(colorOf(f, scheme.numberLabelColorRes));
@@ -156,11 +161,13 @@ public final class GovernmentIdFaceRenderer {
         applyFaceMetrics(f, scheme);
     }
 
-    /** Face micro-metrics: smaller type, tighter rhythm, smaller well.
+    /**
+     * Face micro-metrics: smaller type, tighter rhythm, smaller well.
      * Layout-affecting work runs once per holder (tag-guarded); per-bind
-     * calls only refresh colors/text to avoid measure/layout during scroll. */
+     * calls only refresh colors/text to avoid measure/layout during scroll.
+     */
     private static void applyFaceMetrics(@NonNull FaceViews f,
-                                            @NonNull GovernmentIDModel.FaceScheme scheme) {
+                                         @NonNull GovernmentIdFaceText.FaceScheme scheme) {
         // Colors are cheap but layout is not: run paddings/margins/sizes once.
         boolean metricsDone = Boolean.TRUE.equals(f.cardRoot.getTag(com.akin.wallet.R.id.tag_card_face_metrics));
         // Micro-label colors still refresh every bind (scheme-dependent).
@@ -223,7 +230,9 @@ public final class GovernmentIdFaceRenderer {
         f.cardRoot.setTag(com.akin.wallet.R.id.tag_card_face_metrics, Boolean.TRUE);
     }
 
-    /** Per-bind color refresh; one-time sizing/margins handled by caller. */
+    /**
+     * Per-bind color refresh; one-time sizing/margins handled by caller.
+     */
     private static void microLabelColor(@NonNull FaceViews f, TextView label,
                                         int colorRes, boolean layoutDone) {
         if (label == null) {

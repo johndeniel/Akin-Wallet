@@ -47,7 +47,9 @@ public class PolicyActivity extends BaseVaultActivity {
         renderSections(sections, body);
     }
 
-    /** Splits "HEADING\nbody\n\n..." into heading + body pairs. */
+    /**
+     * Splits "HEADING\nbody\n\n..." into heading + body pairs.
+     */
     private void renderSections(LinearLayout container, String body) {
         if (body == null || body.trim().isEmpty()) {
             return;
@@ -73,6 +75,7 @@ public class PolicyActivity extends BaseVaultActivity {
     private TextView makeHeading(String heading, boolean first) {
         TextView headingView = makeText(heading, R.color.dashboard_active, 13, Typeface.BOLD);
         headingView.setLetterSpacing(0.06f);
+        androidx.core.view.ViewCompat.setAccessibilityHeading(headingView, true);
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         params.topMargin = first ? 0 : Ui.dp(this, 20);

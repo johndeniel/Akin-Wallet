@@ -14,7 +14,9 @@ import com.akin.wallet.util.Ui;
 
 import java.util.Locale;
 
-/** Bank card design picker. Typing previews live on every face. */
+/**
+ * Bank card design picker. Typing previews live on every face.
+ */
 public class BankCardDesignAdapter extends RecyclerView.Adapter<BankCardDesignAdapter.CardViewHolder> {
 
     private String bankName = "";
@@ -91,8 +93,11 @@ public class BankCardDesignAdapter extends RecyclerView.Adapter<BankCardDesignAd
         logoView.setImageResource(icon);
         float density = logoView.getResources().getDisplayMetrics().density;
         ViewGroup.LayoutParams params = logoView.getLayoutParams();
-        params.height = Math.round(heightDp * density);
-        logoView.setLayoutParams(params);
+        int height = Math.round(heightDp * density);
+        if (params.height != height) {
+            params.height = height;
+            logoView.setLayoutParams(params);
+        }
     }
 
     public static class CardViewHolder extends RecyclerView.ViewHolder {

@@ -29,7 +29,9 @@ public final class SocialPlatformModel {
     private SocialPlatformModel() {
     }
 
-    /** Picker row: branding + display url. */
+    /**
+     * Picker row: branding + display url.
+     */
     public static final class Option {
         private final int iconRes;
         private final String name;
@@ -55,7 +57,9 @@ public final class SocialPlatformModel {
     }
 
     private static final Map<String, Integer> ICON_BY_PLATFORM = new HashMap<>();
-    /** {name, url} pairs in picker order; icons come from {@link #ICON_BY_PLATFORM}. */
+    /**
+     * {name, url} pairs in picker order; icons come from {@link #ICON_BY_PLATFORM}.
+     */
     private static final List<String[]> CATALOG_ENTRIES = new ArrayList<>();
 
     static {
@@ -142,11 +146,8 @@ public final class SocialPlatformModel {
      * try/catch at every bind site.
      */
     public static void bindIcon(ImageView iconView, @Nullable String platformName, int storedIconRes) {
-        try {
-            iconView.setImageResource(iconFor(platformName, storedIconRes));
-        } catch (Exception fallbackToGeneric) {
-            iconView.setImageResource(R.drawable.ic_social);
-        }
+        ((com.akin.wallet.AkinWallet) iconView.getContext().getApplicationContext())
+                .platformIcons().bind(iconView, iconFor(platformName, storedIconRes));
     }
 
     /**

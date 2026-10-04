@@ -1,5 +1,8 @@
 package com.akin.wallet.adapter;
 
+import com.akin.wallet.model.GovernmentIdTypes;
+import com.akin.wallet.util.GovernmentIdFaceText;
+
 import android.view.View;
 import android.view.ViewGroup;
 
@@ -15,14 +18,16 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-/** Government ID type picker. Swiping selects the type, typing updates live. */
+/**
+ * Government ID type picker. Swiping selects the type, typing updates live.
+ */
 public class GovernmentIdDesignAdapter extends RecyclerView.Adapter<GovernmentIdDesignAdapter.FaceViewHolder> {
 
     public interface OnTypePageListener {
         void onTypePageSelected(int typeIndex);
     }
 
-    private final List<GovernmentIDModel.IdType> idTypes = GovernmentIDModel.getAllTypes();
+    private final List<GovernmentIdTypes.IdType> idTypes = GovernmentIdTypes.getAllTypes();
     private final OnTypePageListener listener;
     private Map<String, String> draftFields = new LinkedHashMap<>();
 
@@ -40,12 +45,8 @@ public class GovernmentIdDesignAdapter extends RecyclerView.Adapter<GovernmentId
     }
 
     public void updatePreview(Map<String, String> fields) {
-        Map<String, String> next =
-                fields != null ? new LinkedHashMap<>(fields) : new LinkedHashMap<>();
-        if (next.equals(this.draftFields)) {
-            return;
-        }
-        this.draftFields = next;
+        if (fields != null && fields.equals(draftFields)) return;
+        this.draftFields = fields != null ? new LinkedHashMap<>(fields) : new LinkedHashMap<>();
         notifyItemRangeChanged(0, getItemCount());
     }
 
@@ -58,9 +59,9 @@ public class GovernmentIdDesignAdapter extends RecyclerView.Adapter<GovernmentId
     @Override
     public void onBindViewHolder(@NonNull FaceViewHolder holder, int position) {
         String pageType = typeNameAt(position);
-        GovernmentIDModel.IdType spec = GovernmentIDModel.forName(pageType);
+        GovernmentIdTypes.IdType spec = GovernmentIdTypes.forName(pageType);
         Map<String, String> pageFields = new LinkedHashMap<>();
-        for (GovernmentIDModel.IdField field : spec.fields) {
+        for (GovernmentIdTypes.IdField field : spec.fields) {
             String value = draftFields.get(field.key);
             pageFields.put(field.key, value != null ? value : "");
         }

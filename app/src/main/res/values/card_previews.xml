@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Measure complete printed-style previews at a usable width, then scale the graphic. -->
+    <dimen name="card_preview_min_width">280dp</dimen>
+    <dimen name="dashboard_fab_size">56dp</dimen>
+</resources>

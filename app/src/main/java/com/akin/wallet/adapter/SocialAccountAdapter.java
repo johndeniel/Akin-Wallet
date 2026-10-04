@@ -8,6 +8,8 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.recyclerview.widget.AsyncListDiffer;
+import androidx.recyclerview.widget.DiffUtil;
 
 import com.akin.wallet.R;
 import com.akin.wallet.model.SocialAccountModel;
@@ -18,28 +20,39 @@ import com.akin.wallet.util.Ui;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Social account list. Tap opens the editor. */
+/**
+ * Social account list. Tap opens the editor.
+ */
 public class SocialAccountAdapter extends RecyclerView.Adapter<SocialAccountAdapter.AccountViewHolder> {
 
     public interface OnAccountClickListener {
         void onAccountClick(SocialAccountModel item);
     }
 
-    private final List<SocialAccountModel> accounts = new ArrayList<>();
+    private final AsyncListDiffer<SocialAccountModel> differ = new AsyncListDiffer<>(this,
+            new DiffUtil.ItemCallback<SocialAccountModel>() {
+                @Override
+                public boolean areItemsTheSame(SocialAccountModel a, SocialAccountModel b) {
+                    return a.getId() == b.getId();
+                }
+
+                @Override
+                public boolean areContentsTheSame(SocialAccountModel a, SocialAccountModel b) {
+                    return a.equals(b);
+                }
+            });
     private final OnAccountClickListener listener;
 
     public SocialAccountAdapter(OnAccountClickListener listener) {
         this.listener = listener;
     }
 
-    public void updateData(List<SocialAccountModel> newAccounts) {
-        List<SocialAccountModel> next = Ui.nonNullList(newAccounts);
-        List<SocialAccountModel> old = new ArrayList<>(accounts);
-        accounts.clear();
-        accounts.addAll(next);
-        Ui.calculateDiff(old, next,
-                (a, b) -> a.getId() == b.getId(),
-                Object::equals).dispatchUpdatesTo(this);
+    public void updateData(List<SocialAccountModel> rows) {
+        updateData(rows, null);
+    }
+
+    public void updateData(List<SocialAccountModel> rows, Runnable committed) {
+        differ.submitList(List.copyOf(Ui.nonNullList(rows)), committed);
     }
 
     @NonNull
@@ -52,7 +65,7 @@ public class SocialAccountAdapter extends RecyclerView.Adapter<SocialAccountAdap
 
     @Override
     public void onBindViewHolder(@NonNull AccountViewHolder holder, int position) {
-        SocialAccountModel account = accounts.get(position);
+        SocialAccountModel account = differ.getCurrentList().get(position);
         holder.bound = account;
         String fallback = holder.itemView.getContext().getString(R.string.label_social_account);
         holder.title.setText(CardText.safe(account.getPlatform(), fallback));
@@ -65,7 +78,7 @@ public class SocialAccountAdapter extends RecyclerView.Adapter<SocialAccountAdap
 
     @Override
     public int getItemCount() {
-        return accounts.size();
+        return differ.getCurrentList().size();
     }
 
     public static class AccountViewHolder extends RecyclerView.ViewHolder {

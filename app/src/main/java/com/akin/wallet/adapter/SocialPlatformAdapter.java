@@ -20,7 +20,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
-/** Platform picker rows (icon + name + URL). Tap selects the platform. */
+/**
+ * Platform picker rows (icon + name + URL). Tap selects the platform.
+ */
 public class SocialPlatformAdapter extends RecyclerView.Adapter<SocialPlatformAdapter.PlatformViewHolder> implements Filterable {
 
     public interface OnPlatformSelectedListener {
@@ -60,7 +62,7 @@ public class SocialPlatformAdapter extends RecyclerView.Adapter<SocialPlatformAd
     @Override
     public void onBindViewHolder(@NonNull PlatformViewHolder holder, int position) {
         SocialPlatformModel.Option platform = visiblePlatforms.get(position);
-        holder.icon.setImageResource(platform.getIconRes());
+        SocialPlatformModel.bindIcon(holder.icon, platform.getName(), platform.getIconRes());
         holder.name.setText(platform.getName());
         holder.url.setText(platform.getUrl());
     }

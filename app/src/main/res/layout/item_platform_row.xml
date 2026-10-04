@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- Platform picker row. -->
+<?xml version="1.0" encoding="utf-8"?><!-- Platform picker row. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     style="@style/Widget.Akin.PlatformRow"
     android:background="?attr/selectableItemBackground">

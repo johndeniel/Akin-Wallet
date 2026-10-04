@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- Social account form. -->
+<?xml version="1.0" encoding="utf-8"?><!-- Social account form. -->
 <androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
@@ -8,311 +7,312 @@
     android:layout_height="match_parent"
     android:background="@drawable/bg_dashboard_root">
 
-<androidx.core.widget.NestedScrollView
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:fillViewport="true">
-
-<LinearLayout
-    android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:clipChildren="false"
-    android:clipToPadding="false"
-    android:orientation="vertical"
-    android:paddingHorizontal="@dimen/form_gutter_horizontal"
-    android:paddingTop="@dimen/screen_padding_top"
-    android:paddingBottom="@dimen/screen_padding_bottom">
-
-
-    <com.google.android.material.appbar.MaterialToolbar
-        android:id="@+id/toolbar"
-        style="@style/Widget.Akin.Toolbar"
+    <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
-        app:title="@string/dialog_social_title" />
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/field_platform"
-        style="@style/Widget.Akin.FormLabel"
-        android:layout_marginTop="@dimen/spacing_12dp" />
-
-    <LinearLayout
-        android:id="@+id/social_account_platform_selector"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/spacing_8dp"
-        android:background="@drawable/bg_dashboard_card"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:paddingHorizontal="@dimen/form_input_padding_horizontal"
-        android:paddingVertical="@dimen/form_input_padding_vertical"
-        android:clickable="true"
-        android:focusable="true">
-
-        <ImageView
-            android:id="@+id/social_account_platform_icon"
-            android:layout_width="@dimen/platform_row_icon_size"
-            android:layout_height="@dimen/platform_row_icon_size"
-            android:adjustViewBounds="true"
-            android:background="@drawable/bg_dashboard_icon_white"
-            android:scaleType="fitCenter"
-            android:padding="@dimen/spacing_8dp"
-            android:contentDescription="@null" />
-
-        <TextView
-            android:id="@+id/social_account_platform_name"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:layout_marginStart="@dimen/spacing_14dp"
-            android:maxLines="1"
-            android:ellipsize="end"
-            android:singleLine="true"
-            android:textColor="@color/text_primary"
-            android:textSize="16sp"
-            android:textStyle="bold" />
-
-        <ImageView
-            android:layout_width="@dimen/row_trailing_icon_size"
-            android:layout_height="@dimen/row_trailing_icon_size"
-            android:src="@drawable/ic_dropdown"
-            android:contentDescription="@string/cd_select_platform" />
-
-    </LinearLayout>
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/section_account_details"
-        style="@style/Widget.Akin.FormLabel"
-        android:layout_marginTop="@dimen/form_action_top_margin" />
-
-
-    <LinearLayout
-        style="@style/Widget.Akin.CredentialRow">
-
-        <ImageView
-            android:layout_width="@dimen/row_trailing_icon_size"
-            android:layout_height="@dimen/row_trailing_icon_size"
-            android:src="@drawable/ic_person"
-            android:alpha="0.6"
-            android:contentDescription="@null"
-            android:layout_marginEnd="@dimen/spacing_14dp" />
-
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:orientation="vertical">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/field_username"
-                android:textAppearance="@style/TextAppearance.Akin.BodyMuted" />
-
-            <EditText
-                android:id="@+id/social_account_username_field"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="@null"
-                android:hint="@string/hint_username"
-                android:textColorHint="@color/hint_text"
-                android:textAppearance="@style/TextAppearance.Akin.InputValue"
-                android:singleLine="true"
-                android:maxLength="100"
-                android:inputType="text|textNoSuggestions"
-                android:paddingTop="@dimen/spacing_2dp"
-                android:paddingBottom="@dimen/spacing_4dp" />
-
-        </LinearLayout>
-
-    </LinearLayout>
-
-
-    <LinearLayout
-        style="@style/Widget.Akin.CredentialRow">
-
-        <ImageView
-            android:layout_width="@dimen/row_trailing_icon_size"
-            android:layout_height="@dimen/row_trailing_icon_size"
-            android:src="@drawable/ic_lock"
-            android:alpha="0.6"
-            android:contentDescription="@null"
-            android:layout_marginEnd="@dimen/spacing_14dp" />
-
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:orientation="vertical">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/field_password"
-                android:textAppearance="@style/TextAppearance.Akin.BodyMuted" />
-
-            <EditText
-                android:id="@+id/social_account_password_field"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="@null"
-                android:hint="@string/mask_password"
-                android:textColorHint="@color/hint_text"
-                android:textAppearance="@style/TextAppearance.Akin.InputValue"
-                android:singleLine="true"
-                android:inputType="textPassword"
-                android:paddingTop="@dimen/spacing_2dp"
-                android:paddingBottom="@dimen/spacing_4dp" />
-
-        </LinearLayout>
-
-        <ImageView
-            android:id="@+id/social_account_password_visibility_toggle"
-            android:layout_width="@dimen/row_trailing_icon_size"
-            android:layout_height="@dimen/row_trailing_icon_size"
-            android:src="@drawable/ic_eye"
-            android:alpha="0.6"
-            android:minWidth="48dp"
-            android:minHeight="48dp"
-            android:layout_marginStart="@dimen/spacing_8dp"
-            android:contentDescription="@string/cd_show_password" />
-
-    </LinearLayout>
-
-
-    <LinearLayout
-        style="@style/Widget.Akin.CredentialRow">
-
-        <ImageView
-            android:layout_width="@dimen/row_trailing_icon_size"
-            android:layout_height="@dimen/row_trailing_icon_size"
-            android:src="@drawable/ic_lock"
-            android:alpha="0.6"
-            android:contentDescription="@null"
-            android:layout_marginEnd="@dimen/spacing_14dp" />
-
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:orientation="vertical">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/field_pin"
-                android:textAppearance="@style/TextAppearance.Akin.BodyMuted" />
-
-            <EditText
-                android:id="@+id/social_account_pin_field"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="@null"
-                android:hint="@string/mask_pin"
-                android:textColorHint="@color/hint_text"
-                android:textAppearance="@style/TextAppearance.Akin.InputValue"
-                android:singleLine="true"
-                android:inputType="numberPassword"
-                android:maxLength="6"
-                android:paddingTop="@dimen/spacing_2dp"
-                android:paddingBottom="@dimen/spacing_4dp" />
-
-        </LinearLayout>
-
-        <ImageView
-            android:id="@+id/social_account_pin_visibility_toggle"
-            android:layout_width="@dimen/row_trailing_icon_size"
-            android:layout_height="@dimen/row_trailing_icon_size"
-            android:src="@drawable/ic_eye"
-            android:alpha="0.6"
-            android:minWidth="48dp"
-            android:minHeight="48dp"
-            android:layout_marginStart="@dimen/spacing_8dp"
-            android:contentDescription="@string/cd_show_pin" />
-
-    </LinearLayout>
-
-
-    <LinearLayout
-        android:id="@+id/social_account_linked_section"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical">
+        android:layout_height="match_parent"
+        android:fillViewport="true">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/form_action_top_margin"
-            android:gravity="center_vertical"
-            android:orientation="horizontal">
+            android:clipChildren="false"
+            android:clipToPadding="false"
+            android:orientation="vertical"
+            android:paddingHorizontal="@dimen/form_gutter_horizontal"
+            android:paddingTop="@dimen/screen_padding_top"
+            android:paddingBottom="@dimen/screen_padding_bottom">
+
+
+            <com.google.android.material.appbar.MaterialToolbar
+                android:id="@+id/toolbar"
+                style="@style/Widget.Akin.Toolbar"
+                android:layout_width="match_parent"
+                app:title="@string/dialog_social_title" />
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/section_associated_accounts"
-                android:textAppearance="@style/TextAppearance.Akin.SectionTitle" />
-
-            <Space
-                android:layout_width="0dp"
-                android:layout_height="1dp"
-                android:layout_weight="1" />
+                android:text="@string/field_platform"
+                style="@style/Widget.Akin.FormLabel"
+                android:layout_marginTop="@dimen/spacing_12dp" />
 
             <LinearLayout
-                android:id="@+id/social_account_add_linked_button"
-                android:layout_width="wrap_content"
+                android:id="@+id/social_account_platform_selector"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:minWidth="48dp"
-                android:minHeight="48dp"
-                android:background="@drawable/bg_button_outline"
-                android:clickable="true"
-                android:focusable="true"
-                android:gravity="center"
+                android:layout_marginTop="@dimen/spacing_8dp"
+                android:background="@drawable/bg_dashboard_card"
                 android:orientation="horizontal"
-                android:padding="@dimen/spacing_8dp"
-                android:contentDescription="@string/cd_add_account">
+                android:gravity="center_vertical"
+                android:paddingHorizontal="@dimen/form_input_padding_horizontal"
+                android:paddingVertical="@dimen/form_input_padding_vertical"
+                android:clickable="true"
+                android:focusable="true">
 
                 <ImageView
-                    android:layout_width="@dimen/spacing_14dp"
-                    android:layout_height="@dimen/spacing_14dp"
-                    android:src="@drawable/ic_add_circle"
-                    android:importantForAccessibility="no" />
+                    android:id="@+id/social_account_platform_icon"
+                    android:layout_width="@dimen/platform_row_icon_size"
+                    android:layout_height="@dimen/platform_row_icon_size"
+                    android:adjustViewBounds="true"
+                    android:background="@drawable/bg_dashboard_icon_white"
+                    android:scaleType="fitCenter"
+                    android:padding="@dimen/spacing_8dp"
+                    android:contentDescription="@null" />
+
+                <TextView
+                    android:id="@+id/social_account_platform_name"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="@dimen/spacing_14dp"
+                    android:maxLines="1"
+                    android:ellipsize="end"
+                    android:singleLine="true"
+                    android:textColor="@color/text_primary"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+
+                <ImageView
+                    android:layout_width="@dimen/row_trailing_icon_size"
+                    android:layout_height="@dimen/row_trailing_icon_size"
+                    android:src="@drawable/ic_dropdown"
+                    android:contentDescription="@string/cd_select_platform" />
 
             </LinearLayout>
 
-        </LinearLayout>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/section_account_details"
+                style="@style/Widget.Akin.FormLabel"
+                android:layout_marginTop="@dimen/form_action_top_margin" />
 
-        <LinearLayout
-            android:id="@+id/social_account_linked_card"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/spacing_8dp"
-            android:background="@drawable/bg_dashboard_card"
-            android:orientation="vertical"
-            android:paddingStart="@dimen/spacing_6dp"
-            android:paddingEnd="@dimen/spacing_6dp"
-            android:paddingTop="@dimen/spacing_4dp"
-            android:paddingBottom="@dimen/spacing_4dp">
 
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/social_account_linked_list"
+            <LinearLayout style="@style/Widget.Akin.CredentialRow">
+
+                <ImageView
+                    android:layout_width="@dimen/row_trailing_icon_size"
+                    android:layout_height="@dimen/row_trailing_icon_size"
+                    android:src="@drawable/ic_person"
+                    android:alpha="0.6"
+                    android:contentDescription="@null"
+                    android:layout_marginEnd="@dimen/spacing_14dp" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/field_username"
+                        android:textAppearance="@style/TextAppearance.Akin.BodyMuted" />
+
+                    <EditText
+                        android:id="@+id/social_account_username_field"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:background="@null"
+                        android:hint="@string/hint_username"
+                        android:textColorHint="@color/hint_text"
+                        android:textAppearance="@style/TextAppearance.Akin.InputValue"
+                        android:singleLine="true"
+                        android:maxLength="100"
+                        android:inputType="text|textNoSuggestions"
+                        android:paddingTop="@dimen/spacing_2dp"
+                        android:paddingBottom="@dimen/spacing_4dp" />
+
+                </LinearLayout>
+
+            </LinearLayout>
+
+
+            <LinearLayout style="@style/Widget.Akin.CredentialRow">
+
+                <ImageView
+                    android:layout_width="@dimen/row_trailing_icon_size"
+                    android:layout_height="@dimen/row_trailing_icon_size"
+                    android:src="@drawable/ic_lock"
+                    android:alpha="0.6"
+                    android:contentDescription="@null"
+                    android:layout_marginEnd="@dimen/spacing_14dp" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/field_password"
+                        android:textAppearance="@style/TextAppearance.Akin.BodyMuted" />
+
+                    <EditText
+                        android:id="@+id/social_account_password_field"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:background="@null"
+                        android:hint="@string/mask_password"
+                        android:textColorHint="@color/hint_text"
+                        android:textAppearance="@style/TextAppearance.Akin.InputValue"
+                        android:singleLine="true"
+                        android:inputType="textPassword"
+                        android:paddingTop="@dimen/spacing_2dp"
+                        android:paddingBottom="@dimen/spacing_4dp" />
+
+                </LinearLayout>
+
+                <ImageView
+                    android:id="@+id/social_account_password_visibility_toggle"
+                    android:layout_width="@dimen/form_action_height"
+                    android:layout_height="@dimen/form_action_height"
+                    android:padding="@dimen/spacing_14dp"
+                    android:focusable="true"
+                    android:src="@drawable/ic_eye"
+                    android:alpha="0.6"
+                    android:minWidth="48dp"
+                    android:minHeight="48dp"
+                    android:layout_marginStart="@dimen/spacing_8dp"
+                    android:contentDescription="@string/cd_show_password" />
+
+            </LinearLayout>
+
+
+            <LinearLayout style="@style/Widget.Akin.CredentialRow">
+
+                <ImageView
+                    android:layout_width="@dimen/row_trailing_icon_size"
+                    android:layout_height="@dimen/row_trailing_icon_size"
+                    android:src="@drawable/ic_lock"
+                    android:alpha="0.6"
+                    android:contentDescription="@null"
+                    android:layout_marginEnd="@dimen/spacing_14dp" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/field_pin"
+                        android:textAppearance="@style/TextAppearance.Akin.BodyMuted" />
+
+                    <EditText
+                        android:id="@+id/social_account_pin_field"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:background="@null"
+                        android:hint="@string/mask_pin"
+                        android:textColorHint="@color/hint_text"
+                        android:textAppearance="@style/TextAppearance.Akin.InputValue"
+                        android:singleLine="true"
+                        android:inputType="numberPassword"
+                        android:maxLength="6"
+                        android:paddingTop="@dimen/spacing_2dp"
+                        android:paddingBottom="@dimen/spacing_4dp" />
+
+                </LinearLayout>
+
+                <ImageView
+                    android:id="@+id/social_account_pin_visibility_toggle"
+                    android:layout_width="@dimen/form_action_height"
+                    android:layout_height="@dimen/form_action_height"
+                    android:padding="@dimen/spacing_14dp"
+                    android:focusable="true"
+                    android:src="@drawable/ic_eye"
+                    android:alpha="0.6"
+                    android:minWidth="48dp"
+                    android:minHeight="48dp"
+                    android:layout_marginStart="@dimen/spacing_8dp"
+                    android:contentDescription="@string/cd_show_pin" />
+
+            </LinearLayout>
+
+
+            <LinearLayout
+                android:id="@+id/social_account_linked_section"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:overScrollMode="never"
-                android:nestedScrollingEnabled="false" />
+                android:orientation="vertical">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/form_action_top_margin"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/section_associated_accounts"
+                        android:textAppearance="@style/TextAppearance.Akin.SectionTitle" />
+
+                    <Space
+                        android:layout_width="0dp"
+                        android:layout_height="1dp"
+                        android:layout_weight="1" />
+
+                    <LinearLayout
+                        android:id="@+id/social_account_add_linked_button"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:minWidth="48dp"
+                        android:minHeight="48dp"
+                        android:background="@drawable/bg_button_outline"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:gravity="center"
+                        android:orientation="horizontal"
+                        android:padding="@dimen/spacing_8dp"
+                        android:contentDescription="@string/cd_add_account">
+
+                        <ImageView
+                            android:layout_width="@dimen/spacing_14dp"
+                            android:layout_height="@dimen/spacing_14dp"
+                            android:src="@drawable/ic_add_circle"
+                            android:importantForAccessibility="no" />
+
+                    </LinearLayout>
+
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/social_account_linked_card"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/spacing_8dp"
+                    android:background="@drawable/bg_dashboard_card"
+                    android:orientation="vertical"
+                    android:paddingStart="@dimen/spacing_6dp"
+                    android:paddingEnd="@dimen/spacing_6dp"
+                    android:paddingTop="@dimen/spacing_4dp"
+                    android:paddingBottom="@dimen/spacing_4dp">
+
+                    <androidx.recyclerview.widget.RecyclerView
+                        android:id="@+id/social_account_linked_list"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:overScrollMode="never"
+                        android:nestedScrollingEnabled="false" />
+
+                </LinearLayout>
+
+            </LinearLayout>
+
+
+            <include layout="@layout/partial_form_action_row" />
 
         </LinearLayout>
 
-    </LinearLayout>
-
-
-    <include layout="@layout/partial_form_action_row" />
-
-</LinearLayout>
-
-</androidx.core.widget.NestedScrollView>
+    </androidx.core.widget.NestedScrollView>
 
     <com.google.android.material.search.SearchView
         android:id="@+id/social_account_platform_search_view"

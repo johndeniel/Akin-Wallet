@@ -39,7 +39,9 @@ public final class DbKeyManager {
     private static final int GCM_IV_BYTES = 12;
     private static final int GCM_TAG_BITS = 128;
 
-    /** Unwrapped hex passphrase, process memory only. Never persisted. */
+    /**
+     * Unwrapped hex passphrase, process memory only. Never persisted.
+     */
     private static volatile char[] cachedPassphrase;
 
     private DbKeyManager() {
@@ -63,15 +65,20 @@ public final class DbKeyManager {
         String wrapped = preferences.getString(KEY_WRAPPED, "");
         byte[] keyBytes;
         if (wrapped.isEmpty()) {
+            if (appContext.getDatabasePath("akin_wallet.db").exists()) {
+                throw new IllegalStateException("Existing vault has no wrapped key");
+            }
             keyBytes = new byte[RAW_KEY_BYTES];
             new SecureRandom().nextBytes(keyBytes);
             // First seal must survive a crash: commit synchronously. A lost
             // write here orphans the DB created with this key.
-            boolean stored = preferences.edit()
-                    .putString(KEY_WRAPPED, seal(keyBytes)).commit();
-            if (!stored) {
+            try {
+                boolean stored = preferences.edit()
+                        .putString(KEY_WRAPPED, seal(keyBytes)).commit();
+                if (!stored) throw new IllegalStateException("Vault key seal not persisted");
+            } catch (RuntimeException failure) {
                 Arrays.fill(keyBytes, (byte) 0);
-                throw new IllegalStateException("Vault key seal not persisted");
+                throw failure;
             }
         } else {
             try {
@@ -79,12 +86,16 @@ public final class DbKeyManager {
             } catch (IllegalStateException e) {
                 if (isKeyInvalidated(e)) {
                     throw new KeyInvalidatedException(
-                            "Device key invalidated — vault must be reset", e);
+                            "Device key invalidated; vault data was preserved", e);
                 }
                 throw e;
             }
         }
-        cachedPassphrase = toHex(keyBytes).toCharArray();
+        if (keyBytes.length != RAW_KEY_BYTES) {
+            Arrays.fill(keyBytes, (byte) 0);
+            throw new IllegalStateException("Invalid vault key length");
+        }
+        cachedPassphrase = toHex(keyBytes);
         // Best effort: drop the raw bytes as soon as the hex copy exists.
         Arrays.fill(keyBytes, (byte) 0);
         return cachedPassphrase.clone();
@@ -92,7 +103,7 @@ public final class DbKeyManager {
 
     private static String seal(byte[] keyBytes) {
         try {
-            SecretKey key = keystoreKey();
+            SecretKey key = keystoreKey(true);
             Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
             cipher.init(Cipher.ENCRYPT_MODE, key);
             byte[] iv = cipher.getIV();
@@ -115,7 +126,7 @@ public final class DbKeyManager {
             byte[] iv = Arrays.copyOfRange(blob, 0, GCM_IV_BYTES);
             byte[] cipherText = Arrays.copyOfRange(blob, GCM_IV_BYTES, blob.length);
             Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
-            cipher.init(Cipher.DECRYPT_MODE, keystoreKey(),
+            cipher.init(Cipher.DECRYPT_MODE, keystoreKey(false),
                     new GCMParameterSpec(GCM_TAG_BITS, iv));
             return cipher.doFinal(cipherText);
         } catch (IllegalStateException e) {
@@ -127,14 +138,16 @@ public final class DbKeyManager {
         }
     }
 
-    private static SecretKey keystoreKey() throws Exception {
+    private static SecretKey keystoreKey(boolean create) throws Exception {
         KeyStore keyStore = KeyStore.getInstance("AndroidKeyStore");
         keyStore.load(null);
         if (!keyStore.containsAlias(KEYSTORE_ALIAS)) {
+            if (!create) throw new IllegalStateException("Device key unavailable");
             KeyGenerator keyGenerator = KeyGenerator.getInstance(
                     KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore");
             keyGenerator.init(new KeyGenParameterSpec.Builder(KEYSTORE_ALIAS,
                     KeyProperties.PURPOSE_ENCRYPT | KeyProperties.PURPOSE_DECRYPT)
+                    .setKeySize(256)
                     .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
                     .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
                     .setRandomizedEncryptionRequired(true)
@@ -144,16 +157,34 @@ public final class DbKeyManager {
         return (SecretKey) keyStore.getKey(KEYSTORE_ALIAS, null);
     }
 
-    private static String toHex(byte[] keyBytes) {
-        StringBuilder hex = new StringBuilder(keyBytes.length * 2);
-        for (byte keyByte : keyBytes) {
-            hex.append(Character.forDigit((keyByte >> 4) & 0xF, 16));
-            hex.append(Character.forDigit(keyByte & 0xF, 16));
+    private static char[] toHex(byte[] bytes) {
+        char[] hex = new char[bytes.length * 2];
+        for (int i = 0; i < bytes.length; i++) {
+            hex[i * 2] = Character.forDigit((bytes[i] >> 4) & 15, 16);
+            hex[i * 2 + 1] = Character.forDigit(bytes[i] & 15, 16);
         }
-        return hex.toString();
+        return hex;
     }
 
-    /** True when the Keystore alias was invalidated (reset, enrollment change). */
+    public static synchronized byte[] getPassphraseBytes(Context context) {
+        char[] chars = getPassphrase(context);
+        try {
+            byte[] bytes = new byte[chars.length];
+            for (int i = 0; i < chars.length; i++) bytes[i] = (byte) chars[i];
+            return bytes;
+        } finally {
+            Arrays.fill(chars, '\0');
+        }
+    }
+
+    public static synchronized void clearMemory() {
+        if (cachedPassphrase != null) Arrays.fill(cachedPassphrase, '\0');
+        cachedPassphrase = null;
+    }
+
+    /**
+     * True when the Keystore alias was invalidated (reset, enrollment change).
+     */
     private static boolean isKeyInvalidated(Throwable e) {
         for (Throwable t = e; t != null; t = t.getCause()) {
             String name = t.getClass().getName();
@@ -170,39 +201,13 @@ public final class DbKeyManager {
         return false;
     }
 
-    /** Thrown when the Keystore alias is gone: caller must wipe + re-setup. */
+    /**
+     * Signals an invalidated Keystore key without deleting vault data.
+     */
     public static final class KeyInvalidatedException extends IllegalStateException {
         KeyInvalidatedException(String message, Throwable cause) {
             super(message, cause);
         }
     }
 
-    /**
-     * Aggressive-wipe reset for an invalidated key: deletes the sealed blob,
-     * the SQLCipher file, journals and prefs so the next launch creates a
-     * fresh vault instead of a permanently unreadable one. Call only after
-     * explicit user consent — this destroys vault contents by design.
-     */
-    public static void wipeVault(@NonNull Context context) {
-        Context appContext = context.getApplicationContext();
-        cachedPassphrase = null;
-        try {
-            KeyStore keyStore = KeyStore.getInstance("AndroidKeyStore");
-            keyStore.load(null);
-            if (keyStore.containsAlias(KEYSTORE_ALIAS)) {
-                keyStore.deleteEntry(KEYSTORE_ALIAS);
-            }
-        } catch (Exception ignored) {
-        }
-        appContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-                .edit().clear().commit();
-        for (String name : new String[]{
-                "akin_wallet.db", "akin_wallet.db-journal", "akin_wallet.db-wal"}) {
-            java.io.File f = appContext.getDatabasePath("akin_wallet.db");
-            java.io.File target = name.equals("akin_wallet.db")
-                    ? f : new java.io.File(f.getParent(), name);
-            //noinspection ResultOfMethodCallIgnored
-            target.delete();
-        }
-    }
 }

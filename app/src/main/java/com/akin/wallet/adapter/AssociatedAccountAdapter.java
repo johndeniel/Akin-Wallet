@@ -21,21 +21,25 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
-/** Associated account rows: current link set with remove, or pick mode with [+]. */
+/**
+ * Associated account rows: current link set with remove, or pick mode with [+].
+ */
 public class AssociatedAccountAdapter extends RecyclerView.Adapter<AssociatedAccountAdapter.AccountViewHolder> implements Filterable {
 
     public interface OnActionListener {
         void onAction(SocialAccountModel account, boolean removed);
     }
 
-    /** Host-owned list: adapter shows it in place so save reads one list. */
+    /**
+     * Adapter-owned copies; the host owns the draft relationship selection.
+     */
     private final List<SocialAccountModel> visibleAccounts;
     private final List<SocialAccountModel> filterSource;
     private final boolean unlinkMode;
     private final OnActionListener listener;
 
     public AssociatedAccountAdapter(List<SocialAccountModel> accounts, boolean unlinkMode, OnActionListener listener) {
-        this.visibleAccounts = accounts != null ? accounts : new ArrayList<>();
+        this.visibleAccounts = accounts != null ? new ArrayList<>(accounts) : new ArrayList<>();
         this.filterSource = new ArrayList<>(this.visibleAccounts);
         this.unlinkMode = unlinkMode;
         this.listener = listener;
@@ -58,6 +62,7 @@ public class AssociatedAccountAdapter extends RecyclerView.Adapter<AssociatedAcc
         holder.action.setVisibility(View.VISIBLE);
         if (unlinkMode) {
             holder.action.setImageResource(R.drawable.ic_remove_circle);
+            holder.action.setContentDescription(holder.itemView.getContext().getString(R.string.cd_unlink_account));
             holder.action.setOnClickListener(v -> {
                 int clicked = holder.getBindingAdapterPosition();
                 if (clicked < 0 || clicked >= visibleAccounts.size()) {
@@ -106,6 +111,8 @@ public class AssociatedAccountAdapter extends RecyclerView.Adapter<AssociatedAcc
             }
         }
         filterSource.add(account);
+        visibleAccounts.add(account);
+        notifyItemInserted(visibleAccounts.size() - 1);
     }
 
     public void onExternalRestore(@NonNull List<SocialAccountModel> restored) {

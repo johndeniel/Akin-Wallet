@@ -7,6 +7,8 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.recyclerview.widget.AsyncListDiffer;
+import androidx.recyclerview.widget.DiffUtil;
 
 import com.akin.wallet.R;
 import com.akin.wallet.util.Ui;
@@ -17,10 +19,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
-/** Bank card carousel. Tap opens the editor. */
+/**
+ * Bank card carousel. Tap opens the editor.
+ */
 public class BankCardAdapter extends RecyclerView.Adapter<BankCardAdapter.CardViewHolder> {
 
-    /** Design index -> background. Order is persisted, never reorder. */
+    /**
+     * Design index -> background. Order is persisted, never reorder.
+     */
     private static final int[] BACKGROUNDS = {
             R.drawable.bg_bank_card_blue,
             R.drawable.bg_bank_card_purple,
@@ -44,21 +50,30 @@ public class BankCardAdapter extends RecyclerView.Adapter<BankCardAdapter.CardVi
         void onCardClick(BankCardModel item);
     }
 
-    private final List<BankCardModel> cards = new ArrayList<>();
+    private final AsyncListDiffer<BankCardModel> differ = new AsyncListDiffer<>(this,
+            new DiffUtil.ItemCallback<BankCardModel>() {
+                @Override
+                public boolean areItemsTheSame(BankCardModel a, BankCardModel b) {
+                    return a.getId() == b.getId();
+                }
+
+                @Override
+                public boolean areContentsTheSame(BankCardModel a, BankCardModel b) {
+                    return a.equals(b);
+                }
+            });
     private final OnCardClickListener listener;
 
     public BankCardAdapter(OnCardClickListener listener) {
         this.listener = listener;
     }
 
-    public void updateData(List<BankCardModel> newCards) {
-        List<BankCardModel> next = Ui.nonNullList(newCards);
-        List<BankCardModel> old = new ArrayList<>(cards);
-        cards.clear();
-        cards.addAll(next);
-        Ui.calculateDiff(old, next,
-                (a, b) -> a.getId() == b.getId(),
-                Object::equals).dispatchUpdatesTo(this);
+    public void updateData(List<BankCardModel> rows) {
+        updateData(rows, null);
+    }
+
+    public void updateData(List<BankCardModel> rows, Runnable committed) {
+        differ.submitList(List.copyOf(Ui.nonNullList(rows)), committed);
     }
 
     @NonNull
@@ -69,12 +84,12 @@ public class BankCardAdapter extends RecyclerView.Adapter<BankCardAdapter.CardVi
 
     @Override
     public void onBindViewHolder(@NonNull CardViewHolder holder, int position) {
-        holder.bind(cards.get(position));
+        holder.bind(differ.getCurrentList().get(position));
     }
 
     @Override
     public int getItemCount() {
-        return cards.size();
+        return differ.getCurrentList().size();
     }
 
     public static class CardViewHolder extends RecyclerView.ViewHolder {

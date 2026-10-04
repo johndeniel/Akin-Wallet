@@ -11,10 +11,12 @@ import java.util.Objects;
  */
 public final class SocialAccountModel {
 
-    /** Row id for drafts that have never been persisted. */
+    /**
+     * Row id for drafts that have never been persisted.
+     */
     public static final int UNSET_ID = -1;
 
-    private final int id;
+    private final long id;
     private final String platform;
     private final String username;
     private final String password;
@@ -23,15 +25,19 @@ public final class SocialAccountModel {
     private final long createdAt;
     private final long updatedAt;
 
-    /** Unsaved draft; the database assigns the id and timestamps on insert. */
+    /**
+     * Unsaved draft; the database assigns the id and timestamps on insert.
+     */
     public SocialAccountModel(String platform, String username, String password, String pin,
-                          int iconRes, long createdAt, long updatedAt) {
+                              int iconRes, long createdAt, long updatedAt) {
         this(UNSET_ID, platform, username, password, pin, iconRes, createdAt, updatedAt);
     }
 
-    /** Stored row with its database identity and audit timestamps. */
-    public SocialAccountModel(int id, String platform, String username, String password, String pin,
-                          int iconRes, long createdAt, long updatedAt) {
+    /**
+     * Stored row with its database identity and audit timestamps.
+     */
+    public SocialAccountModel(long id, String platform, String username, String password, String pin,
+                              int iconRes, long createdAt, long updatedAt) {
         this.id = id;
         this.platform = platform;
         this.username = username;
@@ -42,7 +48,7 @@ public final class SocialAccountModel {
         this.updatedAt = updatedAt;
     }
 
-    public int getId() {
+    public long getId() {
         return id;
     }
 
@@ -74,7 +80,9 @@ public final class SocialAccountModel {
         return updatedAt;
     }
 
-    /** Value equality across every column (backs DiffUtil content checks). */
+    /**
+     * Value equality across every column (backs DiffUtil content checks).
+     */
     @Override
     public boolean equals(Object o) {
         if (this == o) {

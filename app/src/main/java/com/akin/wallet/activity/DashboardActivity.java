@@ -19,7 +19,7 @@ import com.akin.wallet.R;
 import com.akin.wallet.adapter.BankCardAdapter;
 import com.akin.wallet.adapter.GovernmentIdAdapter;
 import com.akin.wallet.adapter.SocialAccountAdapter;
-import com.akin.wallet.db.VaultWarmCache;
+import com.akin.wallet.db.VaultStore;
 import com.akin.wallet.model.BankCardModel;
 import com.akin.wallet.model.SocialAccountModel;
 import com.akin.wallet.model.GovernmentIDModel;
@@ -32,12 +32,45 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 /**
  * Dashboard (Home) — single-screen host, no fragments.
  */
 public class DashboardActivity extends BaseVaultActivity {
 
+    public static final class DashboardState extends androidx.lifecycle.ViewModel {
+        List<GovernmentIDModel> ids;
+        List<BankCardModel> cards;
+        List<SocialAccountModel> accounts;
+        DashboardSearch.Index index = DashboardSearch.EMPTY_INDEX;
+        long session = -1;
+        long data = -1;
+        long idRevision = -1;
+        long cardRevision = -1;
+        long accountRevision = -1;
+
+        @Override
+        protected void onCleared() {
+            clear();
+        }
+
+        void clear() {
+            ids = null;
+            cards = null;
+            accounts = null;
+            index = DashboardSearch.EMPTY_INDEX;
+            session = -1;
+            data = -1;
+            idRevision = cardRevision = accountRevision = -1;
+        }
+    }
+
+    private DashboardState display;
+    private View dashboardContent;
+    private boolean dashboardLoadInFlight;
+    private int dashboardBindGeneration;
+    private boolean dashboardReady;
     private BankCardAdapter cardAdapter;
     private RecyclerView bankCardCarousel;
     private View bankCardEmptyState;
@@ -49,10 +82,11 @@ public class DashboardActivity extends BaseVaultActivity {
     private RecyclerView socialAccountList;
     private View socialAccountEmptyState;
 
-    /** Shared carousel gap. */
+    /**
+     * Shared carousel gap.
+     */
     private RecyclerView.ItemDecoration sharedGap;
 
-    private static final float CARD_ASPECT_RATIO = 1.586f;
     private FloatingActionButton quickAddButton;
     private View quickAddMenu;
     private View quickAddScrim;
@@ -87,21 +121,26 @@ public class DashboardActivity extends BaseVaultActivity {
 
     /**
      * Search pipeline: single thread = ordered, generation drops stale results,
-     * 120ms debounce collapses fast typing.
+     * A short debounce collapses fast typing; obsolete queued work is cancelled.
      */
     private DashboardSearch.Index searchIndex = DashboardSearch.EMPTY_INDEX;
     private final ExecutorService searchExecutor = Executors.newSingleThreadExecutor();
     private final Handler searchHandler = new Handler(Looper.getMainLooper());
     private Runnable pendingSearch;
+    private Future<?> searchTask;
     private int searchGeneration;
-    private static final long SEARCH_DEBOUNCE_MS = 120L;
+    private long boundSearchData = -1;
+    private String boundSearchQuery;
+    private static final long SEARCH_DEBOUNCE_MS = 50L;
 
-    private static final int SOCIAL_LIST_MAX_HEIGHT_DP = 380;
 
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
+    protected void onCreate(Bundle instanceState) {
+        super.onCreate(instanceState);
+        final Bundle savedInstanceState = restoredDraft();
+        display = new androidx.lifecycle.ViewModelProvider(this).get(DashboardState.class);
         setContentView(R.layout.activity_dashboard);
+        dashboardContent = findViewById(R.id.dashboard_content);
         applyChrome();
         sharedGap = Ui.carouselGapDecoration(this);
 
@@ -111,7 +150,6 @@ public class DashboardActivity extends BaseVaultActivity {
         setupSocialAccounts();
         setupSearch();
         setupAddMenu();
-        bindCachedSnapshot();
 
         if (savedInstanceState != null) {
             currentQuery = savedInstanceState.getString(KEY_SEARCH_QUERY, "");
@@ -140,8 +178,9 @@ public class DashboardActivity extends BaseVaultActivity {
     }
 
     @Override
-    protected void onSaveInstanceState(@NonNull Bundle outState) {
-        super.onSaveInstanceState(outState);
+    protected void captureDraft() {
+        Bundle outState = draftState();
+        outState.clear();
         outState.putString(KEY_SEARCH_QUERY, currentQuery);
         outState.putBoolean(KEY_SEARCH_OPEN, searchShowing);
         outState.putBoolean(KEY_FAB_MENU_OPEN, isFabMenuOpen);
@@ -149,11 +188,34 @@ public class DashboardActivity extends BaseVaultActivity {
 
     @Override
     protected void onDestroy() {
-        clearPendingMeasure(bankCardEmptyState);
-        clearPendingMeasure(governmentIdEmptyState);
         cancelSearch();
         searchExecutor.shutdownNow();
         super.onDestroy();
+    }
+
+    @Override
+    protected void onVaultLocked() {
+        super.onVaultLocked();
+        cancelSearch();
+        dashboardLoadInFlight = false;
+        dashboardBindGeneration++;
+        dashboardReady = false;
+        dashboardContent.setVisibility(View.INVISIBLE);
+        if (display != null) display.clear();
+        searchIndex = DashboardSearch.EMPTY_INDEX;
+        boundSearchData = -1;
+        boundSearchQuery = null;
+        allIds = null;
+        allCards = null;
+        allAccounts = null;
+        if (idAdapter != null) idAdapter.updateData(java.util.Collections.emptyList());
+        if (cardAdapter != null) cardAdapter.updateData(java.util.Collections.emptyList());
+        if (socialAdapter != null) socialAdapter.updateData(java.util.Collections.emptyList());
+        if (searchIdAdapter != null) searchIdAdapter.updateData(java.util.Collections.emptyList());
+        if (searchCardAdapter != null)
+            searchCardAdapter.updateData(java.util.Collections.emptyList());
+        if (searchSocialAdapter != null)
+            searchSocialAdapter.updateData(java.util.Collections.emptyList());
     }
 
     private void cancelSearch() {
@@ -162,19 +224,16 @@ public class DashboardActivity extends BaseVaultActivity {
             pendingSearch = null;
         }
         searchGeneration++;
-    }
-
-    private static void clearPendingMeasure(View empty) {
-        if (empty != null) {
-            Runnable pending = (Runnable) empty.getTag(R.id.tag_empty_state_measure);
-            if (pending != null) {
-                empty.removeCallbacks(pending);
-                empty.setTag(R.id.tag_empty_state_measure, null);
-            }
+        if (searchTask != null) {
+            searchTask.cancel(true);
+            searchTask = null;
         }
     }
 
-    /** TopAppBar header: search opens SearchView, gear opens Settings. */
+
+    /**
+     * TopAppBar header: search opens SearchView, gear opens Settings.
+     */
     private void setupHeader() {
         headerIds = findViewById(R.id.dashboard_government_id_section_header);
         headerCards = findViewById(R.id.dashboard_bank_card_section_header);
@@ -207,7 +266,9 @@ public class DashboardActivity extends BaseVaultActivity {
         });
     }
 
-    /** Full-screen SearchView: typing filters masters into result lists. */
+    /**
+     * Full-screen SearchView: typing filters masters into result lists.
+     */
     private void setupSearch() {
         searchView = findViewById(R.id.dashboard_search_view);
         // Each search list keeps its own pool: IDs and cards share viewType 0
@@ -247,8 +308,14 @@ public class DashboardActivity extends BaseVaultActivity {
             }
         });
         searchView.addTransitionListener((view, oldState, newState) -> {
-            if (newState == SearchView.TransitionState.SHOWN) {
+            if (newState == SearchView.TransitionState.SHOWING) {
+                // Prepare during the opening animation instead of after it.
+                scheduleSearch();
+            } else if (newState == SearchView.TransitionState.SHOWN) {
                 searchShowing = true;
+                // The opaque, full-screen search now covers the Dashboard.
+                // Stop measuring/rendering that hierarchy until closing starts.
+                dashboardContent.setVisibility(View.GONE);
                 if (isFabMenuOpen) {
                     toggleAddMenu();
                 }
@@ -256,58 +323,68 @@ public class DashboardActivity extends BaseVaultActivity {
                 // Re-filter on open (covers rotation restore: the query is
                 // set before show, masters load separately).
                 scheduleSearch();
+            } else if (newState == SearchView.TransitionState.HIDING) {
+                dashboardContent.setVisibility(dashboardReady ? View.VISIBLE : View.INVISIBLE);
             } else if (newState == SearchView.TransitionState.HIDDEN) {
                 searchShowing = false;
+                cancelSearch();
                 setFabVisible(true);
             }
         });
     }
 
-    /** FAB hides while the SearchView covers the screen. */
+    /**
+     * FAB hides while the SearchView covers the screen.
+     */
     private void setFabVisible(boolean visible) {
         quickAddButton.setVisibility(visible ? View.VISIBLE : View.GONE);
     }
 
-    /** Rebuilds the search index from the current masters. Once per refresh. */
-    private void rebuildSearchIndex() {
-        searchIndex = DashboardSearch.buildIndex(allIds, allCards, allAccounts);
-    }
-
-    /** Debounced search entry point (UI thread only). Drops stale generations. */
+    /**
+     * Debounced search entry point (UI thread only). Drops stale generations.
+     */
     private void scheduleSearch() {
         if (searchIdAdapter == null || searchCardAdapter == null || searchSocialAdapter == null) {
             return;
         }
-        if (pendingSearch != null) {
-            searchHandler.removeCallbacks(pendingSearch);
-        }
+        cancelSearch();
         final int generation = ++searchGeneration;
+        if (boundSearchData == display.data && boundSearchData == store().dataGeneration()
+                && currentQuery.equals(boundSearchQuery)) return;
         final String raw = currentQuery;
         final DashboardSearch.Index snapshot =
                 searchIndex != null ? searchIndex : DashboardSearch.EMPTY_INDEX;
+        final long sessionToken = app().getSession().generation();
+        final long dataToken = display.data;
         pendingSearch = () -> {
+            pendingSearch = null;
             try {
-                searchExecutor.execute(() -> runSearch(generation, raw, snapshot));
+                searchTask = searchExecutor.submit(() -> runSearch(generation, raw, snapshot, sessionToken, dataToken));
             } catch (RuntimeException e) {
-                Log.w("Dashboard", "search executor shut down", e);
+                if (com.akin.wallet.BuildConfig.DEBUG)
+                    Log.w("Dashboard", "search executor shut down", e);
             }
         };
-        searchHandler.postDelayed(pendingSearch, SEARCH_DEBOUNCE_MS);
+        searchHandler.postDelayed(pendingSearch, raw.trim().isEmpty() ? 0L : SEARCH_DEBOUNCE_MS);
     }
 
-    /** Background pass: normalize query, scan pre-lowered strings. */
-    private void runSearch(int generation, String raw, DashboardSearch.Index snapshot) {
+    /**
+     * Background pass: normalize query, scan pre-lowered strings.
+     */
+    private void runSearch(int generation, String raw, DashboardSearch.Index snapshot,
+                           long sessionToken, long dataToken) {
         final DashboardSearch.Query query;
         final DashboardSearch.Result result;
         try {
             query = DashboardSearch.normalizeQuery(raw);
             result = DashboardSearch.search(snapshot, query);
         } catch (RuntimeException e) {
-            Log.w("Dashboard", "search failed, keeping previous results", e);
+            if (com.akin.wallet.BuildConfig.DEBUG)
+                Log.w("Dashboard", "search failed, keeping previous results", e);
             return;
         }
         searchHandler.post(() -> {
-            if (generation != searchGeneration || !isAlive()) {
+            if (snapshot != searchIndex || generation != searchGeneration || !isAlive() || !app().getSession().isCurrent(sessionToken) || dataToken != store().dataGeneration()) {
                 return;
             }
             if (allIds == null || allCards == null || allAccounts == null
@@ -319,7 +396,9 @@ public class DashboardActivity extends BaseVaultActivity {
         });
     }
 
-    /** True while any search list is mid-layout. */
+    /**
+     * True while any search list is mid-layout.
+     */
     private boolean isAnySearchListLayingOut() {
         return (searchGovernmentIdList != null && searchGovernmentIdList.isComputingLayout())
                 || (searchBankCardList != null && searchBankCardList.isComputingLayout())
@@ -327,7 +406,7 @@ public class DashboardActivity extends BaseVaultActivity {
     }
 
     private void bindSearchResults(List<GovernmentIDModel> ids, List<BankCardModel> cards,
-                                    List<SocialAccountModel> accounts, boolean searching, int generation) {
+                                   List<SocialAccountModel> accounts, boolean searching, int generation) {
         if (!isAlive() || generation != searchGeneration) {
             return;
         }
@@ -352,6 +431,8 @@ public class DashboardActivity extends BaseVaultActivity {
         setVisible(searchSocialAccountCard, hasAccounts);
         setVisible(searchHeaderSocial, hasAccounts);
 
+        boundSearchData = display.data;
+        boundSearchQuery = currentQuery;
         boolean allEmpty = !hasIds && !hasCards && !hasAccounts;
         setVisible(emptySearchResults, allEmpty);
         if (allEmpty) {
@@ -380,7 +461,9 @@ public class DashboardActivity extends BaseVaultActivity {
         }
     }
 
-    /** Extended FAB: round main button expanding the 3-option menu above it. */
+    /**
+     * Extended FAB: round main button expanding the 3-option menu above it.
+     */
     private void setupAddMenu() {
         quickAddButton = findViewById(R.id.dashboard_quick_add_button);
         quickAddMenu = findViewById(R.id.dashboard_quick_add_menu);
@@ -412,13 +495,17 @@ public class DashboardActivity extends BaseVaultActivity {
         }
     }
 
-    /** Tap bumps updated_at so the row sorts newest-first on return. */
+    /**
+     * Tap bumps updated_at so the row sorts newest-first on return.
+     */
     private void openSocialEditor(SocialAccountModel item) {
         touchAndOpen(() -> db().touchSocialAccountUpdatedAt(item.getId()),
-                SocialAccountActivity.editIntent(this, item));
+                SocialAccountActivity.editIntent(this, item), VaultStore.Section.SOCIAL_ACCOUNTS);
     }
 
-    /** Opens a creation screen. FAB is the only entry. */
+    /**
+     * Opens a creation screen. FAB is the only entry.
+     */
     private void openCreator(Class<?> editorScreen) {
         if (isFabMenuOpen) {
             toggleAddMenu();
@@ -428,29 +515,35 @@ public class DashboardActivity extends BaseVaultActivity {
 
     private void openIdEditor(GovernmentIDModel item) {
         touchAndOpen(() -> db().touchIdCardUpdatedAt(item.getId()),
-                GovernmentIDActivity.editIntent(this, item));
+                GovernmentIDActivity.editIntent(this, item), VaultStore.Section.GOVERNMENT_IDS);
     }
 
     private void openBankEditor(BankCardModel item) {
         touchAndOpen(() -> db().touchBankCardUpdatedAt(item.getId()),
-                BankCardActivity.editIntent(this, item));
+                BankCardActivity.editIntent(this, item), VaultStore.Section.BANK_CARDS);
     }
 
-    private void touchAndOpen(Runnable touch, Intent intent) {
-        vaultIo(touch);
-        startActivity(intent);
+    private void touchAndOpen(Runnable touch, Intent intent, VaultStore.Section section) {
+        vaultIo(() -> {
+            touch.run();
+            store().invalidate(section);
+            runIfAlive(() -> startActivity(intent));
+        });
     }
 
     private void setupHorizontalList(RecyclerView list, RecyclerView.Adapter<?> adapter) {
         list.setLayoutManager(
                 new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
         list.setAdapter(adapter);
+        list.setItemAnimator(null);
         list.addItemDecoration(sharedGap);
         list.setHasFixedSize(false);
         list.setItemViewCacheSize(4);
     }
 
-    /** Horizontal snap carousel rendering the user's bank cards. */
+    /**
+     * Horizontal snap carousel rendering the user's bank cards.
+     */
     private void setupCardCarousel() {
         bankCardCarousel = findViewById(R.id.dashboard_bank_card_carousel);
         bankCardEmptyState = findViewById(R.id.dashboard_bank_card_empty_state);
@@ -460,47 +553,18 @@ public class DashboardActivity extends BaseVaultActivity {
                 R.id.dashboard_bank_card_empty_action, cardAdapter, BankCardActivity.class);
     }
 
-    private void refreshCardCarousel(List<BankCardModel> cards) {
+    private void refreshCardCarousel(List<BankCardModel> cards, Runnable committed) {
         if (cardAdapter == null || bankCardCarousel == null) {
             return;
         }
-        cardAdapter.updateData(cards);
-        bindCarouselVisibility(bankCardCarousel, bankCardEmptyState, headerCards,
-                cards != null && !cards.isEmpty(),
-                () -> matchEmptyHeightToCards(bankCardCarousel, bankCardEmptyState));
+        cardAdapter.updateData(cards, () -> {
+            committed.run();
+        });
     }
 
-    /** Sizes an empty-state card like one carousel page to keep section height. */
-    private void matchEmptyHeightToCards(@NonNull RecyclerView carousel, @NonNull View empty) {
-        Runnable pending = (Runnable) empty.getTag(R.id.tag_empty_state_measure);
-        if (pending != null) {
-            empty.removeCallbacks(pending);
-        }
-        Runnable measure = () -> {
-            if (!isAlive()) {
-                return;
-            }
-            int contentWidth = empty.getWidth();
-            if (contentWidth <= 0) {
-                return;
-            }
-            int viewport = contentWidth
-                    - carousel.getPaddingStart() - carousel.getPaddingEnd();
-            if (viewport <= 0) {
-                return;
-            }
-            int pageHeight = (int) ((viewport * Ui.CAROUSEL_PAGE_RATIO - Ui.dp(empty.getContext(), 8))
-                    / CARD_ASPECT_RATIO);
-            if (pageHeight > 0 && empty.getLayoutParams().height != pageHeight) {
-                empty.getLayoutParams().height = pageHeight;
-                empty.requestLayout();
-            }
-        };
-        empty.setTag(R.id.tag_empty_state_measure, measure);
-        empty.post(measure);
-    }
-
-    /** Horizontal snap carousel rendering the user's government IDs. */
+    /**
+     * Horizontal snap carousel rendering the user's government IDs.
+     */
     private void setupIdsCarousel() {
         governmentIdCarousel = findViewById(R.id.dashboard_government_id_carousel);
         governmentIdEmptyState = findViewById(R.id.dashboard_government_id_empty_state);
@@ -511,38 +575,36 @@ public class DashboardActivity extends BaseVaultActivity {
     }
 
     private void wireSnapCarousel(RecyclerView carousel, View empty, int emptyActionId,
-                                   RecyclerView.Adapter<?> adapter, Class<?> creator) {
+                                  RecyclerView.Adapter<?> adapter, Class<?> creator) {
         setupHorizontalList(carousel, adapter);
         new PagerSnapHelper().attachToRecyclerView(carousel);
         empty.setOnClickListener(v -> openCreator(creator));
         findViewById(emptyActionId).setOnClickListener(v -> openCreator(creator));
     }
 
-    private void refreshIdsCarousel(List<GovernmentIDModel> ids) {
+    private void refreshIdsCarousel(List<GovernmentIDModel> ids, Runnable committed) {
         if (idAdapter == null || governmentIdCarousel == null) {
             return;
         }
-        idAdapter.updateData(ids);
-        bindCarouselVisibility(governmentIdCarousel, governmentIdEmptyState, headerIds,
-                ids != null && !ids.isEmpty(),
-                () -> matchEmptyHeightToCards(governmentIdCarousel, governmentIdEmptyState));
+        idAdapter.updateData(ids, () -> {
+            committed.run();
+        });
     }
 
     private static void bindCarouselVisibility(RecyclerView carousel, View empty, View header,
-                                               boolean hasItems, Runnable matchEmptyHeight) {
+                                               boolean hasItems) {
         carousel.setVisibility(hasItems ? View.VISIBLE : View.GONE);
         if (header != null) {
             header.setVisibility(View.VISIBLE);
         }
         if (empty != null) {
             empty.setVisibility(!hasItems ? View.VISIBLE : View.GONE);
-            if (!hasItems) {
-                matchEmptyHeight.run();
-            }
         }
     }
 
-    /** Social Account — vertical list of created accounts. */
+    /**
+     * Social Account — vertical list of created accounts.
+     */
     private void setupSocialAccounts() {
         socialAccountCard = findViewById(R.id.dashboard_social_account_card);
         socialAccountList = findViewById(R.id.dashboard_social_account_list);
@@ -551,6 +613,7 @@ public class DashboardActivity extends BaseVaultActivity {
         socialAdapter = new SocialAccountAdapter(this::openSocialEditor);
         socialAccountList.setLayoutManager(new LinearLayoutManager(this));
         socialAccountList.setAdapter(socialAdapter);
+        socialAccountList.setItemAnimator(null);
         socialAccountList.setHasFixedSize(false);
 
         socialAccountEmptyState.setOnClickListener(v -> openCreator(SocialAccountActivity.class));
@@ -558,97 +621,109 @@ public class DashboardActivity extends BaseVaultActivity {
                 v -> openCreator(SocialAccountActivity.class));
     }
 
-    /** Binds social rows, capping the list at a fixed height. Defers while mid-layout. */
-    private void refreshSocialAccounts(List<SocialAccountModel> accounts) {
+    /**
+     * Binds social rows into the adaptive card. Defers only during an active layout.
+     */
+    private void refreshSocialAccounts(List<SocialAccountModel> accounts, Runnable committed) {
         if (socialAdapter == null || socialAccountList == null || !isAlive()) {
             return;
         }
-        if (socialAccountList.isComputingLayout()
-                || socialAccountList.hasPendingAdapterUpdates()) {
+        // Pending updates are safe to replace. A hidden or zero-height list cannot
+        // consume them until this binding makes its populated card visible again.
+        if (socialAccountList.isComputingLayout()) {
             final List<SocialAccountModel> snapshot =
                     accounts != null ? new ArrayList<>(accounts) : null;
-            socialAccountList.post(() -> refreshSocialAccounts(snapshot));
+            socialAccountList.post(() -> refreshSocialAccounts(snapshot, committed));
             return;
         }
-        socialAdapter.updateData(accounts);
-        boolean hasAccounts = accounts != null && !accounts.isEmpty();
-        if (socialAccountCard != null) {
-            socialAccountCard.setVisibility(hasAccounts ? View.VISIBLE : View.GONE);
-        }
-        if (headerSocial != null) {
-            headerSocial.setVisibility(View.VISIBLE);
-        }
-        if (socialAccountEmptyState != null) {
-            socialAccountEmptyState.setVisibility(!hasAccounts ? View.VISIBLE : View.GONE);
-        }
-        capSocialListHeight();
-    }
-
-    /** Caps the social list at a fixed height with scrolling; short lists wrap. */
-    private void capSocialListHeight() {
-        final RecyclerView list = socialAccountList;
-        if (list == null) {
-            return;
-        }
-        ViewGroup.LayoutParams params = list.getLayoutParams();
-        if (params != null && params.height != ViewGroup.LayoutParams.WRAP_CONTENT) {
-            params.height = ViewGroup.LayoutParams.WRAP_CONTENT;
-            list.setLayoutParams(params);
-        }
-        list.setNestedScrollingEnabled(false);
-        list.post(() -> {
-            if (!isAlive()) {
-                return;
-            }
-            if (list.getHeight() > Ui.dp(list.getContext(), SOCIAL_LIST_MAX_HEIGHT_DP)) {
-                ViewGroup.LayoutParams capped = list.getLayoutParams();
-                capped.height = Ui.dp(list.getContext(), SOCIAL_LIST_MAX_HEIGHT_DP);
-                list.setLayoutParams(capped);
-                list.setNestedScrollingEnabled(true);
-            }
-        });
-    }
-
-    /** Cache-first bind: preload snapshot before first draw; onResume revalidates. */
-    private void bindCachedSnapshot() {
-        VaultWarmCache.Snapshot cached = cache().snapshot();
-        if (cached == null || !cached.hasActive()) {
-            return;
-        }
-        bindSnapshot(new ArrayList<>(cached.activeIds),
-                new ArrayList<>(cached.activeCards),
-                new ArrayList<>(cached.activeAccounts));
+        socialAdapter.updateData(accounts, committed);
     }
 
     private void bindSnapshot(List<GovernmentIDModel> ids, List<BankCardModel> cards,
                               List<SocialAccountModel> accounts) {
+        final int generation = ++dashboardBindGeneration;
+        final long sessionToken = app().getSession().generation();
+        final int[] pending = {3};
+        Runnable committed = () -> {
+            if (!isAlive() || generation != dashboardBindGeneration
+                    || !app().getSession().isCurrent(sessionToken) || --pending[0] != 0) return;
+            // Publish the sections together only after all three adapters commit.
+            // The first frame contains IDs, bank cards, then populated social rows.
+            governmentIdCarousel.scrollToPosition(0);
+            bindCarouselVisibility(governmentIdCarousel, governmentIdEmptyState, headerIds, !ids.isEmpty());
+            bankCardCarousel.scrollToPosition(0);
+            bindCarouselVisibility(bankCardCarousel, bankCardEmptyState, headerCards, !cards.isEmpty());
+            socialAccountList.scrollToPosition(0);
+            setVisible(socialAccountCard, !accounts.isEmpty());
+            setVisible(socialAccountEmptyState, accounts.isEmpty());
+            setVisible(headerSocial, true);
+            dashboardReady = true;
+            if (!searchShowing) dashboardContent.setVisibility(View.VISIBLE);
+        };
+        if (allIds != ids) refreshIdsCarousel(ids, committed);
+        else committed.run();
+        if (allCards != cards) refreshCardCarousel(cards, committed);
+        else committed.run();
+        if (allAccounts != accounts) refreshSocialAccounts(accounts, committed);
+        else committed.run();
         allIds = ids;
         allCards = cards;
         allAccounts = accounts;
-        refreshIdsCarousel(allIds);
-        refreshCardCarousel(allCards);
-        refreshSocialAccounts(allAccounts);
-        rebuildSearchIndex();
+        searchIndex = display.index;
     }
 
     private void refreshDashboard() {
+        if (!isAlive()) return;
+        final long sessionToken = app().getSession().generation();
+        final long dataToken = store().dataGeneration();
+        if (display.session == sessionToken && display.data == dataToken && display.ids != null) {
+            if (allIds != display.ids) bindSnapshot(display.ids, display.cards, display.accounts);
+            return;
+        }
+        if (dashboardLoadInFlight) return;
+        dashboardLoadInFlight = true;
+        final long idRevision = store().sectionGeneration(VaultStore.Section.GOVERNMENT_IDS);
+        final long cardRevision = store().sectionGeneration(VaultStore.Section.BANK_CARDS);
+        final long accountRevision = store().sectionGeneration(VaultStore.Section.SOCIAL_ACCOUNTS);
+        final boolean sameSession = display.session == sessionToken;
+        final List<GovernmentIDModel> cachedIds = sameSession && display.idRevision == idRevision ? display.ids : null;
+        final List<BankCardModel> cachedCards = sameSession && display.cardRevision == cardRevision ? display.cards : null;
+        final List<SocialAccountModel> cachedAccounts = sameSession && display.accountRevision == accountRevision ? display.accounts : null;
+        final DashboardSearch.Index previousIndex = sameSession ? display.index : DashboardSearch.EMPTY_INDEX;
         final int generation = nextLoadGeneration();
         vaultIo(() -> {
             final List<GovernmentIDModel> ids;
             final List<BankCardModel> cards;
             final List<SocialAccountModel> accounts;
             try {
-                ids = db().getAllIdCards();
-                cards = db().getAllBankCards();
-                accounts = db().getAllSocialAccounts();
+                ids = cachedIds != null ? cachedIds : db().getAllIdCards();
+                cards = cachedCards != null ? cachedCards : db().getAllBankCards();
+                accounts = cachedAccounts != null ? cachedAccounts : db().getAllSocialAccounts();
             } catch (RuntimeException e) {
-                Log.w("Dashboard", "refresh failed", e);
-                runIfAlive(generation, () -> showMessage(R.string.err_dashboard_load));
+                if (com.akin.wallet.BuildConfig.DEBUG) Log.w("Dashboard", "refresh failed", e);
+                runIfAlive(generation, () -> {
+                    dashboardLoadInFlight = false;
+                    showMessage(R.string.err_dashboard_load);
+                });
                 return;
             }
-            cache().publishActive(ids, cards, accounts);
+            DashboardSearch.Index prepared = DashboardSearch.buildIndex(previousIndex, ids, cards, accounts);
             runIfAlive(generation, () -> {
-                bindSnapshot(ids, cards, accounts);
+                dashboardLoadInFlight = false;
+                if (dataToken != store().dataGeneration()) {
+                    refreshDashboard();
+                    return;
+                }
+                display.ids = prepared.idRows();
+                display.cards = prepared.cardRows();
+                display.accounts = prepared.accountRows();
+                display.index = prepared;
+                display.session = sessionToken;
+                display.data = dataToken;
+                display.idRevision = idRevision;
+                display.cardRevision = cardRevision;
+                display.accountRevision = accountRevision;
+                bindSnapshot(display.ids, display.cards, display.accounts);
                 if (searchShowing) {
                     scheduleSearch();
                 }

@@ -16,11 +16,8 @@ import androidx.core.content.ContextCompat;
 import com.akin.wallet.AkinWallet;
 import com.akin.wallet.R;
 import com.akin.wallet.security.AppLockManager;
-import com.akin.wallet.security.DbKeyManager;
 import com.akin.wallet.util.Ui;
 
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 /**
  * App lock — launcher screen. First run walks PIN setup (create + confirm);
@@ -33,7 +30,7 @@ public class LockActivity extends AppCompatActivity {
     public static final String MODE_VERIFY = "verify";
     public static final String MODE_CHANGE = "change";
 
-    private enum Screen { CREATE, CONFIRM, VERIFY, PIN }
+    private enum Screen {CREATE, CONFIRM, VERIFY, PIN}
 
     private String mode = MODE_START;
     private Screen screen = Screen.PIN;
@@ -42,14 +39,14 @@ public class LockActivity extends AppCompatActivity {
     private String firstPin;
     private boolean submitting;
 
-    private static final String KEY_MODE = "lock_mode";
-    private static final String KEY_SCREEN = "lock_screen";
     // Secrets never touch savedInstanceState: rotation clears in-progress digits.
 
-    /** Delayed biometric ask / entry submit, removable on pause/destroy. */
+    /**
+     * Delayed biometric ask / entry submit, removable on pause/destroy.
+     */
     private final Runnable autoBiometric = this::startBiometric;
     private final Runnable pendingEntry = this::processEntry;
-    private final ExecutorService pinIo = Executors.newSingleThreadExecutor();
+    private volatile int authenticationGeneration;
 
     private TextView errorLabel;
     private TextView stepLabel;
@@ -82,9 +79,8 @@ public class LockActivity extends AppCompatActivity {
         Ui.applySystemBars(this);
 
         String extra = getIntent().getStringExtra(EXTRA_MODE);
-        if (extra != null) {
-            mode = extra;
-        }
+        if (MODE_VERIFY.equals(extra)) mode = MODE_VERIFY;
+        if (MODE_CHANGE.equals(extra) && !app().shouldReLock()) mode = MODE_CHANGE;
 
         errorLabel = findViewById(R.id.lock_error_label);
         stepLabel = findViewById(R.id.lock_step_label);
@@ -101,34 +97,6 @@ public class LockActivity extends AppCompatActivity {
             biometricKey.setOnClickListener(v -> startBiometric());
         }
 
-        biometricPrompt = new BiometricPrompt(this,
-                ContextCompat.getMainExecutor(this), biometricCallback());
-
-        // Pre-auth warm-up: connection + catalog only, never rows.
-        if (AppLockManager.isPinSet(this)) {
-            app().warmPreAuth();
-        }
-
-        if (savedInstanceState != null) {
-            // Rotation resumes screen/mode only; typed digits are dropped.
-            String savedMode = savedInstanceState.getString(KEY_MODE, null);
-            if (savedMode != null) {
-                mode = savedMode;
-            }
-            try {
-                screen = Screen.valueOf(
-                        savedInstanceState.getString(KEY_SCREEN, Screen.PIN.name()));
-            } catch (IllegalArgumentException ignored) {
-                screen = Screen.PIN;
-            }
-            entry.setLength(0);
-            firstPin = null;
-            submitting = false;
-            restoreScreen();
-            renderDots();
-            return;
-        }
-
         if (!AppLockManager.isPinSet(this)) {
             showCreateScreen();
         } else if (MODE_CHANGE.equals(mode)) {
@@ -140,34 +108,6 @@ public class LockActivity extends AppCompatActivity {
                 keypadLayout.postDelayed(autoBiometric, 400);
             }
         }
-    }
-
-    /** Re-renders the current screen after a rotation. Digits stay cleared. */
-    private void restoreScreen() {
-        switch (screen) {
-            case CREATE:
-                showCreateScreen();
-                break;
-            case CONFIRM:
-                // First PIN is a secret and was never saved: restart setup.
-                showCreateScreen();
-                break;
-            case VERIFY:
-                showVerifyScreen();
-                break;
-            case PIN:
-            default:
-                showPinScreen();
-                break;
-        }
-    }
-
-    @Override
-    protected void onSaveInstanceState(@NonNull Bundle outState) {
-        super.onSaveInstanceState(outState);
-        outState.putString(KEY_MODE, mode);
-        outState.putString(KEY_SCREEN, screen.name());
-        // Intentionally no PIN/entry/firstPin — see KEY notes above.
     }
 
     @Override
@@ -188,6 +128,7 @@ public class LockActivity extends AppCompatActivity {
     @Override
     protected void onPause() {
         paused = true;
+        authenticationGeneration++;
         cancelBiometric();
         cancelPending();
         // A cancelled delayed submit must not stay buffered.
@@ -204,7 +145,6 @@ public class LockActivity extends AppCompatActivity {
     protected void onDestroy() {
         cancelPending();
         lockoutHandler.removeCallbacks(lockoutTicker);
-        pinIo.shutdownNow();
         super.onDestroy();
     }
 
@@ -253,7 +193,9 @@ public class LockActivity extends AppCompatActivity {
         setBioKeyVisible(false);
     }
 
-    /** Change-PIN step 1: prove the current PIN before setting a new one. */
+    /**
+     * Change-PIN step 1: prove the current PIN before setting a new one.
+     */
     private void showVerifyScreen() {
         screen = Screen.VERIFY;
         resetEntry();
@@ -274,7 +216,9 @@ public class LockActivity extends AppCompatActivity {
         }
     }
 
-    /** Keypad biometric key left of 0 — INVISIBLE (not GONE) to keep 0 centered. */
+    /**
+     * Keypad biometric key left of 0 — INVISIBLE (not GONE) to keep 0 centered.
+     */
     private void setBioKeyVisible(boolean visible) {
         if (biometricKey != null) {
             biometricKey.setVisibility(visible ? View.VISIBLE : View.INVISIBLE);
@@ -284,7 +228,9 @@ public class LockActivity extends AppCompatActivity {
         }
     }
 
-    /** Tagline slot doubles as the step helper during setup / update. */
+    /**
+     * Tagline slot doubles as the step helper during setup / update.
+     */
     private void setStepText(String text) {
         stepLabel.setText(text);
         stepLabel.setLetterSpacing(0.02f);
@@ -350,6 +296,7 @@ public class LockActivity extends AppCompatActivity {
             submitting = false;
             return;
         }
+        final int requestToken = authenticationGeneration;
         final String pin = entry.toString();
         entry.setLength(0);
         final Screen current = screen;
@@ -364,11 +311,11 @@ public class LockActivity extends AppCompatActivity {
         if (current == Screen.CONFIRM) {
             if (pin.equals(capturedFirst)) {
                 submitting = true;
-                pinIo.execute(() -> {
+                AppLockManager.execute(() -> {
                     try {
                         AppLockManager.setPin(LockActivity.this, pin);
                     } catch (RuntimeException e) {
-                        runOnUiAlive(() -> {
+                        runOnUiAlive(requestToken, () -> {
                             firstPin = null;
                             showCreateScreen();
                             showError(getString(R.string.lock_error_mismatch));
@@ -377,7 +324,7 @@ public class LockActivity extends AppCompatActivity {
                         });
                         return;
                     }
-                    runOnUiAlive(() -> {
+                    runOnUiAlive(requestToken, () -> {
                         unlockSuccess();
                         submitting = false;
                         renderDots();
@@ -392,65 +339,30 @@ public class LockActivity extends AppCompatActivity {
             }
             return;
         }
-        // VERIFY / PIN: hash off UI thread to keep dot animation smooth.
-        pinIo.execute(() -> {
-            final boolean lockedOutAtSample;
-            final boolean ok;
+        final int token = authenticationGeneration;
+        AppLockManager.execute(() -> {
             try {
-                lockedOutAtSample = AppLockManager.isLockedOut(LockActivity.this);
-                ok = !lockedOutAtSample && AppLockManager.verifyPin(LockActivity.this, pin);
-            } catch (RuntimeException e) {
-                runOnUiAlive(this::showPinIoError);
-                return;
-            }
-            runOnUiAlive(() -> {
-                if (AppLockManager.isLockedOut(LockActivity.this)) {
-                    showLockout();
+                AppLockManager.Verification result = AppLockManager.verifyAndRecord(getApplicationContext(), pin);
+                runOnUiThread(() -> {
+                    if (token != authenticationGeneration || !isAlive() || paused) return;
+                    if (result.verified) {
+                        if (current == Screen.VERIFY) showCreateScreen();
+                        else unlockSuccess();
+                    } else if (result.attemptsLeft < 0) showLockout();
+                    else showError(getString(R.string.lock_error_wrong, result.attemptsLeft));
                     submitting = false;
                     renderDots();
-                } else if (lockedOutAtSample) {
-                    // Cooldown expired mid-hash: retry once instead of recording a failure.
-                    retryVerify(pin, current);
-                } else {
-                    finishVerify(ok, current);
-                }
-            });
-        });
-    }
-
-    private void retryVerify(String pin, Screen current) {
-        submitting = true;
-        pinIo.execute(() -> {
-            final boolean retryOk;
-            try {
-                retryOk = AppLockManager.verifyPin(LockActivity.this, pin);
-            } catch (RuntimeException e) {
-                runOnUiAlive(this::showPinIoError);
-                return;
+                });
+            } catch (RuntimeException failure) {
+                runOnUiAlive(LockActivity.this::showPinIoError);
             }
-            runOnUiAlive(() -> finishVerify(retryOk, current));
         });
     }
 
-    private void finishVerify(boolean ok, Screen current) {
-        if (AppLockManager.isLockedOut(LockActivity.this)) {
-            showLockout();
-        } else if (ok) {
-            onPinVerified(current);
-        } else {
-            handleWrongPin();
-        }
-        submitting = false;
-        renderDots();
-    }
-
-    private void onPinVerified(Screen current) {
-        AppLockManager.resetFailures(LockActivity.this);
-        if (current == Screen.VERIFY) {
-            showCreateScreen();
-        } else {
-            unlockSuccess();
-        }
+    private void runOnUiAlive(int token, Runnable action) {
+        runOnUiThread(() -> {
+            if (token == authenticationGeneration && isAlive() && !paused) action.run();
+        });
     }
 
     private void runOnUiAlive(Runnable action) {
@@ -469,28 +381,10 @@ public class LockActivity extends AppCompatActivity {
         renderDots();
     }
 
-    private void handleWrongPin() {
-        int left = AppLockManager.recordFailure(this);
-        if (left < 0) {
-            if (AppLockManager.shouldWipe(this)) {
-                DbKeyManager.wipeVault(this);
-                AppLockManager.resetFailures(this);
-                firstPin = null;
-                showCreateScreen();
-                showError(getString(R.string.lock_error_mismatch));
-            } else {
-                showLockout();
-            }
-        } else {
-            showError(getString(R.string.lock_error_wrong, left));
-        }
-    }
-
     private void unlockSuccess() {
         cancelBiometric();
         if (MODE_CHANGE.equals(mode)) {
-            AppLockManager.setSessionUnlocked(true);
-            app().resetGrace();
+            app().onUnlocked();
             app().notifyOnReturn(R.string.lock_pin_updated);
             setResult(RESULT_OK);
             finish();
@@ -530,7 +424,9 @@ public class LockActivity extends AppCompatActivity {
             return;
         }
         promptActive = true;
+        biometricPrompt = new BiometricPrompt(this, ContextCompat.getMainExecutor(this), biometricCallback(authenticationGeneration));
         BiometricPrompt.PromptInfo info = new BiometricPrompt.PromptInfo.Builder()
+                .setAllowedAuthenticators(androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG)
                 .setTitle(getString(R.string.app_name))
                 .setSubtitle(getString(R.string.lock_sub_enter))
                 .setNegativeButtonText(getString(R.string.lock_use_pin))
@@ -556,29 +452,36 @@ public class LockActivity extends AppCompatActivity {
         showError(getString(R.string.lock_error_fingerprint));
     }
 
-    private BiometricPrompt.AuthenticationCallback biometricCallback() {
+    private BiometricPrompt.AuthenticationCallback biometricCallback(int token) {
         return new BiometricPrompt.AuthenticationCallback() {
             @Override
             public void onAuthenticationSucceeded(
                     @NonNull BiometricPrompt.AuthenticationResult result) {
-                promptActive = false;
-                if (isBiometricGuarded()) {
+                if (!promptActive || token != authenticationGeneration || isBiometricGuarded())
                     return;
-                }
+                promptActive = false;
                 if (AppLockManager.isLockedOut(LockActivity.this)) {
                     showLockout();
                     return;
                 }
-                AppLockManager.resetFailures(LockActivity.this);
-                unlockSuccess();
+                AppLockManager.execute(() -> {
+                    try {
+                        AppLockManager.resetFailures(getApplicationContext());
+                        runOnUiThread(() -> {
+                            if (token == authenticationGeneration && !isBiometricGuarded())
+                                unlockSuccess();
+                        });
+                    } catch (RuntimeException failure) {
+                        runOnUiAlive(LockActivity.this::showPinIoError);
+                    }
+                });
             }
 
             @Override
             public void onAuthenticationError(int errorCode, @NonNull CharSequence errString) {
-                promptActive = false;
-                if (isBiometricGuarded()) {
+                if (!promptActive || token != authenticationGeneration || isBiometricGuarded())
                     return;
-                }
+                promptActive = false;
                 if (errorCode == BiometricPrompt.ERROR_USER_CANCELED
                         || errorCode == BiometricPrompt.ERROR_CANCELED
                         || errorCode == BiometricPrompt.ERROR_NEGATIVE_BUTTON) {
