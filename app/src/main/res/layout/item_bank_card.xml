@@ -1,0 +1,221 @@
+<?xml version="1.0" encoding="utf-8"?><!-- Bank card face, 1.586:1. -->
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+
+    <FrameLayout
+        android:id="@+id/bank_card_root"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginHorizontal="4dp"
+        android:elevation="4dp"
+        android:background="@drawable/bg_bank_card_blue"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintDimensionRatio="H,1.586:1">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:paddingHorizontal="16dp"
+            android:paddingVertical="14dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:paddingEnd="12dp">
+
+                    <androidx.appcompat.widget.AppCompatTextView
+                        android:id="@+id/bank_card_preview_bank_name"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/preview_bank_name"
+                        android:textColor="@color/text_primary"
+                        android:textSize="15sp"
+                        android:textStyle="bold|italic"
+                        android:letterSpacing="0.02"
+                        android:shadowColor="@color/text_shadow"
+                        android:shadowDx="1"
+                        android:shadowDy="1"
+                        android:shadowRadius="2"
+                        android:maxLines="2"
+                        android:autoSizeTextType="uniform"
+                        android:autoSizeMinTextSize="4sp"
+                        android:autoSizeMaxTextSize="15sp"
+                        android:autoSizeStepGranularity="1sp" />
+
+                    <androidx.appcompat.widget.AppCompatTextView
+                        android:id="@+id/bank_card_preview_type"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/preview_card_type"
+                        android:textColor="@color/text_subtle_light"
+                        android:textSize="9sp"
+                        android:textStyle="bold"
+                        android:letterSpacing="0.2"
+                        android:layout_marginTop="2dp"
+                        android:singleLine="true"
+                        android:autoSizeTextType="uniform"
+                        android:autoSizeMinTextSize="6sp"
+                        android:autoSizeMaxTextSize="9sp"
+                        android:autoSizeStepGranularity="1sp" />
+
+                </LinearLayout>
+
+                <ImageView
+                    android:id="@+id/bank_card_preview_network"
+                    android:layout_width="38dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="top"
+                    android:layout_marginTop="2dp"
+                    android:src="@drawable/visa"
+                    android:scaleType="fitCenter"
+                    android:adjustViewBounds="true"
+                    android:contentDescription="@string/cd_card_network" />
+
+            </LinearLayout>
+
+            <ImageView
+                android:layout_width="30dp"
+                android:layout_height="23dp"
+                android:layout_marginTop="10dp"
+                android:src="@drawable/chip"
+                android:scaleType="fitCenter"
+                android:adjustViewBounds="true"
+                android:contentDescription="@string/cd_card_chip" />
+
+            <androidx.appcompat.widget.AppCompatTextView
+                android:id="@+id/bank_card_preview_number"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                tools:text="•••• •••• •••• ••••"
+                android:textColor="@color/text_primary"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:fontFamily="monospace"
+                android:letterSpacing="0.04"
+                android:singleLine="true"
+                android:shadowColor="@color/text_shadow"
+                android:shadowDx="1"
+                android:shadowDy="1"
+                android:shadowRadius="2"
+                android:autoSizeTextType="uniform"
+                android:autoSizeMinTextSize="6sp"
+                android:autoSizeMaxTextSize="12sp"
+                android:autoSizeStepGranularity="1sp" />
+
+            <Space
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="bottom">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:paddingEnd="12dp">
+
+                    <androidx.appcompat.widget.AppCompatTextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/preview_holder_label"
+                        android:textColor="@color/text_faint_light"
+                        android:textSize="8sp"
+                        android:textStyle="bold"
+                        android:letterSpacing="0.2"
+                        android:autoSizeTextType="uniform"
+                        android:autoSizeMinTextSize="4sp"
+                        android:autoSizeMaxTextSize="8sp"
+                        android:autoSizeStepGranularity="1sp" />
+
+                    <androidx.appcompat.widget.AppCompatTextView
+                        android:id="@+id/bank_card_preview_holder_name"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="@string/preview_holder_name"
+                        android:textColor="@color/white"
+                        android:textSize="10sp"
+                        android:textStyle="bold"
+                        android:letterSpacing="0.02"
+                        android:shadowColor="@color/text_shadow"
+                        android:shadowDx="1"
+                        android:shadowDy="1"
+                        android:shadowRadius="2"
+                        android:maxLines="2"
+                        android:autoSizeTextType="uniform"
+                        android:autoSizeMinTextSize="4sp"
+                        android:autoSizeMaxTextSize="10sp"
+                        android:autoSizeStepGranularity="1sp" />
+
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:gravity="end">
+
+                    <androidx.appcompat.widget.AppCompatTextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/preview_expiry_label"
+                        android:textColor="@color/text_faint_light"
+                        android:textSize="8sp"
+                        android:textStyle="bold"
+                        android:letterSpacing="0.2"
+                        android:autoSizeTextType="uniform"
+                        android:autoSizeMinTextSize="4sp"
+                        android:autoSizeMaxTextSize="8sp"
+                        android:autoSizeStepGranularity="1sp" />
+
+                    <androidx.appcompat.widget.AppCompatTextView
+                        android:id="@+id/bank_card_preview_expiry"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="@string/preview_expiry_value"
+                        android:textColor="@color/white"
+                        android:textSize="10sp"
+                        android:textStyle="bold"
+                        android:letterSpacing="0.02"
+                        android:shadowColor="@color/text_shadow"
+                        android:shadowDx="1"
+                        android:shadowDy="1"
+                        android:shadowRadius="2"
+                        android:singleLine="true"
+                        android:autoSizeTextType="uniform"
+                        android:autoSizeMinTextSize="6sp"
+                        android:autoSizeMaxTextSize="10sp"
+                        android:autoSizeStepGranularity="1sp" />
+
+                </LinearLayout>
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+    </FrameLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

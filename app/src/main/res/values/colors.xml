@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- ============================================================
+         Akin Wallet — color system (dark theme).
+         Names are semantic (role), never raw values, so a rebrand
+         means editing this file only. Opacity variants carry their
+         role, e.g. text on light card faces vs. gloss overlays.
+         ============================================================ -->
+
+    <!-- Brand -->
+    <color name="brand_blue">#FF2196F3</color>
+
+    <!-- App surfaces -->
+    <color name="dark_bg">#FF0D1B2A</color>
+    <color name="dark_card_border">#FF2A3A4A</color>
+
+    <!-- Core text & graphics. text_primary is the white used on dark surfaces. -->
+    <color name="text_primary">#FFFFFFFF</color>
+    <color name="text_secondary">#FF8899AA</color>
+    <color name="white">#FFFFFFFF</color>
+    <color name="black">#FF000000</color>
+
+    <!-- Feedback -->
+    <color name="danger">#FFEE4444</color>
+    <color name="danger_bright">#FFFF5252</color>
+
+    <!-- Input hints. -->
+    <color name="hint_text">#99FFFFFF</color>
+
+    <!-- Text on card faces. -->
+    <color name="text_faint_light">#E6FFFFFF</color>
+    <color name="text_subtle_light">#B3FFFFFF</color>
+    <color name="text_shadow">#80000000</color>
+
+    <!-- Gloss & edge overlays drawn over card gradients -->
+    <color name="card_gloss_start">#30FFFFFF</color>
+    <color name="card_gloss_mid">#08FFFFFF</color>
+    <color name="card_gloss_end">#00FFFFFF</color>
+    <color name="card_edge">#33FFFFFF</color>
+    <!-- Hairline for light document faces (dark ink at low alpha) -->
+    <color name="id_edge_on_light">#2B1A2E4D</color>
+
+    <!-- Photo wells: each face tints the well with its own hue at
+         photo-paper lightness (~90%), framed by the face mid-tone and
+         stamped with the face ink — one monochromatic family per card. -->
+    <color name="photo_bg_national">#FFDCE6F2</color>
+    <color name="photo_bg_dl">#FFD9DDF2</color>
+    <color name="photo_bg_passport">#FFF0D9CE</color>
+    <color name="photo_icon_passport">#FF5C1F2E</color>
+    <color name="photo_bg_sss">#FFD5E3F7</color>
+    <color name="photo_bg_phil_health">#FFD6EBDD</color>
+    <color name="photo_bg_tin">#FFF3E3BC</color>
+
+    <!-- Bank card gradients (one ramp per card colorway) -->
+    <color name="card_blue_start">#FF0A1F44</color>
+    <color name="card_blue_center">#FF1E4B9E</color>
+    <color name="card_blue_end">#FF060F26</color>
+    <color name="card_purple_start">#FF2A0A44</color>
+    <color name="card_purple_center">#FF5E2A9E</color>
+    <color name="card_purple_end">#FF150626</color>
+    <color name="card_green_start">#FF04302A</color>
+    <color name="card_green_center">#FF0E6B5E</color>
+    <color name="card_green_end">#FF031713</color>
+    <color name="card_orange_start">#FF431207</color>
+    <color name="card_orange_center">#FF9E4E1E</color>
+    <color name="card_orange_end">#FF200A04</color>
+    <color name="card_slate_start">#FF111B28</color>
+    <color name="card_slate_center">#FF33465E</color>
+    <color name="card_slate_end">#FF05080E</color>
+
+    <!-- National ID face (paper-white document, navy ink) -->
+    <color name="national_bg_start">#FFFFFFFF</color>
+    <color name="national_bg_center">#FFDFE7F2</color>
+    <color name="national_bg_end">#FFB4C4D8</color>
+    <color name="national_ink">#FF0F2A52</color>
+    <color name="national_muted">#FF54637D</color>
+    <color name="national_rule">#FF1B3D75</color>
+
+    <!-- Driver's License face (cool steel document, indigo ink) -->
+    <color name="dl_bg_start">#FFF4F8FD</color>
+    <color name="dl_bg_center">#FFCFDDF0</color>
+    <color name="dl_bg_end">#FF9FB8D4</color>
+
+    <!-- Passport face (deep maroon document, cream ink) -->
+    <color name="passport_bg_start">#FF7E2C40</color>
+    <color name="passport_bg_center">#FF932C44</color>
+    <color name="passport_bg_end">#FF2A0C15</color>
+    <color name="passport_ink">#FFF7EBD7</color>
+    <color name="passport_muted">#FFE8D5CC</color>
+    <color name="passport_rule">#FFD9B8AC</color>
+
+    <!-- SSS face (corporate blue document, white ink) -->
+    <color name="sss_bg_start">#FF1463B4</color>
+    <color name="sss_bg_center">#FF1B5FC4</color>
+    <color name="sss_bg_end">#FF071E49</color>
+    <color name="sss_muted">#FFD6E4F7</color>
+
+    <!-- PhilHealth face (soft sage document, green ink) -->
+    <color name="phil_health_bg_start">#FFEFF7F1</color>
+    <color name="phil_health_bg_center">#FFBFE0CA</color>
+    <color name="phil_health_bg_end">#FF8DBFA0</color>
+
+    <!-- TIN face (warm ivory document, dark-brown ink) -->
+    <color name="tin_bg_start">#FFFFFAE9</color>
+    <color name="tin_bg_center">#FFF0DCAC</color>
+    <color name="tin_bg_end">#FFD9B87E</color>
+    <color name="tin_ink">#FF4A2F1B</color>
+    <color name="tin_rule">#FF6E5636</color>
+    <color name="phil_health_ink">#FF005C36</color>
+    <color name="phil_health_muted">#FF2F5446</color>
+    <color name="phil_health_rule">#FF006B3F</color>
+    <color name="dl_bar">#FF5B4FA3</color>
+    <color name="dl_ink">#FF2B2545</color>
+    <color name="dl_muted">#FF3E3854</color>
+    <color name="dl_accent">#FF4A3F7A</color>
+
+    <!-- Dashboard (MyKey reference) — deep-navy theme. Background is
+         near-black navy; surfaces are lifted navy with a cool hairline. -->
+    <color name="dashboard_bg_start">#FF050B18</color>
+    <color name="dashboard_bg_end">#FF0A1E3A</color>
+    <color name="dashboard_surface">#FF0E1C33</color>
+    <color name="dashboard_surface_border">#FF1D3154</color>
+    <color name="dashboard_muted">#FFA3B4CE</color>
+    <color name="dashboard_active">#FF2EA6FF</color>
+
+    <!-- Header avatar / settings wells -->
+    <color name="dashboard_well">#FF16305A</color>
+    <color name="dashboard_well_border">#FF2A4A7A</color>
+
+    <!-- ============================================================
+         Lock screen — biometric passcode system: halo glow, glass keys,
+         glowing dots. Sampled from the Akin logo blues.
+         ============================================================ -->
+    <color name="lock_halo_center">#662EA6FF</color>
+    <color name="lock_halo_edge">#002EA6FF</color>
+    <color name="lock_glow_top">#331E4B9E</color>
+    <color name="pin_key_top">#FF182C4E</color>
+    <color name="pin_key_bottom">#FF0B1830</color>
+    <color name="pin_key_stroke">#FF2C4E80</color>
+    <color name="pin_key_pressed_top">#FF2560B8</color>
+    <color name="pin_key_pressed_bottom">#FF14305E</color>
+    <color name="dot_empty_fill">#FF0C1A31</color>
+    <color name="dot_empty_stroke">#FF2A456E</color>
+    <color name="dot_filled_start">#FF4DB8FF</color>
+    <color name="dot_filled_end">#FF1B6BFF</color>
+    <color name="dot_filled_glow">#662EA6FF</color>
+</resources>

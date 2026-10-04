@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Lock root: deep-navy base + royal top glow + bottom vignette.
+     Gives the 3D Akin mark a stage instead of flat black. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:angle="270"
+                android:startColor="@color/dashboard_bg_start"
+                android:endColor="@color/dashboard_bg_end" />
+        </shape>
+    </item>
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:angle="270"
+                android:startColor="@color/lock_glow_top"
+                android:centerColor="#001E4B9E"
+                android:endColor="#00000000" />
+        </shape>
+    </item>
+</layer-list>

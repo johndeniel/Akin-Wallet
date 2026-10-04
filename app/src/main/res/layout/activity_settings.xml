@@ -1,0 +1,394 @@
+<?xml version="1.0" encoding="utf-8"?><!-- Settings. Fixed, compact tokens. -->
+<com.akin.wallet.ui.SettingsContentLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:context=".activity.SettingsActivity"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_dashboard_root"
+    android:clipChildren="false"
+    android:clipToPadding="false"
+    android:orientation="vertical"
+    android:paddingStart="@dimen/screen_gutter_horizontal"
+    android:paddingEnd="@dimen/screen_gutter_horizontal"
+    android:paddingTop="@dimen/screen_padding_top"
+    android:paddingBottom="@dimen/screen_padding_bottom">
+
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/toolbar"
+        style="@style/Widget.Akin.Toolbar"
+        android:layout_width="match_parent"
+        app:title="@string/settings_title" />
+
+    <androidx.appcompat.widget.AppCompatTextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/section_gap_top"
+        android:maxLines="2"
+        android:text="@string/settings_section_security"
+        style="@style/Widget.Akin.SectionLabel"
+        android:accessibilityHeading="true" />
+
+    <com.google.android.material.card.MaterialCardView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/section_header_gap"
+        style="@style/Widget.Akin.DashboardCard">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <LinearLayout style="@style/Widget.Akin.SettingsRowContent">
+
+                    <com.google.android.material.imageview.ShapeableImageView
+                        android:layout_width="@dimen/row_icon_well_size"
+                        android:layout_height="@dimen/row_icon_well_size"
+                        android:background="@color/white"
+                        android:importantForAccessibility="no"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/fingerprint"
+                        app:contentPadding="@dimen/row_icon_content_padding"
+                        app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Akin.Rounded12" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="@dimen/row_title_icon_gap"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <androidx.appcompat.widget.AppCompatTextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/settings_biometric"
+                            style="@style/Widget.Akin.CompactCardTitle"
+                            android:maxLines="2" />
+
+                        <androidx.appcompat.widget.AppCompatTextView
+                            android:id="@+id/settings_biometric_status"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="@dimen/spacing_2dp"
+                            android:text="@string/settings_biometric_off"
+                            style="@style/Widget.Akin.CompactBodyMuted"
+                            android:maxLines="3" />
+
+                    </LinearLayout>
+
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/settings_biometric_switch"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="@dimen/spacing_8dp"
+                        android:minWidth="48dp"
+                        android:minHeight="48dp"
+                        android:contentDescription="@string/settings_biometric" />
+
+                </LinearLayout>
+
+                <View style="@style/Widget.Akin.HairlineDivider" />
+
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/settings_change_pin_row"
+                style="@style/Widget.Akin.SettingsRow">
+
+                <LinearLayout style="@style/Widget.Akin.SettingsRowContent">
+
+                    <com.google.android.material.imageview.ShapeableImageView
+                        android:layout_width="@dimen/row_icon_well_size"
+                        android:layout_height="@dimen/row_icon_well_size"
+                        android:background="@color/white"
+                        android:contentDescription="@string/settings_change_pin"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_lock"
+                        app:contentPadding="@dimen/row_icon_content_padding"
+                        app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Akin.Rounded12" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="@dimen/row_title_icon_gap"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <androidx.appcompat.widget.AppCompatTextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/settings_change_pin"
+                            style="@style/Widget.Akin.CompactCardTitle"
+                            android:maxLines="2" />
+
+                        <androidx.appcompat.widget.AppCompatTextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="@dimen/spacing_2dp"
+                            android:text="@string/settings_change_pin_sub"
+                            style="@style/Widget.Akin.CompactBodyMuted"
+                            android:maxLines="2" />
+
+                    </LinearLayout>
+
+                    <ImageView
+                        android:layout_width="@dimen/row_trailing_icon_size"
+                        android:layout_height="@dimen/row_trailing_icon_size"
+                        android:layout_marginStart="@dimen/spacing_8dp"
+                        android:src="@drawable/ic_chevron_right"
+                        android:importantForAccessibility="no" />
+
+                </LinearLayout>
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+    </com.google.android.material.card.MaterialCardView>
+
+    <androidx.appcompat.widget.AppCompatTextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/section_gap_top"
+        android:maxLines="2"
+        android:text="@string/settings_section_wallet"
+        style="@style/Widget.Akin.SectionLabel"
+        android:accessibilityHeading="true" />
+
+    <com.google.android.material.card.MaterialCardView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/section_header_gap"
+        style="@style/Widget.Akin.DashboardCard">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <LinearLayout
+                android:id="@+id/settings_trash_row"
+                style="@style/Widget.Akin.SettingsRow">
+
+                <LinearLayout style="@style/Widget.Akin.SettingsRowContent">
+
+                    <com.google.android.material.imageview.ShapeableImageView
+                        android:layout_width="@dimen/row_icon_well_size"
+                        android:layout_height="@dimen/row_icon_well_size"
+                        android:background="@color/white"
+                        android:contentDescription="@string/settings_trash"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_trash"
+                        app:contentPadding="@dimen/row_icon_content_padding"
+                        app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Akin.Rounded12" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="@dimen/row_title_icon_gap"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <androidx.appcompat.widget.AppCompatTextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/settings_trash"
+                            style="@style/Widget.Akin.CompactCardTitle"
+                            android:maxLines="2" />
+
+                    </LinearLayout>
+
+                    <ImageView
+                        android:layout_width="@dimen/row_trailing_icon_size"
+                        android:layout_height="@dimen/row_trailing_icon_size"
+                        android:layout_marginStart="@dimen/spacing_8dp"
+                        android:src="@drawable/ic_chevron_right"
+                        android:importantForAccessibility="no" />
+
+                </LinearLayout>
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+    </com.google.android.material.card.MaterialCardView>
+
+    <androidx.appcompat.widget.AppCompatTextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/section_gap_top"
+        android:maxLines="2"
+        android:text="@string/settings_section_legal"
+        style="@style/Widget.Akin.SectionLabel"
+        android:accessibilityHeading="true" />
+
+    <com.google.android.material.card.MaterialCardView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/section_header_gap"
+        style="@style/Widget.Akin.DashboardCard">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <LinearLayout
+                android:id="@+id/settings_privacy_row"
+                style="@style/Widget.Akin.SettingsRow">
+
+                <LinearLayout style="@style/Widget.Akin.SettingsRowContent">
+
+                    <com.google.android.material.imageview.ShapeableImageView
+                        android:layout_width="@dimen/row_icon_well_size"
+                        android:layout_height="@dimen/row_icon_well_size"
+                        android:background="@color/white"
+                        android:contentDescription="@string/settings_privacy"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_privacy"
+                        app:contentPadding="@dimen/row_icon_content_padding"
+                        app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Akin.Rounded12" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="@dimen/row_title_icon_gap"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <androidx.appcompat.widget.AppCompatTextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/settings_privacy"
+                            style="@style/Widget.Akin.CompactCardTitle"
+                            android:maxLines="2" />
+
+                    </LinearLayout>
+
+                    <ImageView
+                        android:layout_width="@dimen/row_trailing_icon_size"
+                        android:layout_height="@dimen/row_trailing_icon_size"
+                        android:layout_marginStart="@dimen/spacing_8dp"
+                        android:src="@drawable/ic_chevron_right"
+                        android:importantForAccessibility="no" />
+
+                </LinearLayout>
+
+                <View style="@style/Widget.Akin.HairlineDivider" />
+
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/settings_terms_row"
+                style="@style/Widget.Akin.SettingsRow">
+
+                <LinearLayout style="@style/Widget.Akin.SettingsRowContent">
+
+                    <com.google.android.material.imageview.ShapeableImageView
+                        android:layout_width="@dimen/row_icon_well_size"
+                        android:layout_height="@dimen/row_icon_well_size"
+                        android:background="@color/white"
+                        android:contentDescription="@string/settings_terms"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_terms"
+                        app:contentPadding="@dimen/row_icon_content_padding"
+                        app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Akin.Rounded12" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="@dimen/row_title_icon_gap"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <androidx.appcompat.widget.AppCompatTextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/settings_terms"
+                            style="@style/Widget.Akin.CompactCardTitle"
+                            android:maxLines="2" />
+
+                    </LinearLayout>
+
+                    <ImageView
+                        android:layout_width="@dimen/row_trailing_icon_size"
+                        android:layout_height="@dimen/row_trailing_icon_size"
+                        android:layout_marginStart="@dimen/spacing_8dp"
+                        android:src="@drawable/ic_chevron_right"
+                        android:importantForAccessibility="no" />
+
+                </LinearLayout>
+
+                <View style="@style/Widget.Akin.HairlineDivider" />
+
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/settings_about_row"
+                style="@style/Widget.Akin.SettingsRow">
+
+                <LinearLayout style="@style/Widget.Akin.SettingsRowContent">
+
+                    <com.google.android.material.imageview.ShapeableImageView
+                        android:layout_width="@dimen/row_icon_well_size"
+                        android:layout_height="@dimen/row_icon_well_size"
+                        android:background="@color/white"
+                        android:contentDescription="@string/settings_about"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_info"
+                        app:contentPadding="@dimen/row_icon_content_padding"
+                        app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Akin.Rounded12" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="@dimen/row_title_icon_gap"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <androidx.appcompat.widget.AppCompatTextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/settings_about"
+                            style="@style/Widget.Akin.CompactCardTitle"
+                            android:maxLines="2" />
+
+                    </LinearLayout>
+
+                    <ImageView
+                        android:layout_width="@dimen/row_trailing_icon_size"
+                        android:layout_height="@dimen/row_trailing_icon_size"
+                        android:layout_marginStart="@dimen/spacing_8dp"
+                        android:src="@drawable/ic_chevron_right"
+                        android:importantForAccessibility="no" />
+
+                </LinearLayout>
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+    </com.google.android.material.card.MaterialCardView>
+
+    <Space
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+
+    <androidx.appcompat.widget.AppCompatTextView
+        android:id="@+id/settings_version_label"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="@dimen/section_gap_top"
+        android:gravity="center"
+        android:maxLines="2"
+        style="@style/Widget.Akin.CompactBodyMuted" />
+
+</com.akin.wallet.ui.SettingsContentLayout>

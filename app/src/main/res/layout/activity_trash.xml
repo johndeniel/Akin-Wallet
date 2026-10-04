@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="utf-8"?><!-- Trash. Fixed, grid scrolls internally. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:context=".activity.TrashActivity"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@drawable/bg_dashboard_root"
+    android:clipChildren="false"
+    android:clipToPadding="false"
+    android:paddingStart="@dimen/screen_gutter_horizontal"
+    android:paddingEnd="@dimen/screen_gutter_horizontal"
+    android:paddingTop="@dimen/screen_padding_top"
+    android:paddingBottom="@dimen/screen_padding_bottom">
+
+    <!-- Contextual toolbar: idle shows Trash, selection shows count. -->
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/toolbar"
+        style="@style/Widget.Akin.Toolbar"
+        android:layout_width="match_parent"
+        app:title="@string/trash_title" />
+
+    <!-- Trash grid: tiles pair two-per-row, headers span both columns. -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/trash_grid"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_marginTop="@dimen/section_header_gap"
+        android:clipToPadding="false" />
+
+    <!-- Bulk action bar: visible only while items are selected. -->
+    <LinearLayout
+        android:id="@+id/trash_bulk_action_bar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/spacing_12dp"
+        android:orientation="horizontal"
+        android:visibility="gone">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/trash_restore_selected_button"
+            style="@style/Widget.Material3.Button.TonalButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="@dimen/form_action_gap"
+            android:minHeight="48dp"
+            android:text="@string/trash_restore"
+            android:textColor="@color/text_primary"
+            app:backgroundTint="@color/dashboard_well"
+            app:icon="@drawable/restore"
+            app:iconSize="18dp"
+            app:iconTint="@color/dashboard_active" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/trash_delete_forever_button"
+            style="@style/Widget.Material3.Button.TonalButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="@dimen/form_action_gap"
+            android:minHeight="48dp"
+            android:text="@string/trash_delete_forever"
+            android:textColor="@color/white"
+            app:backgroundTint="@color/danger"
+            app:icon="@drawable/ic_delete"
+            app:iconSize="18dp"
+            app:iconTint="@color/white" />
+
+    </LinearLayout>
+
+    <!-- Empty state: filled card with icon well, title and supporting text. -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/trash_empty_state"
+        style="@style/Widget.Akin.DashboardCard"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_marginTop="@dimen/section_header_gap"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:padding="@dimen/spacing_24dp">
+
+            <FrameLayout
+                android:layout_width="64dp"
+                android:layout_height="64dp"
+                android:background="@drawable/bg_dashboard_circle">
+
+                <ImageView
+                    android:layout_width="@dimen/spacing_28dp"
+                    android:layout_height="@dimen/spacing_28dp"
+                    android:layout_gravity="center"
+                    android:contentDescription="@string/trash_title"
+                    android:src="@drawable/ic_trash" />
+
+            </FrameLayout>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/spacing_16dp"
+                android:gravity="center"
+                android:maxLines="2"
+                android:ellipsize="end"
+                android:text="@string/trash_empty_title"
+                android:textAppearance="@style/TextAppearance.Akin.CardTitle" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/spacing_4dp"
+                android:gravity="center"
+                android:maxLines="2"
+                android:ellipsize="end"
+                android:text="@string/trash_empty_sub"
+                android:textAppearance="@style/TextAppearance.Akin.BodyMuted" />
+
+        </LinearLayout>
+
+    </com.google.android.material.card.MaterialCardView>
+
+</LinearLayout>

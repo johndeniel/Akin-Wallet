@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?><!-- Social row. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:clickable="true"
+    android:focusable="true"
+    android:foreground="?attr/selectableItemBackground"
+    android:orientation="vertical">
+
+    <LinearLayout style="@style/Widget.Akin.SettingsRowContent">
+
+        <com.google.android.material.imageview.ShapeableImageView
+            android:id="@+id/social_account_row_icon"
+            android:layout_width="@dimen/row_icon_well_size"
+            android:layout_height="@dimen/row_icon_well_size"
+            android:background="@color/white"
+            android:importantForAccessibility="no"
+            android:scaleType="fitCenter"
+            android:src="@drawable/google"
+            app:contentPadding="5dp"
+            app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Akin.Rounded12" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/row_title_icon_gap"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/social_account_row_title"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textAppearance="@style/TextAppearance.Akin.CardTitle"
+                tools:text="Platform" />
+
+            <TextView
+                android:id="@+id/social_account_row_subtitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/spacing_2dp"
+                android:textAppearance="@style/TextAppearance.Akin.BodyMuted"
+                tools:text="username" />
+
+        </LinearLayout>
+
+        <ImageView
+            android:layout_width="@dimen/row_trailing_icon_size"
+            android:layout_height="@dimen/row_trailing_icon_size"
+            android:layout_marginStart="@dimen/spacing_8dp"
+            android:alpha="0.6"
+            android:contentDescription="@null"
+            android:src="@drawable/ic_chevron_right"
+            app:tint="@color/dashboard_muted" />
+
+    </LinearLayout>
+
+    <View
+        android:id="@+id/social_account_row_divider"
+        style="@style/Widget.Akin.HairlineDivider" />
+
+</LinearLayout>

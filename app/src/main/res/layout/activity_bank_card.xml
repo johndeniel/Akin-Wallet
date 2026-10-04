@@ -1,0 +1,299 @@
+<?xml version="1.0" encoding="utf-8"?><!-- Bank card form. -->
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:context=".activity.BankCardActivity"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_dashboard_root"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:clipChildren="false"
+        android:clipToPadding="false"
+        android:orientation="vertical"
+        android:paddingHorizontal="@dimen/form_gutter_horizontal"
+        android:paddingTop="@dimen/screen_padding_top"
+        android:paddingBottom="@dimen/screen_padding_bottom">
+
+        <com.google.android.material.appbar.MaterialToolbar
+            android:id="@+id/toolbar"
+            style="@style/Widget.Akin.Toolbar"
+            android:layout_width="match_parent"
+            app:title="@string/dialog_bank_title" />
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/bank_card_design_carousel"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_20dp"
+            android:clipToPadding="false"
+            android:paddingEnd="@dimen/carousel_end_padding"
+            android:overScrollMode="never" />
+
+        <LinearLayout
+            android:id="@+id/bank_card_design_indicator"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="@dimen/carousel_dots_gap_top"
+            android:gravity="center_vertical"
+            android:orientation="horizontal" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_20dp"
+            android:orientation="horizontal">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="@dimen/spacing_6dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    style="@style/Widget.Akin.FormLabel"
+                    android:text="@string/field_card_type" />
+
+                <LinearLayout
+                    android:id="@+id/bank_card_type_selector"
+                    style="@style/Widget.Akin.FormSelectRow">
+
+                    <TextView
+                        android:id="@+id/bank_card_type_label"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:singleLine="true"
+                        android:maxLines="1"
+                        android:ellipsize="end"
+                        android:text="@string/default_card_type"
+                        android:textAppearance="@style/TextAppearance.Akin.FieldValue" />
+
+                    <ImageView
+                        android:layout_width="@dimen/row_trailing_icon_size"
+                        android:layout_height="@dimen/row_trailing_icon_size"
+                        android:contentDescription="@string/cd_select_card_type"
+                        android:src="@drawable/ic_dropdown" />
+
+                </LinearLayout>
+
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/spacing_6dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    style="@style/Widget.Akin.FormLabel"
+                    android:text="@string/field_card_network" />
+
+                <LinearLayout
+                    android:id="@+id/bank_card_network_selector"
+                    style="@style/Widget.Akin.FormSelectRow">
+
+                    <TextView
+                        android:id="@+id/bank_card_network_label"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:singleLine="true"
+                        android:maxLines="1"
+                        android:ellipsize="end"
+                        android:text="@string/default_card_network"
+                        android:textAppearance="@style/TextAppearance.Akin.FieldValue" />
+
+                    <ImageView
+                        android:layout_width="@dimen/row_trailing_icon_size"
+                        android:layout_height="@dimen/row_trailing_icon_size"
+                        android:contentDescription="@string/cd_select_card_network"
+                        android:src="@drawable/ic_dropdown" />
+
+                </LinearLayout>
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <TextView
+            style="@style/Widget.Akin.FormLabel"
+            android:layout_marginTop="@dimen/form_field_gap"
+            android:text="@string/field_bank_name" />
+
+        <EditText
+            android:id="@+id/bank_card_bank_name_field"
+            style="@style/Widget.Akin.FormInput"
+            android:hint="@string/hint_bank_name"
+            android:maxLength="50"
+            android:inputType="textCapWords|textNoSuggestions" />
+
+        <TextView
+            style="@style/Widget.Akin.FormLabel"
+            android:layout_marginTop="@dimen/form_field_gap"
+            android:text="@string/field_holder_name" />
+
+        <EditText
+            android:id="@+id/bank_card_holder_name_field"
+            style="@style/Widget.Akin.FormInput"
+            android:hint="@string/hint_person_name"
+            android:maxLength="50"
+            android:inputType="textCapWords|textNoSuggestions" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/form_field_gap"
+            android:orientation="horizontal">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="@dimen/spacing_6dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    style="@style/Widget.Akin.FormLabel"
+                    android:text="@string/field_card_number" />
+
+                <EditText
+                    android:id="@+id/bank_card_number_field"
+                    style="@style/Widget.Akin.FormInput"
+                    android:hint="@string/hint_card_number"
+                    android:inputType="number"
+                    android:digits="0123456789 "
+                    android:maxLength="19" />
+
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/spacing_6dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    style="@style/Widget.Akin.FormLabel"
+                    android:text="@string/field_expiry" />
+
+                <EditText
+                    android:id="@+id/bank_card_expiry_field"
+                    style="@style/Widget.Akin.FormInput"
+                    android:hint="@string/hint_expiry"
+                    android:inputType="number"
+                    android:digits="0123456789/"
+                    android:maxLength="5" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/form_field_gap"
+            android:orientation="horizontal">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="@dimen/spacing_6dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    style="@style/Widget.Akin.FormLabel"
+                    android:text="@string/field_cvv" />
+
+                <LinearLayout style="@style/Widget.Akin.SecretInputRow">
+
+                    <EditText
+                        android:id="@+id/bank_card_cvv_field"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:background="@null"
+                        android:hint="@string/hint_cvv"
+                        android:inputType="numberPassword"
+                        android:maxLength="3"
+                        android:paddingVertical="@dimen/spacing_10dp"
+                        android:singleLine="true"
+                        android:textAppearance="@style/TextAppearance.Akin.FieldValue"
+                        android:textColorHint="@color/hint_text" />
+
+                    <ImageView
+                        android:id="@+id/bank_card_cvv_visibility_toggle"
+                        android:layout_width="@dimen/form_action_height"
+                        android:layout_height="@dimen/form_action_height"
+                        android:padding="@dimen/spacing_14dp"
+                        android:focusable="true"
+                        android:layout_marginStart="@dimen/spacing_8dp"
+                        android:alpha="0.6"
+                        android:minWidth="48dp"
+                        android:minHeight="48dp"
+                        android:contentDescription="@string/cd_show_cvv"
+                        android:src="@drawable/ic_eye" />
+
+                </LinearLayout>
+
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/spacing_6dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    style="@style/Widget.Akin.FormLabel"
+                    android:text="@string/field_pin" />
+
+                <LinearLayout style="@style/Widget.Akin.SecretInputRow">
+
+                    <EditText
+                        android:id="@+id/bank_card_pin_field"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:background="@null"
+                        android:hint="@string/mask_pin"
+                        android:inputType="numberPassword"
+                        android:maxLength="6"
+                        android:paddingVertical="@dimen/spacing_10dp"
+                        android:singleLine="true"
+                        android:textAppearance="@style/TextAppearance.Akin.FieldValue"
+                        android:textColorHint="@color/hint_text" />
+
+                    <ImageView
+                        android:id="@+id/bank_card_pin_visibility_toggle"
+                        android:layout_width="@dimen/form_action_height"
+                        android:layout_height="@dimen/form_action_height"
+                        android:padding="@dimen/spacing_14dp"
+                        android:focusable="true"
+                        android:layout_marginStart="@dimen/spacing_8dp"
+                        android:alpha="0.6"
+                        android:minWidth="48dp"
+                        android:minHeight="48dp"
+                        android:contentDescription="@string/cd_show_pin"
+                        android:src="@drawable/ic_eye" />
+
+                </LinearLayout>
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <include layout="@layout/partial_form_action_row" />
+
+    </LinearLayout>
+
+</androidx.core.widget.NestedScrollView>

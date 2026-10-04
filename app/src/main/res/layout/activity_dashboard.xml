@@ -1,0 +1,554 @@
+<?xml version="1.0" encoding="utf-8"?><!-- Dashboard. Fixed content, never scrollable. Inner social list caps to viewport. -->
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_dashboard_root"
+    android:fitsSystemWindows="false"
+    tools:context=".activity.DashboardActivity">
+
+    <com.akin.wallet.ui.DashboardContentLayout
+        android:id="@+id/dashboard_content"
+        android:visibility="invisible"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:paddingStart="@dimen/screen_gutter_horizontal"
+        android:paddingEnd="@dimen/screen_gutter_horizontal"
+        android:paddingTop="@dimen/screen_padding_top"
+        android:paddingBottom="@dimen/screen_padding_bottom">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingTop="@dimen/spacing_4dp"
+            android:paddingBottom="@dimen/spacing_4dp">
+
+            <LinearLayout
+                android:id="@+id/dashboard_toolbar"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:minHeight="@dimen/toolbar_height"
+                android:gravity="center_vertical"
+                android:orientation="vertical"
+                android:paddingStart="@dimen/spacing_12dp"
+                android:paddingEnd="0dp">
+
+                <androidx.appcompat.widget.AppCompatTextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/app_name"
+                    android:textAppearance="@style/TextAppearance.Akin.ToolbarTitle"
+                    android:maxLines="1"
+                    android:autoSizeTextType="uniform"
+                    android:autoSizeMinTextSize="16sp"
+                    android:autoSizeMaxTextSize="20sp"
+                    android:autoSizeStepGranularity="1sp" />
+
+                <androidx.appcompat.widget.AppCompatTextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/header_tagline"
+                    android:textAppearance="@style/TextAppearance.Akin.ToolbarSubtitle"
+                    android:maxLines="1"
+                    android:autoSizeTextType="uniform"
+                    android:autoSizeMinTextSize="8sp"
+                    android:autoSizeMaxTextSize="12sp"
+                    android:autoSizeStepGranularity="1sp" />
+
+            </LinearLayout>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/dashboard_search_button"
+                style="@style/Widget.Akin.HeaderIconButton"
+                android:contentDescription="@string/cd_search"
+                app:backgroundTint="@color/dashboard_well"
+                app:icon="@drawable/ic_search_white"
+                app:iconGravity="textStart"
+                app:iconPadding="0dp"
+                app:iconSize="18dp"
+                app:iconTint="@color/text_primary"
+                app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Circle"
+                app:strokeColor="@color/dashboard_well_border"
+                app:strokeWidth="1dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/dashboard_settings_button"
+                style="@style/Widget.Akin.HeaderIconButton"
+                android:contentDescription="@string/cd_settings"
+                app:backgroundTint="@color/dashboard_well"
+                app:icon="@drawable/ic_settings"
+                app:iconGravity="textStart"
+                app:iconPadding="0dp"
+                app:iconSize="18dp"
+                app:iconTint="@color/text_primary"
+                app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Circle"
+                app:strokeColor="@color/dashboard_well_border"
+                app:strokeWidth="1dp" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/dashboard_government_id_section_header"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_2dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <androidx.appcompat.widget.AppCompatTextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:maxLines="1"
+                android:text="@string/trash_section_ids"
+                style="@style/Widget.Akin.SectionTitle"
+                android:accessibilityHeading="true" />
+
+        </LinearLayout>
+
+        <com.akin.wallet.ui.PortraitCardCarousel
+            android:id="@+id/dashboard_government_id_carousel"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/section_header_gap"
+            android:clipToPadding="false"
+            android:orientation="horizontal"
+            android:paddingEnd="@dimen/carousel_end_padding" />
+
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/dashboard_government_id_empty_state"
+            style="@style/Widget.Akin.DashboardCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_16dp"
+            android:clickable="false"
+            android:focusable="false"
+            android:visibility="gone">
+
+            <com.akin.wallet.ui.DashboardEmptyStateLayout
+                style="@style/Widget.Akin.EmptyStateContent"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <androidx.appcompat.widget.AppCompatTextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:text="@string/empty_ids_title"
+                    style="@style/Widget.Akin.CompactCardTitle"
+                    android:maxLines="2" />
+
+                <androidx.appcompat.widget.AppCompatTextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/spacing_4dp"
+                    android:gravity="center"
+                    android:text="@string/empty_ids_sub"
+                    style="@style/Widget.Akin.CompactBodyMuted"
+                    android:maxLines="2" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/dashboard_government_id_empty_action"
+                    style="@style/Widget.Material3.Button.TonalButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/spacing_12dp"
+                    android:minWidth="48dp"
+                    android:minHeight="48dp"
+                    android:text="@string/dialog_id_title"
+                    android:textColor="@color/text_primary"
+                    app:backgroundTint="@color/dashboard_well"
+                    app:icon="@drawable/ic_add"
+                    app:iconSize="16dp"
+                    app:iconTint="@color/text_primary" />
+
+            </com.akin.wallet.ui.DashboardEmptyStateLayout>
+
+        </com.google.android.material.card.MaterialCardView>
+
+        <LinearLayout
+            android:id="@+id/dashboard_bank_card_section_header"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/section_gap_top"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <androidx.appcompat.widget.AppCompatTextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:maxLines="1"
+                android:text="@string/trash_section_cards"
+                style="@style/Widget.Akin.SectionTitle"
+                android:accessibilityHeading="true" />
+
+        </LinearLayout>
+
+        <com.akin.wallet.ui.PortraitCardCarousel
+            android:id="@+id/dashboard_bank_card_carousel"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/section_header_gap"
+            android:clipToPadding="false"
+            android:orientation="horizontal"
+            android:paddingEnd="@dimen/carousel_end_padding" />
+
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/dashboard_bank_card_empty_state"
+            style="@style/Widget.Akin.DashboardCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_16dp"
+            android:clickable="false"
+            android:focusable="false"
+            android:visibility="gone">
+
+            <com.akin.wallet.ui.DashboardEmptyStateLayout
+                style="@style/Widget.Akin.EmptyStateContent"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <androidx.appcompat.widget.AppCompatTextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:text="@string/empty_cards_title"
+                    style="@style/Widget.Akin.CompactCardTitle"
+                    android:maxLines="2" />
+
+                <androidx.appcompat.widget.AppCompatTextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/spacing_4dp"
+                    android:gravity="center"
+                    android:text="@string/empty_cards_sub"
+                    style="@style/Widget.Akin.CompactBodyMuted"
+                    android:maxLines="2" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/dashboard_bank_card_empty_action"
+                    style="@style/Widget.Material3.Button.TonalButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/spacing_12dp"
+                    android:minWidth="48dp"
+                    android:minHeight="48dp"
+                    android:text="@string/dialog_bank_title"
+                    android:textColor="@color/text_primary"
+                    app:backgroundTint="@color/dashboard_well"
+                    app:icon="@drawable/ic_add"
+                    app:iconSize="16dp"
+                    app:iconTint="@color/text_primary" />
+
+            </com.akin.wallet.ui.DashboardEmptyStateLayout>
+
+        </com.google.android.material.card.MaterialCardView>
+
+        <LinearLayout
+            android:id="@+id/dashboard_social_account_section_header"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/section_gap_top"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <androidx.appcompat.widget.AppCompatTextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:maxLines="1"
+                android:text="@string/trash_section_social"
+                style="@style/Widget.Akin.SectionTitle"
+                android:accessibilityHeading="true" />
+
+        </LinearLayout>
+
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/dashboard_social_account_card"
+            android:visibility="gone"
+            style="@style/Widget.Akin.DashboardCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/section_header_gap"
+            android:paddingStart="@dimen/spacing_6dp"
+            android:paddingEnd="@dimen/spacing_6dp"
+            android:paddingTop="@dimen/spacing_4dp"
+            android:paddingBottom="@dimen/spacing_4dp">
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/dashboard_social_account_list"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:clipToPadding="false"
+                android:nestedScrollingEnabled="false" />
+
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/dashboard_social_account_empty_state"
+            style="@style/Widget.Akin.DashboardCard"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_marginTop="@dimen/spacing_10dp"
+            android:layout_weight="1"
+            android:clickable="false"
+            android:focusable="false"
+            android:visibility="gone">
+
+            <com.akin.wallet.ui.DashboardEmptyStateLayout
+                style="@style/Widget.Akin.EmptyStateContent"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent">
+
+                <androidx.appcompat.widget.AppCompatTextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:text="@string/empty_social_title"
+                    style="@style/Widget.Akin.CompactCardTitle"
+                    android:maxLines="2" />
+
+                <androidx.appcompat.widget.AppCompatTextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/spacing_4dp"
+                    android:gravity="center"
+                    android:text="@string/empty_social_sub"
+                    style="@style/Widget.Akin.CompactBodyMuted"
+                    android:maxLines="2" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/dashboard_social_account_empty_action"
+                    style="@style/Widget.Material3.Button.TonalButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/spacing_12dp"
+                    android:minWidth="48dp"
+                    android:minHeight="48dp"
+                    android:text="@string/dialog_social_title"
+                    android:textColor="@color/text_primary"
+                    app:backgroundTint="@color/dashboard_well"
+                    app:icon="@drawable/ic_add"
+                    app:iconSize="16dp"
+                    app:iconTint="@color/text_primary" />
+
+            </com.akin.wallet.ui.DashboardEmptyStateLayout>
+
+        </com.google.android.material.card.MaterialCardView>
+
+    </com.akin.wallet.ui.DashboardContentLayout>
+
+    <View
+        android:id="@+id/dashboard_quick_add_scrim"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/text_shadow"
+        android:clickable="true"
+        android:focusable="true"
+        android:contentDescription="@string/cd_close_menu"
+        android:visibility="gone" />
+
+    <LinearLayout
+        android:id="@+id/dashboard_quick_add_menu"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_marginEnd="@dimen/fab_margin"
+        android:layout_marginBottom="@dimen/fab_menu_gap_bottom"
+        android:orientation="vertical"
+        android:visibility="gone">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/dashboard_quick_add_option_government_id"
+            style="@style/Widget.Akin.QuickAddOption"
+            android:text="@string/dialog_id_title" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/dashboard_quick_add_option_bank_card"
+            style="@style/Widget.Akin.QuickAddOption"
+            android:text="@string/dialog_bank_title" />
+
+        <!-- Last option drops the style's inter-item gap; re-add it if the
+             menu ever gains a fourth item below this one. -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/dashboard_quick_add_option_social_account"
+            style="@style/Widget.Akin.QuickAddOption"
+            android:layout_marginBottom="0dp"
+            android:text="@string/dialog_social_title" />
+
+    </LinearLayout>
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/dashboard_quick_add_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_marginEnd="@dimen/fab_margin"
+        android:layout_marginBottom="@dimen/fab_margin"
+        android:contentDescription="@string/fab_add_menu"
+        android:src="@drawable/ic_add"
+        app:backgroundTint="?attr/colorPrimary"
+        app:elevation="8dp"
+        app:fabSize="normal"
+        app:pressedTranslationZ="12dp"
+        app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Circle"
+        app:tint="@color/white" />
+
+    <com.google.android.material.search.SearchView
+        android:id="@+id/dashboard_search_view"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:theme="@style/ThemeOverlay.Material3.Dark"
+        app:backgroundTint="@color/dashboard_bg_start">
+
+        <com.akin.wallet.ui.DashboardContentLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:paddingStart="@dimen/screen_gutter_horizontal"
+            android:paddingEnd="@dimen/screen_gutter_horizontal"
+            android:paddingTop="@dimen/screen_padding_top"
+            android:paddingBottom="@dimen/screen_padding_bottom">
+
+            <LinearLayout
+                android:id="@+id/dashboard_search_government_id_header"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/spacing_2dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:visibility="gone">
+
+                <androidx.appcompat.widget.AppCompatTextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:maxLines="1"
+                    android:text="@string/trash_section_ids"
+                    style="@style/Widget.Akin.SectionTitle"
+                    android:accessibilityHeading="true" />
+
+            </LinearLayout>
+
+            <com.akin.wallet.ui.PortraitCardCarousel
+                android:id="@+id/dashboard_search_government_id_list"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/section_header_gap"
+                android:clipToPadding="false"
+                android:orientation="horizontal"
+                android:paddingEnd="@dimen/carousel_end_padding"
+                android:visibility="gone" />
+
+            <LinearLayout
+                android:id="@+id/dashboard_search_bank_card_header"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/section_gap_top"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:visibility="gone">
+
+                <androidx.appcompat.widget.AppCompatTextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:maxLines="1"
+                    android:text="@string/trash_section_cards"
+                    style="@style/Widget.Akin.SectionTitle"
+                    android:accessibilityHeading="true" />
+
+            </LinearLayout>
+
+            <com.akin.wallet.ui.PortraitCardCarousel
+                android:id="@+id/dashboard_search_bank_card_list"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/section_header_gap"
+                android:clipToPadding="false"
+                android:orientation="horizontal"
+                android:paddingEnd="@dimen/carousel_end_padding"
+                android:visibility="gone" />
+
+            <LinearLayout
+                android:id="@+id/dashboard_search_social_account_header"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/section_gap_top"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:visibility="gone">
+
+                <androidx.appcompat.widget.AppCompatTextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:maxLines="1"
+                    android:text="@string/trash_section_social"
+                    style="@style/Widget.Akin.SectionTitle"
+                    android:accessibilityHeading="true" />
+
+            </LinearLayout>
+
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/dashboard_search_social_account_card"
+                style="@style/Widget.Akin.DashboardCard"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/section_header_gap"
+                android:paddingStart="@dimen/spacing_6dp"
+                android:paddingEnd="@dimen/spacing_6dp"
+                android:paddingTop="@dimen/spacing_4dp"
+                android:paddingBottom="@dimen/spacing_4dp"
+                android:visibility="gone">
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/dashboard_search_social_account_list"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:clipToPadding="false"
+                    android:nestedScrollingEnabled="false" />
+
+            </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/dashboard_search_empty_state"
+                style="@style/Widget.Akin.DashboardCard"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/spacing_16dp"
+                android:visibility="gone">
+
+                <LinearLayout
+                    style="@style/Widget.Akin.EmptyStateContent"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+
+                    <androidx.appcompat.widget.AppCompatTextView
+                        android:id="@+id/dashboard_search_empty_title"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:text="@string/search_empty_title"
+                        style="@style/Widget.Akin.CompactCardTitle"
+                        android:maxLines="2" />
+
+                    <androidx.appcompat.widget.AppCompatTextView
+                        android:id="@+id/dashboard_search_empty_subtitle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/spacing_4dp"
+                        android:gravity="center"
+                        android:text="@string/search_empty_sub"
+                        style="@style/Widget.Akin.CompactBodyMuted"
+                        android:maxLines="2" />
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+        </com.akin.wallet.ui.DashboardContentLayout>
+
+    </com.google.android.material.search.SearchView>
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

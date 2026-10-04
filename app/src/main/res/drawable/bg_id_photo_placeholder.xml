@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Photo well for the ID face: rounded "photo paper" with a soft keyline.
+     Adapters mutate the solid color + stroke per face; corners stay. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="#FFE9EEF3" />
+    <stroke
+        android:width="1.5dp"
+        android:color="#FFB7C2CE" />
+    <corners android:radius="12dp" />
+</shape>

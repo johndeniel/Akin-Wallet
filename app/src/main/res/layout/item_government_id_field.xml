@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginTop="@dimen/form_field_gap"
+    android:orientation="vertical">
+
+    <TextView
+        android:id="@+id/government_form_label"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textColor="@color/dashboard_muted"
+        android:textSize="13sp"
+        android:maxLines="1"
+        android:ellipsize="end" />
+
+    <EditText
+        android:id="@+id/government_form_input"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/form_label_gap"
+        android:minHeight="@dimen/form_action_height"
+        android:background="@drawable/bg_dashboard_card"
+        android:paddingHorizontal="@dimen/form_input_padding_horizontal"
+        android:paddingVertical="@dimen/form_input_padding_vertical"
+        android:textColor="@color/text_primary"
+        android:textColorHint="@color/hint_text"
+        android:textSize="15sp"
+        android:singleLine="true"
+        android:ellipsize="end"
+        android:saveEnabled="false"
+        android:importantForAutofill="noExcludeDescendants" />
+</LinearLayout>

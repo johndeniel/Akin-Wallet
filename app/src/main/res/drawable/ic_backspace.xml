@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Keypad delete: refined outline glyph in soft steel — matches the
+     glass keys instead of shouting in solid white. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="@android:color/transparent"
+        android:strokeColor="#FF9DB4D0"
+        android:strokeWidth="1.8"
+        android:strokeLineJoin="round"
+        android:strokeLineCap="round"
+        android:pathData="M21,5 H8.5 L3.5,12 L8.5,19 H21 C21.6,19 22,18.6 22,18 L22,6 C22,5.4 21.6,5 21,5 Z" />
+    <path
+        android:strokeColor="#FF9DB4D0"
+        android:strokeWidth="1.8"
+        android:strokeLineCap="round"
+        android:fillColor="@android:color/transparent"
+        android:pathData="M12,9.5 L15.5,13 M15.5,9.5 L12,13" />
+</vector>

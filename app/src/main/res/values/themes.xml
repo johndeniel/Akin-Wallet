@@ -1,0 +1,137 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <style name="Base.Theme.AkinWallet" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="colorPrimary">@color/brand_blue</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <item name="android:colorAccent">@color/brand_blue</item>
+        <item name="colorSurface">@color/dashboard_bg_start</item>
+        <item name="colorOnSurface">@color/white</item>
+        <item name="android:windowBackground">@color/dashboard_bg_start</item>
+        <item name="android:statusBarColor">@color/dashboard_bg_start</item>
+        <item name="android:navigationBarColor">@color/dashboard_bg_start</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+    <style name="Theme.AkinWallet" parent="Base.Theme.AkinWallet" />
+
+    <!-- M3 small top-app-bar headline: 20sp bold, set via
+         app:titleTextAppearance on each MaterialToolbar. -->
+    <style name="TextAppearance.Akin.ToolbarTitle" parent="TextAppearance.Material3.TitleLarge">
+        <item name="android:textSize">20sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">@color/text_primary</item>
+    </style>
+
+    <!-- M3 small top-app-bar supporting text under the headline. -->
+    <style name="TextAppearance.Akin.ToolbarSubtitle" parent="TextAppearance.Material3.BodySmall">
+        <item name="android:textSize">12sp</item>
+        <item name="android:textColor">@color/dashboard_muted</item>
+    </style>
+
+    <!-- M3 dashboard section header (Government ID / Bank Card / Social).
+         TitleSmall base keeps M3 tracking; size/weight pinned for the vault look. -->
+    <style name="TextAppearance.Akin.SectionTitle" parent="TextAppearance.Material3.TitleSmall">
+        <item name="android:textSize">13sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">@color/text_primary</item>
+    </style>
+
+    <!-- M3 card / row title + muted supporting text (social rows, empty states). -->
+    <style name="TextAppearance.Akin.CardTitle" parent="TextAppearance.Material3.TitleMedium">
+        <item name="android:textSize">14sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">@color/text_primary</item>
+    </style>
+
+    <style name="TextAppearance.Akin.BodyMuted" parent="TextAppearance.Material3.BodySmall">
+        <item name="android:textSize">12sp</item>
+        <item name="android:textColor">@color/dashboard_muted</item>
+    </style>
+
+    <!-- Form field label above every input (bank / ID / social share it). -->
+    <style name="TextAppearance.Akin.FormLabel" parent="TextAppearance.Material3.BodySmall">
+        <item name="android:textSize">13sp</item>
+        <item name="android:textColor">@color/dashboard_muted</item>
+    </style>
+
+    <!-- Form field value (select rows, secret inputs): 15sp primary ink. -->
+    <style name="TextAppearance.Akin.FieldValue" parent="TextAppearance.Material3.BodyLarge">
+        <item name="android:textSize">15sp</item>
+        <item name="android:textColor">@color/text_primary</item>
+    </style>
+
+    <!-- Credential input value + form action label: 14sp primary ink. -->
+    <style name="TextAppearance.Akin.InputValue" parent="TextAppearance.Material3.BodyLarge">
+        <item name="android:textSize">14sp</item>
+        <item name="android:textColor">@color/text_primary</item>
+    </style>
+
+    <!-- M3 settings section label (SECURITY / WALLET / LEGAL): muted label
+         with M3 label tracking, used with textAppearance in settings. -->
+    <style name="TextAppearance.Akin.SectionLabel" parent="TextAppearance.Material3.LabelSmall">
+        <item name="android:textSize">12sp</item>
+        <item name="android:textColor">@color/dashboard_muted</item>
+        <item name="android:letterSpacing">0.08</item>
+    </style>
+
+    <!-- DashboardCard, SettingsRow, Form widgets live in styles.xml. -->
+
+    <!-- 12dp rounded overlay for M3 icon wells (ShapeableImageView). -->
+    <style name="ShapeAppearanceOverlay.Akin.Rounded12" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">12dp</item>
+    </style>
+
+    <!-- True-circle overlay for the dashboard FAB (M3 default is a squircle). -->
+    <style name="ShapeAppearanceOverlay.Circle" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">50%</item>
+    </style>
+
+    <!-- M3 small top app bar. -->
+    <style name="Widget.Akin.Toolbar" parent="Widget.Material3.Toolbar">
+        <item name="android:layout_height">@dimen/toolbar_height</item>
+        <item name="android:layout_marginStart">0dp</item>
+        <item name="android:background">@android:color/transparent</item>
+        <item name="contentInsetStart">0dp</item>
+        <item name="contentInsetStartWithNavigation">0dp</item>
+        <item name="navigationIcon">@drawable/ic_arrow_back</item>
+        <item name="titleMarginStart">12dp</item>
+        <item name="titleTextAppearance">@style/TextAppearance.Akin.ToolbarTitle</item>
+    </style>
+
+    <!-- Shared government-ID face header. Sizes, tracking and rhythm live
+         here so all 6 faces stay identical; each face sets only its text,
+         ink colors and rule color. -->
+    <style name="IdFaceEyebrow">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textSize">8sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:letterSpacing">0.28</item>
+        <item name="android:singleLine">true</item>
+    </style>
+
+    <style name="IdFaceTitle">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">2dp</item>
+        <item name="android:textSize">17sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:letterSpacing">0.0</item>
+        <item name="android:singleLine">true</item>
+    </style>
+
+    <style name="IdFaceSubtitle">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">2dp</item>
+        <item name="android:textSize">8sp</item>
+        <item name="android:letterSpacing">0.14</item>
+        <item name="android:singleLine">true</item>
+    </style>
+
+    <style name="IdFaceRule">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">1dp</item>
+        <item name="android:layout_marginTop">8dp</item>
+    </style>
+</resources>

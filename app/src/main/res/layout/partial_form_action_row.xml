@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?><!-- Form actions. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginTop="@dimen/form_action_top_margin"
+    android:orientation="horizontal">
+
+    <LinearLayout
+        android:id="@+id/form_primary_action"
+        android:layout_width="0dp"
+        android:layout_height="@dimen/form_action_height"
+        android:layout_marginEnd="@dimen/form_action_gap"
+        android:layout_weight="1"
+        android:background="@drawable/bg_button_outline"
+        android:clickable="true"
+        android:focusable="true"
+        android:gravity="center"
+        android:orientation="horizontal">
+
+        <ImageView
+            android:layout_width="@dimen/form_action_icon_size"
+            android:layout_height="@dimen/form_action_icon_size"
+            android:importantForAccessibility="no"
+            android:src="@drawable/ic_edit" />
+
+        <TextView
+            android:id="@+id/form_primary_action_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/spacing_6dp"
+            android:text="@string/action_save"
+            android:textAppearance="@style/TextAppearance.Akin.InputValue" />
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/form_destructive_action"
+        android:layout_width="0dp"
+        android:layout_height="@dimen/form_action_height"
+        android:layout_marginStart="@dimen/form_action_gap"
+        android:layout_weight="1"
+        android:background="@drawable/bg_button_outline_red"
+        android:clickable="true"
+        android:focusable="true"
+        android:gravity="center"
+        android:orientation="horizontal"
+        android:visibility="gone">
+
+        <ImageView
+            android:layout_width="@dimen/form_action_icon_size"
+            android:layout_height="@dimen/form_action_icon_size"
+            android:importantForAccessibility="no"
+            android:src="@drawable/ic_delete" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/spacing_6dp"
+            android:text="@string/action_delete"
+            android:textAppearance="@style/TextAppearance.Akin.InputValue"
+            android:textColor="@color/danger" />
+
+    </LinearLayout>
+
+</LinearLayout>

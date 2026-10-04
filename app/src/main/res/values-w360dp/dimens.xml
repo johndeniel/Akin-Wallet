@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Standard phones (>=360dp wide): wider gutters mirror the design mock. -->
+    <dimen name="screen_gutter_horizontal">20dp</dimen>
+    <dimen name="form_gutter_horizontal">24dp</dimen>
+</resources>

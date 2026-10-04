@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- PIN key: bounded circular ripple (oval mask) over the glass disc.
+     The old borderless foreground ripple overflowed the key and got
+     clipped into a square by the wrap_content row — this stays round. -->
+<ripple xmlns:android="http://schemas.android.com/apk/res/android"
+    android:color="#33FFFFFF">
+    <item android:id="@android:id/mask">
+        <shape android:shape="oval">
+            <solid android:color="@color/white" />
+        </shape>
+    </item>
+    <item android:drawable="@drawable/bg_pin_key_states" />
+</ripple>
