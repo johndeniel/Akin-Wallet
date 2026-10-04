@@ -97,6 +97,7 @@ proguard/
 
 # Splash Screen
 *.png
+!banner.png
 !app/src/main/res/drawable/*
 !app/src/main/res/drawable-nodpi/*
 !app/src/main/res/mipmap-*/*
